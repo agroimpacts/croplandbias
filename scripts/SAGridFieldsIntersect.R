@@ -4,7 +4,8 @@
 # Author     : Lyndon Estes
 # Draws from : 
 # Used by    : 
-# Notes      : 
+# Notes      : 23/7/14: Fails for unknown reasons on chunk 54, with inconsistent problem on initial polygon 
+#              cleaning steps
 ##############################################################################################################
 
 # Libraries
@@ -78,6 +79,7 @@ for(i in 2:length(grid.ids.all)) grid.ids.all[[i]] <- grid.ids[[i - 1]]
 
 tick <- Sys.time()
 fld.1km.ints <- lapply(1:length(grid.ids.all), function(x) {
+  #x <- 54
 
   # select fields intersecting with grid ids within the box
   print(paste("Processing section", x))
@@ -97,6 +99,7 @@ fld.1km.ints <- lapply(1:length(grid.ids.all), function(x) {
 
   ding <- Sys.time()
   fld.type.ints <- lapply(1:length(fmatches), function(j) {
+    #j <- 4
     print(paste("Processing intersections with Class", j, ":", names(fmatches)[j]))
     fld.sel <- fieldgrid.id.tab[fmatches[[j]], ]
     if(nrow(fld.sel) == 0) {
@@ -110,42 +113,51 @@ fld.1km.ints <- lapply(1:length(grid.ids.all), function(x) {
       sql <- paste("SELECT gid, ST_AsText(geom) FROM ", fldname, " WHERE gid in (",
                    paste(fld.sel$gid, collapse = ","), ")", sep = "")
       fld.geom.tab <- dbGetQuery(con, sql)
-      
-      fld.ints <- t(sapply(unique(fld.sel$id), function(k) {
+
+      #fld.ints <- t(sapply(unique(fld.sel$id), function(k) {
+      fld.ints <- sapply(unique(fld.sel$id), function(k) {
+          
+      #fld.ints <- sapply(unique(fld.sel$id)[3290:3310], function(k) {
+      #fld.ints <- t(sapply(unique(fld.sel$id)[3290:3310], function(k) {
         print(paste("processing grid", k))
+        #k <- 986374
+        #k <- 987424
+        #k <- unique(fld.sel$id)[3290:3310]  # length(unique(fld.sel$id))
         g <- polyFromWkt(geom.tab=grid.geom.tab[grid.geom.tab$id == k, ], crs=prjstr)
         fid <- fld.sel[fld.sel$id == k, "gid"]
-        f <- polyFromWkt(geom.tab=fld.geom.tab[fld.geom.tab$gid %in% fid, ], crs=prjstr)
-        if(!gIsValid(f)) {
+        fld.tab <- fld.geom.tab[fld.geom.tab$gid %in% fid, ]
+        f <- polyFromWkt(geom.tab=fld.tab, crs=prjstr)
+        if(suppressWarnings(gIsValid(f))) {
+          f.polys <- f
+        } else {
+          #print("Original geometry not valid, first try fix with gUnaryUnion")
           f.union <- gUnaryUnion(f)
-          if(!gIsValid(f.union)) {
-            print("Unioned geometry not valid, first try fix with gBuffer")
-            f.union2 <- gBuffer(f.union, width=0)
-            if(!gIsValid(f.union2)) {
+          if(suppressWarnings(gIsValid(f.union))) {
+            f.polys <- f.union
+          } else {
+            print("Unioned geometry not valid, second try fix with gBuffer")
+            f.buffer <- gBuffer(f.union, width=0)
+            if(suppressWarnings(gIsValid(f.buffer))) {
+              print("Buffering worked, geometry now valid")
+              f.polys <- f.buffer
+            } else {
               print("Still not valid, call pprepair to clean this one")
               td <- tempdir()
               tmpnmin <- strsplit(tempfile("poly", tmpdir = ""), "/")[[1]][2]
               tmpnmout <- strsplit(tempfile("poly", tmpdir = ""), "/")[[1]][2]
-              writeOGR(f.union2, dsn = td, layer = tmpnmin, driver = "ESRI Shapefile")
-              f.union3 <- callPprepair(td, spdfinname = tmpnmin, spdfoutname = tmpnmout, 
-                                       crs = f.union2@proj4string)
-              f.polys <- f.union3
-            } else {
-              print("Buffering work, geometry now valid")
-              f.polys <- f.union2
+              writeOGR(f.buffer, dsn = td, layer = tmpnmin, driver = "ESRI Shapefile")
+              f.pprepair <- callPprepair(td, spdfinname = tmpnmin, spdfoutname = tmpnmout, 
+                                         crs = f.buffer@proj4string)
+              f.polys <- f.pprepair
             }
-          } else {
-            print("Unioned geometry is valid")
-            f.polys <- f.union
-          } 
-        } else {
-          f.polys <- f
-        }
+          }
+        } 
         #print("Processing intersections now")
         grid.int <- gIntersection(g, f.polys, byid = TRUE)
         farea <- gArea(grid.int, byid = TRUE) / 10000
         c("id" = k, "area" = unname(sum(farea)))  # sum areas to make for single record
-      }))
+      })
+      #}))
     }
   })
   names(fld.type.ints) <- names(fmatches)
