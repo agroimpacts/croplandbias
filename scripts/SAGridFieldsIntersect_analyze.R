@@ -200,7 +200,6 @@ areasUpdate <- lapply(1:2, function(x) {
       up
     } else {
       up <- areas[[x]][[y]]
-      up
       up$area <- round(up$area, 2)
       up
     }
