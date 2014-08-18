@@ -44,5 +44,54 @@ diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) 
   return(diffs)
 }
 
+#' Groups the values of one raster into bins that correspond to ranges of values in another raster
+#' 
+#' @param bin.rast The "master raster", or that which has the values defining the bin ranges
+#' @param rast.to.bin The raster whose values will be binned
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
+#' @return 
+#' @details This requires the two inputs to be of the same extent in order for values to correspond
+bin_values <- function(bin.rast, rast.to.bin, bins = binv) {
+  binmat <- rbind(bins[-length(bins)], bins[-1])  # create range matrix
+  binmat[2, ncol(binmat)] <- binmat[1, 1] + max(binmat) * 0.0001  # so that no values escape conditionals
+  br_v <- values(bin.rast) 
+  rtb_v <- values(rast.to.bin)
+  bindims <- dim(binmat)
+  vals <- lapply(1:bindims[2], function(x) {
+    ind <- which((br_v >= binmat[1, x]) & (br_v < binmat[2, x]))  # Figure out which bin.rast values are in bins
+    binned <- rtb_v[ind]
+    cbind("bin" = x, "ind" = ind, "val" = binned)
+  })
+  lind <- (1:bindims[2])[-which(sapply(vals, function(x) dim(x)[2]) != 3)]  # which list elements have values
+  outmat <- do.call(rbind, vals[lind])
+  return(outmat)
+}
+
+#' Function to run various statistics over different lists produced by bin_value
+#' 
+#' @param stat.list Output list created by bin_values function
+#' @param fun.list List of functions, passed as e.g., list(mean, sd), or list(mean)
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
+#' @return 
+#' @details List of output tables, one table per level, in a list corresponding to different statistics
+bin_stats <- function(stat.list, fun.list, bins) {
+  stat_list <- lapply(fun.list, function(FUN) {  # Outer list is function to be applied
+    level_list <- lapply(1:length(stat.list), function(x) {  # first inner list on level
+      print(paste("processing level", x))
+      sat_stats <- lapply(stat.list[[x]], function(j) {  # second inner list on sensor
+        stats <- sapply(1:(length(bins) - 1), function(y) {  # stat processed on each sensor within each level
+          #o <- sapply(fun.list[[i]], function(FUN) FUN(j[j[, 1] == y, 3], na.rm = TRUE))
+          o <- FUN(j[j[, 1] == y, 3], na.rm = TRUE)
+        })
+      })
+      out_stats <- do.call(cbind, sat_stats)
+    })
+    names(level_list) <- paste("L", 1:length(stat.list), sep = "")
+    return(level_list)
+  })
+  return(stat_list)
+}
+
+
 
 
