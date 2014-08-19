@@ -1,4 +1,24 @@
-# Processing functions
+#' Block processing function to assign new values to different layers in brick
+#' 
+#' @param x Brick with layers containing binary landcover classes
+#' @param y Vector containing the values to assign to each layer in brick (thus one element per layer)
+#' @param fname Output file name for reclassified brick
+#' @return Raster with altered values
+assignLCPct <- function(x, y, fname) {
+  if(length(y) != nlayers(x)) stop("Vector must have same length as number of layers")
+  out <- brick(x, values=FALSE)
+  out <- writeStart(out, filename=fname)
+  bs <- blockSize(x)
+  for (i in 1:bs$n) {
+    print(paste("Block", i, "of", bs$n))
+    v <- getValues(x, row=bs$row[i], nrows=bs$nrows[i])
+    v <- t(t(v) * y)
+    out <- writeValues(out, v, bs$row[i])
+  }
+  out <- writeStop(out)
+  return(out)
+}
+
 #' Aggregates a raster or list of rasters using a vector of factors
 #' 
 #' @param fact Vector of integers giving factors to aggregate by

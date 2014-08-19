@@ -11,53 +11,44 @@ library(lmisc)
 source("R/landcover-functions.R")
 
 # Path variables
+p_root <- proj_root("SAcropland")
 p_fig <- full_path(p_root, "SAcropland/figures/")
 p_data <- full_path(p_root, "SAcropland/data/")
 
 # Load necessary datasets
-load(full_path(p_data, "difference_grids.rda"))  # load if already done
-load(full_path(p_data, "difference_stats.rda"))  # load if already done
+load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
+load(full_path(p_data, "difference_grids.rda"))  # difference rasters
+load(full_path(p_data, "difference_stats.rda"))  # difference stats
 
 # Figure 1
 # Plotting colors
 cols <- colorRampPalette(c("red", "grey80", "blue4"))
-# brks <- seq(-100, 100, 10)
 brks <- c(-100.1, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100.1)
-ncol <- length(brks) - 1
+n_cols <- length(brks) - 1
 legtext <- "% Difference"
 cx <- 1.5
 lcol <- "black"
 mcap <- c("SA Landcover", "GlobCover min", "GlobCover mean", "GlobCover max", "MODIS min", "MODIS mean", 
           "MODIS max", "GLC-Share")
-
 pdf(full_path(p_fig, "Figure1.pdf"), height = 12, width = 8)
 par(mfrow = c(4, 2), mar = c(0, 0, 2, 0), oma = c(7, 0, 0, 0))
 for(i in 1:8) {
   plot(sa.shp, lty = 0)
-  plot(diff2011_act$f1[[i]], add = TRUE, col = cols(ncol), breaks = brks, legend = FALSE)
+  plot(diff2011_act$f1[[i]], add = TRUE, col = cols(n_cols), breaks = brks, legend = FALSE)
   mtext(mcap[i], side = 3, cex = cx)
 }
 flex_legend(ncuts = length(brks) - 1, legend.text = legtext, legend.vals = round(brks), 
             longdims = c(0.2, 0.8), shortdims = c(0.04, 0.01), colvec = cols(length(brks) - 1), 
-            srt = c(270, 0), horiz = TRUE, textside = "bottom", legend.pos = c(4, 10), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", legend.pos = c(4, 5), 
             leg.adj = list(c(0.25, 0), c(0.5, -0.5)), cex.val = cx, textcol = lcol, bordercol = lcol)
 dev.off()
 
-cols <- colorRampPalette(c("red", "grey80", "blue4"))
-# brks <- seq(-100, 100, 10)
-brks <- c(-100.1, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100.1)
-ncol <- length(brks) - 1
-legtext <- "% Difference"
-cx <- 1.5
-lcol <- "black"
-mcap <- c("SA Landcover", "GlobCover min", "GlobCover mean", "GlobCover max", "MODIS min", "MODIS mean", 
-          "MODIS max", "GLC-Share")
-
+# Figure 2
 pdf(full_path(p_fig, "Figure2.pdf"), height = 12, width = 8)
 par(mfrow = c(4, 2), mar = c(0, 0, 2, 0), oma = c(7, 0, 0, 0))
 for(i in 1:8) {
   plot(sa.shp, lty = 0)
-  plot(diff2011_act$f20[[i]], add = TRUE, col = cols(ncol), breaks = brks, legend = FALSE)
+  plot(diff2011_act$f20[[i]], add = TRUE, col = cols(n_cols), breaks = brks, legend = FALSE)
   mtext(mcap[i], side = 3, cex = cx)
 }
 flex_legend(ncuts = length(brks) - 1, legend.text = legtext, legend.vals = round(brks), 
@@ -77,7 +68,7 @@ lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
 mlab <- paste(c(1, 5, 10, 20, 50, 100, 200, 300, 600), "km")
 leg <- c("SA 30", "GCov min", "GCov mean", "GCov max", "Mod min", "Mod mean", "Mod max", "GLC-share")
 
-pdf(full_path(p_fig, "Figure2.pdf"), height = 8, width = 8)
+pdf(full_path(p_fig, "Figure3.pdf"), height = 8, width = 8)
 par(mfrow = c(3, 3), oma = c(5, 3, 0, 0), mar = c(1, 1, 0, 0))
 ylim <- c(-20, 80)
 for(i in 1:length(v)) {
@@ -109,7 +100,7 @@ dev.off()
 
 # Figure 4 - plot of absolute differences with scale
 v <- abs_diff_2011_stats$mu
-pdf(full_path(p_fig, "Figure3.pdf"), height = 8, width = 8)
+pdf(full_path(p_fig, "Figure4.pdf"), height = 8, width = 8)
 par(mfrow = c(3, 3), oma = c(5, 3, 0, 0), mar = c(1, 1, 0, 0))
 ylim <- c(0, 80)
 for(i in 1:length(v)) {
