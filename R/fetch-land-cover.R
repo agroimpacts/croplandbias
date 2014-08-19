@@ -66,17 +66,17 @@ if(!file.exists(full_path(p_data, "sagrid.tif"))) {
   point.tab <- cbind(geom.tab[, 1:2], coord.mat)
   colnames(point.tab)[3:4] <- c("x", "y") 
   pointsXYZ <- point.tab[, c(3:4, 2)]
-  sa.r <- rasterFromXYZ(pointsXYZ)
-  projection(sa.r) <- sa.buf@proj4string
-  sa.r <- writeRaster(sa.r, filename = full_path(p_data, "sagrid.tif"), overwrite = TRUE)
+  sa_r <- rasterFromXYZ(pointsXYZ)
+  projection(sa_r) <- sa.buf@proj4string
+  sa_r <- writeRaster(sa_r, filename = full_path(p_data, "sagrid.tif"), overwrite = TRUE)
 } else {
-  sa.r <- raster(full_path(p_data, "sagrid.tif"))
+  sa_r <- raster(full_path(p_data, "sagrid.tif"))
 }
 
 # GLC share
-glcpath <- "/u/lestes/spatial_data/glc_share/"
 if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists, to avoid redoing step 
-  # FAO GLC share
+  setwd("/u/lestes/spatial_data/")
+  glcpath <- "/u/lestes/spatial_data/glc_share/"
   url <- "http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&fname=GlcShare_v10_02.zip&access=private"
   download.file(url, method="auto", destfile = "glc_share.zip")
   unzip("glc_share.zip", exdir= "glc_share")
@@ -211,9 +211,8 @@ if(!file.exists(full_path(p_data, "salc_ag_masked.tif"))) {
 } 
 
 # KZN masking layer for sugarcane
-kznpath <- "/u/lestes/spatial_data/kzn_landcover/"
 if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
-  
+  kznpath <- "/u/lestes/spatial_data/kzn_landcover/"
   setwd(kznpath)
   # copied over and unzipped out of script
   gdal_translate(src_dataset = "kznlc11v1w31", dst_dataset= "kznlandcover.tif", of = "GTiff")
@@ -247,11 +246,11 @@ if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
            r = "average", ot = "Float32", srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
            verbose = TRUE, overwrite = TRUE)
   kzn_1km <- raster(full_path(p_data, "kzn_cane_1km.tif"))
-  kzn_1km.r <- resample(kzn_1km, sa.r, method = "bilinear")
-  kzn_1km.m <- mask(kzn_1km.r, sa.r, filename = full_path(p_data, "kzn_cane_masked.tif"), 
+  kzn_1km_r <- resample(kzn_1km, sa.r, method = "bilinear")
+  kzn_1km_m <- mask(kzn_1km_r, sa.r, filename = full_path(p_data, "kzn_cane_masked.tif"), 
                     overwrite = TRUE)
 } else {
-  kzn_1km.m <- raster(full_path(p_data, "kzn_cane_masked.tif"))
+  kzn_1km_m <- raster(full_path(p_data, "kzn_cane_masked.tif"))
 } 
 # plot(salc1km.m, )
 # plot(kzn_1km.m > 0, add = TRUE, legend = FALSE, col = c("transparent", "red"))
@@ -350,46 +349,55 @@ cover2011 <- brick(full_path(p_data, "cover2011.tif"))
 # sum these also with and without horticulture
 sumfun <- function(x) sum(x, na.rm = TRUE)
 gti_nohort <- lapply(list(cover2007, cover2011), function(y) {
-  calc(y[[-6]], sumfun, file = gsub("\\.tif", "sum_nh.tif", y@file@name), overwrite = TRUE)
+  r <- calc(y[[-6]], sumfun)
+  r[r > 100] <- 100
+  writeRaster(r, file = gsub("\\.tif", "sum_nh.tif", y@file@name), overwrite = TRUE)
 }) 
-gti_hort <- lapply(list(cover2007, cover2011), function(x) {
-  calc(x, sumfun, file = gsub("\\.tif", "sum_h.tif", x@file@name), overwrite = TRUE)
+gti_hort <- lapply(list(cover2007, cover2011), function(y) {
+  r <- calc(y, sumfun)
+  r[r > 100] <- 100
+  writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
 }) 
-# which(values(gti_hort[[1]] > 100) == 1)  # a few values greater than 100
+# which(values(gti_hort[[1]] > 100) == 1) 
+# gti_nohort <- lapply(full_path(p_data, dir(p_data, "cover*.*sum_nh.tif")), raster)
+# gti_hort <- lapply(full_path(p_data, dir(p_data, "cover*.*sum_h.tif")), raster)
 
 # And with and without communal farmlands
 sust_mask_2011 <- cover2011[[2]] < 50  
 sust_mask_2007 <- cover2007[[2]] < 50
-plot(sust_mask_2007)
-plot(cover2011[[2]])
-plot(cover2011[[6]])
-
 
 # Set up SA mask including sugarcane -- add in Mpumalanga sugar cane when it becomes available
 # Might also want to mask out protected areas, if GTI excluded them from consideration
-m1 <- kzn_1km.m
+m1 <- kzn_1km_m
 m1[is.na(m1)] <- 0
 m1[m1 > 0] <- NA
-sa_masks <- sa.r > 0
+sa_masks <- sa_r > 0
 sa_masks <- m1 + sa_masks
+rm(m1)
 
-# Fix values greater than 100% and apply sugarcane mask
-gti_nohort <- lapply(gti_nohort, function(x) {
-  r <- x
-  r[r > 100] <- 100
-  r <- mask(r, sa_masks)
-  writeRaster(r, file = x@file@name, overwrite = TRUE)
+# create additional masks for areas of subsistence agriculture
+mask_list <- lapply(list(sust_mask_2007, sust_mask_2011), function(x) {
+  m <- x
+  m[is.na(m)] <- 0
+  m[m > 0] <- NA
+  mr <- m + sa_masks
+  mr
 })
-gti_hort <- lapply(gti_hort, function(x) {
-  r <- x
-  r[r > 100] <- 100
-  r <- mask(r, sa_masks)
-  writeRaster(r, file = x@file@name, overwrite = TRUE)
-})
-gti_nohort <- lapply(full_path(p_data, dir(p_data, "cover*.*sum_nh.tif")), raster)
-gti_hort <- lapply(full_path(p_data, dir(p_data, "cover*.*sum_h.tif")), raster)
+mask_list <- c(sa_masks, mask_list)
+names(mask_list) <- c("stand", "nosubs_2007", "nosubs_2011")
+brick(stack(mask_list), file = full_path(p_data, "mask_brick.tif"), overwrite = TRUE)
 
-# Save the various landcover object names for easy loading into analysis script
-save(sa.r, sa.shp, gti_hort, gti_nohort, globsa_list_sum, modsa_list_sum, glcsa.m, salc1km.m, 
-     file = full_path(p_data, "landcover_objects.rda"))
+# Fix values greater than 100% and apply masks
+lapply(gti_nohort, function(x) {
+  m_list <- lapply(1:length(mask_list), function(y) {
+    out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
+    mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
+  })
+})
+lapply(gti_hort, function(x) {
+  m_list <- lapply(1:length(mask_list), function(y) {
+    out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
+    mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
+  })
+})
 
