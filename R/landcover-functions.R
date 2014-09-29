@@ -71,14 +71,14 @@ diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) 
 #' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
 #' @return 
 #' @details This requires the two inputs to be of the same extent in order for values to correspond
-bin_values <- function(bin.rast, rast.to.bin, bins = binv) {
+bin_values <- function(bin.rast, rast.to.bin, bins) {
   binmat <- rbind(bins[-length(bins)], bins[-1])  # create range matrix
   binmat[2, ncol(binmat)] <- binmat[1, 1] + max(binmat) * 0.0001  # so that no values escape conditionals
   br_v <- values(bin.rast) 
   rtb_v <- values(rast.to.bin)
   bindims <- dim(binmat)
   vals <- lapply(1:bindims[2], function(x) {
-    ind <- which((br_v >= binmat[1, x]) & (br_v < binmat[2, x]))  # Figure out which bin.rast values are in bins
+    ind <- which((br_v >= binmat[1, x]) & (br_v < binmat[2, x]))  # which bin.rast values are in bins
     binned <- rtb_v[ind]
     cbind("bin" = x, "ind" = ind, "val" = binned)
   })
@@ -86,6 +86,23 @@ bin_values <- function(bin.rast, rast.to.bin, bins = binv) {
   outmat <- do.call(rbind, vals[lind])
   return(outmat)
 }
+
+#' Applies bin_values to list
+#' 
+#' @param bin.rast The "master raster", or that which has the values defining the bin ranges
+#' @param which.rast Index of raster in bin.rast level 2 on which to do the binning
+#' @param rast.to.bin The raster whose values will be binned
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
+#' @return 
+#' @details This requires the two inputs to be of the same extent in order for values to correspond
+extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins) {
+  bin_val_list <- lapply(1:length(bin.rast), function(x) {
+    out <- lapply(rast.to.bin[[x]], function(j) b <- bin_values(bin.rast[[x]][[which.rast]], j, bins))
+    names(out) <- names(rast.to.bin[[x]])
+    return(out)
+  })
+  return(bin_val_list)
+}  
 
 #' Function to run various statistics over different lists produced by bin_value
 #' 

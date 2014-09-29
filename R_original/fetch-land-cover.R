@@ -89,9 +89,9 @@ if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists,
   # Warp to SA grid
   glcsa <- resample(glcSA_alb, sa.r, method = "bilinear", 
                     filename = full_path(p_data, "glcSA_alb_rect.tif"))
-  glcsa.m <- mask(glcsa, sa.r, file = full_path(p_data, "glcsa_masked.tif"), overwrite = TRUE)
+  glcsa_m <- mask(glcsa, sa.r, file = full_path(p_data, "glcsa_masked.tif"), overwrite = TRUE)
 } else {
-  glcsa.m <- raster(full_path(p_data, "glcsa_masked.tif"))
+  glcsa_m <- raster(full_path(p_data, "glcsa_masked.tif"))
 }
 
 # Globcover 2009
@@ -201,13 +201,13 @@ if(!file.exists(full_path(p_data, "salc_ag_masked.tif"))) {
   # agtest1 <- raster("salc_ag_test1km.tif")
   # agtet <- aggregate(salc_agtest, fact = 33, na.rm = TRUE)
   salc1km <- raster(full_path(p_data, "salc_ag_1km.tif"))
-  salc1km.r <- resample(salc1km, sa.r, method = "bilinear")
-  salc1km.m <- mask(salc1km.r, sa.r, filename = full_path(p_data, "salc_ag_masked.tif"), 
+  salc1km_r <- resample(salc1km, sa.r, method = "bilinear")
+  salc1km_m <- mask(salc1km.r, sa.r, filename = full_path(p_data, "salc_ag_masked.tif"), 
                     overwrite = TRUE)
   file.remove(full_path(salcpath, salconm))
   file.remove(full_path(p_data, "salc_ag_1km.tif"))
 } else {
-  salc1km.m <- raster(full_path(p_data, "salc_ag_masked.tif"))
+  salc1km_m <- raster(full_path(p_data, "salc_ag_masked.tif"))
 } 
 
 # KZN masking layer for sugarcane
@@ -363,8 +363,8 @@ gti_hort <- lapply(list(cover2007, cover2011), function(y) {
 # gti_hort <- lapply(full_path(p_data, dir(p_data, "cover*.*sum_h.tif")), raster)
 
 # And with and without communal farmlands
-sust_mask_2011 <- cover2011[[2]] < 50  
-sust_mask_2007 <- cover2007[[2]] < 50
+sust_mask_2011 <- cover2011[[2]] > 10  
+sust_mask_2007 <- cover2007[[2]] > 10
 
 # Set up SA mask including sugarcane -- add in Mpumalanga sugar cane when it becomes available
 # Might also want to mask out protected areas, if GTI excluded them from consideration
@@ -388,16 +388,38 @@ names(mask_list) <- c("stand", "nosubs_2007", "nosubs_2011")
 brick(stack(mask_list), file = full_path(p_data, "mask_brick.tif"), overwrite = TRUE)
 
 # Fix values greater than 100% and apply masks
-lapply(gti_nohort, function(x) {
-  m_list <- lapply(1:length(mask_list), function(y) {
-    out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
-    mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
-  })
-})
-lapply(gti_hort, function(x) {
-  m_list <- lapply(1:length(mask_list), function(y) {
-    out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
-    mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
-  })
-})
+r <- gti_nohort[[1]]
+lapply(1:2, function(x) {
+  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+})  
+r <- gti_nohort[[2]]
+lapply(c(1, 3), function(x) {
+  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+})  
+r <- gti_hort[[1]]
+lapply(1:2, function(x) {
+  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+})  
+r <- gti_hort[[2]]
+lapply(c(1, 3), function(x) {
+  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+})  
+
+# lapply(gti_nohort, function(x) {
+#   gti_nohort[c(1, 2)]
+#   m_list <- lapply(1:length(mask_list), function(y) {
+#     out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
+#     #mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
+#   })
+# })
+# lapply(gti_hort, function(x) {
+#   m_list <- lapply(1:length(mask_list), function(y) {
+#     out_name <- paste(gsub("\\.tif", "", x@file@name), "_", names(mask_list)[y], ".tif", sep = "")
+#     mask(x, mask_list[[y]], file = out_name, overwrite = TRUE)
+#   })
+# })
 

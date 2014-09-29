@@ -1,0 +1,15 @@
+Package: SAcropland
+Type: Package
+Title: Analysis of error in global landcover using SA cropland layer
+Description: As above, but the date the analysis began was earlier than noted here. 
+Version: 0.1
+Date: 29-09-2014 
+Author: Lyndon Estes <lestes@princeton.edu>
+Maintainer: Lyndon Estes <lestes@princeton.edu>
+Depends:
+    TeachingDemos,
+    R (>= 3.0.0), 
+    raster, rgdal, lmisc
+Imports:
+    TeachingDemos, raster, rgdal, lmisc
+License: GPL (>= 3)
