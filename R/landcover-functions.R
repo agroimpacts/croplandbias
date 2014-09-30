@@ -4,6 +4,7 @@
 #' @param y Vector containing the values to assign to each layer in brick (thus one element per layer)
 #' @param fname Output file name for reclassified brick
 #' @return Raster with altered values
+#' @export
 assignLCPct <- function(x, y, fname) {
   if(length(y) != nlayers(x)) stop("Vector must have same length as number of layers")
   out <- brick(x, values=FALSE)
@@ -24,6 +25,7 @@ assignLCPct <- function(x, y, fname) {
 #' @param fact Vector of integers giving factors to aggregate by
 #' @param rlist List of rasters to be aggregated
 #' @return List of rasters aggregated by specified factors, with original raster or list prepended to it 
+#' @export
 aggregate_rast_list <- function(fact, rlist) {
   aggs <- lapply(fact, function(x) {
     print(paste("aggregating by factor of", x))
@@ -47,6 +49,7 @@ aggregate_rast_list <- function(fact, rlist) {
 #' @param subtractee Raster/raster list to difference against, with same structure as subtractor
 #' @param whichdiff Index or name determing which raster from rdifflist per factor level will be used to diff
 #' @param abs TRUE or FALSE, for whether actual or absolute difference should be taken (default is FALSE)
+#' @export
 diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) {
   diffs <- lapply(ind, function(x) {
     print(paste("differencing at level", x))
@@ -69,8 +72,9 @@ diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) 
 #' @param bin.rast The "master raster", or that which has the values defining the bin ranges
 #' @param rast.to.bin The raster whose values will be binned
 #' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
-#' @return 
+#' @return List of differences between rasters
 #' @details This requires the two inputs to be of the same extent in order for values to correspond
+#' @export
 bin_values <- function(bin.rast, rast.to.bin, bins) {
   binmat <- rbind(bins[-length(bins)], bins[-1])  # create range matrix
   binmat[2, ncol(binmat)] <- binmat[1, 1] + max(binmat) * 0.0001  # so that no values escape conditionals
@@ -93,8 +97,9 @@ bin_values <- function(bin.rast, rast.to.bin, bins) {
 #' @param which.rast Index of raster in bin.rast level 2 on which to do the binning
 #' @param rast.to.bin The raster whose values will be binned
 #' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
-#' @return 
+#' @return List of values extracting from rasters corresponding to different bins 
 #' @details This requires the two inputs to be of the same extent in order for values to correspond
+#' @export
 extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins) {
   bin_val_list <- lapply(1:length(bin.rast), function(x) {
     out <- lapply(rast.to.bin[[x]], function(j) b <- bin_values(bin.rast[[x]][[which.rast]], j, bins))
@@ -109,8 +114,9 @@ extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins) {
 #' @param stat.list Output list created by bin_values function
 #' @param fun.list List of functions, passed as e.g., list(mean, sd), or list(mean)
 #' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
-#' @return 
+#' @return List of specified statistics applied per bin value
 #' @details List of output tables, one table per level, in a list corresponding to different statistics
+#' @export
 bin_stats <- function(stat.list, fun.list, bins) {
   stat_list <- lapply(fun.list, function(FUN) {  # Outer list is function to be applied
     level_list <- lapply(1:length(stat.list), function(x) {  # first inner list on level
