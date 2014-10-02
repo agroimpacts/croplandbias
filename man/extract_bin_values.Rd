@@ -3,7 +3,7 @@
 \alias{extract_bin_values}
 \title{Applies bin_values to list}
 \usage{
-extract_bin_values(bin.rast, which.rast, rast.to.bin, bins)
+extract_bin_values(bin.rast, which.rast, rast.to.bin, bins, filename = "none")
 }
 \arguments{
 \item{bin.rast}{The "master raster", or that which has the values defining the bin ranges}
@@ -13,14 +13,17 @@ extract_bin_values(bin.rast, which.rast, rast.to.bin, bins)
 \item{rast.to.bin}{The raster whose values will be binned}
 
 \item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%}
+
+\item{filename}{A filename without any extension. Defaults to null, but if provided writes results to rda}
 }
 \value{
-List of values extracting from rasters corresponding to different bins
+List of values extracted from rasters corresponding to different bins, in memory or written to disk
 }
 \description{
 Applies bin_values to list
 }
 \details{
-This requires the two inputs to be of the same extent in order for values to correspond
+This requires the two inputs to be of the same extent in order for values to correspond. The list
+will not be returned is a filename is specified, which is a good options for saving disk space.
 }
 

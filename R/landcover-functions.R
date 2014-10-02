@@ -97,16 +97,23 @@ bin_values <- function(bin.rast, rast.to.bin, bins) {
 #' @param which.rast Index of raster in bin.rast level 2 on which to do the binning
 #' @param rast.to.bin The raster whose values will be binned
 #' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
-#' @return List of values extracting from rasters corresponding to different bins 
-#' @details This requires the two inputs to be of the same extent in order for values to correspond
+#' @param filename A filename without any extension. Defaults to null, but if provided writes results to rda
+#' @return List of values extracted from rasters corresponding to different bins, in memory or written to disk 
+#' @details This requires the two inputs to be of the same extent in order for values to correspond. The list
+#' will not be returned is a filename is specified, which is a good options for saving disk space. 
 #' @export
-extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins) {
+extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins, filename = "none") {
   bin_val_list <- lapply(1:length(bin.rast), function(x) {
     out <- lapply(rast.to.bin[[x]], function(j) b <- bin_values(bin.rast[[x]][[which.rast]], j, bins))
     names(out) <- names(rast.to.bin[[x]])
     return(out)
   })
-  return(bin_val_list)
+  if(filename != "none") {
+    save(bin_val_list, file = paste(filename, ".rda", sep = ""))
+    rm(bin_val_list)
+  } else {
+    return(bin_val_list)
+  }
 }  
 
 #' Function to run various statistics over different lists produced by bin_value
