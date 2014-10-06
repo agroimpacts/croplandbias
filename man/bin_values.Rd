@@ -10,7 +10,7 @@ bin_values(bin.rast, rast.to.bin, bins)
 
 \item{rast.to.bin}{The raster whose values will be binned}
 
-\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%}
+\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%}
 }
 \value{
 List of differences between rasters

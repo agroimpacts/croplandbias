@@ -12,7 +12,7 @@ extract_bin_values(bin.rast, which.rast, rast.to.bin, bins, filename = "none")
 
 \item{rast.to.bin}{The raster whose values will be binned}
 
-\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%}
+\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%}
 
 \item{filename}{A filename without any extension. Defaults to null, but if provided writes results to rda}
 }

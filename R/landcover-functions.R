@@ -71,9 +71,9 @@ diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) 
 #' 
 #' @param bin.rast The "master raster", or that which has the values defining the bin ranges
 #' @param rast.to.bin The raster whose values will be binned
-#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%
 #' @return List of differences between rasters
-#' @details This requires the two inputs to be of the same extent in order for values to correspond
+#' @details This requires the two inputs to be of the same extent in order for values to correspond 
 #' @export
 bin_values <- function(bin.rast, rast.to.bin, bins) {
   binmat <- rbind(bins[-length(bins)], bins[-1])  # create range matrix
@@ -96,10 +96,10 @@ bin_values <- function(bin.rast, rast.to.bin, bins) {
 #' @param bin.rast The "master raster", or that which has the values defining the bin ranges
 #' @param which.rast Index of raster in bin.rast level 2 on which to do the binning
 #' @param rast.to.bin The raster whose values will be binned
-#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
-#' @param filename A filename without any extension. Defaults to null, but if provided writes results to rda
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%
+#' @param filename A filename without any extension. Defaults to null, but if provided writes results to rda  
 #' @return List of values extracted from rasters corresponding to different bins, in memory or written to disk 
-#' @details This requires the two inputs to be of the same extent in order for values to correspond. The list
+#' @details This requires the two inputs to be of the same extent in order for values to correspond. The list 
 #' will not be returned is a filename is specified, which is a good options for saving disk space. 
 #' @export
 extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins, filename = "none") {
@@ -114,15 +114,15 @@ extract_bin_values <- function(bin.rast, which.rast, rast.to.bin, bins, filename
   } else {
     return(bin_val_list)
   }
-}  
+} 
 
 #' Function to run various statistics over different lists produced by bin_value
-#' 
+#'  
 #' @param stat.list Output list created by bin_values function
-#' @param fun.list List of functions, passed as e.g., list(mean, sd), or list(mean)
-#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%
+#' @param fun.list List of functions, passed as e.g. list(mean, sd), or list(mean)
+#' @param bins A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%
 #' @return List of specified statistics applied per bin value
-#' @details List of output tables, one table per level, in a list corresponding to different statistics
+#' @details List of output tables, one table per level, in a list corresponding to different statistics  
 #' @export
 bin_stats <- function(stat.list, fun.list, bins) {
   stat_list <- lapply(fun.list, function(FUN) {  # Outer list is function to be applied
@@ -141,6 +141,66 @@ bin_stats <- function(stat.list, fun.list, bins) {
   })
   return(stat_list)
 }
+
+#' Function to reshape list output created by extract_bin_values
+#' 
+#' @param diff.list Output list created by extract_bin_values function
+#' @param sens.ind Index vector, named or numbered, for sensors (lowest level of list)
+#' @param level.vec A vector defining the number of aggregation levels (second level of list)
+#' @param bin.len The total number of bins used in extract_bin_values
+#' @return A reshaped list, by sensor, factor, then bin
+#' @details This function assumes that the binned differences for each sensor were calculated from multiple
+#' difference permutations, e.g. there should be three elements of the binned difference list, one created by 
+#' the 2011 GTI dataset, one by the mean of the 2007 and 2011 datasets, and one from the 2007 set.   
+#' @export
+reshape_diff_list <- function(diff.list, sens.ind, level.vec, bin.len) {
+  resh <- lapply(sens.ind, function(v) {
+    print(v)
+    agg <- lapply(1:length(level.vec), function(x) {
+      bin_pool <- lapply(1:bin.len, function(z) {  # apply across bins
+        dat <- do.call(rbind, lapply(1:3, function(y) diff.list[[y]][[x]][[v]]))  # bind sens by scale by gti
+        v  <- dat[dat[, "bin"] == z, "val"]  # pool bias values
+      })
+      names(bin_pool) <- paste("b", 1:bin.len, sep = "")
+      return(bin_pool)
+    })
+    names(agg) <- level.vec
+    return(agg)
+  })
+  names(resh) <- sens.ind
+  return(resh)
+}
+
+#' Function to reshape list output created by reshape_diff_list, in this case to do one further pooling
+#' 
+#' @param resh.diff.list Output list created by reshape_diff_list
+#' @param sens.pat Index vector of character patterns for the difference bins that need to be further pooled
+#' @param level.vec A vector defining the number of aggregation levels (second level of list)
+#' @param bin.len The total number of bins used in extract_bin_values
+#' @return A reshaped list, by sensor, factor, then bin
+#' @details This function was created to do one further level of pooling of the binned differences resulting 
+#' from the MODIS and GlobCover high, medium, and low variants. It assumes that each level of the list is 
+#' named.  
+#' @export
+reshape_reshape_list <- function(resh.diff.list, sens.pat, level.vec, bin.len) {
+  resh <- lapply(sens.pat, function(pat) {
+    print(pat)
+    resh_comb <- lapply(1:length(level.vec), function(x) {
+      bin_pool <- lapply(1:bin.len, function(y) {
+        unlist(lapply(grep(pat, names(resh.diff.list)), function(z) resh.diff.list[[z]][[x]][[y]]))
+      })
+      names(bin_pool) <- paste("b", 1:bin.len, sep = "")
+      return(bin_pool)
+    })
+    names(resh_comb) <- level.vec
+    return(resh_comb)
+  })
+  names(resh) <- sens.pat
+  return(resh)
+}
+
+
+
 
 
 

@@ -8,9 +8,9 @@ bin_stats(stat.list, fun.list, bins)
 \arguments{
 \item{stat.list}{Output list created by bin_values function}
 
-\item{fun.list}{List of functions, passed as e.g., list(mean, sd), or list(mean)}
+\item{fun.list}{List of functions, passed as e.g. list(mean, sd), or list(mean)}
 
-\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10%}
+\item{bins}{A vector defining the bin ranges, e.g. seq(0, 100, 10) for bins of 10\%}
 }
 \value{
 List of specified statistics applied per bin value
