@@ -1,0 +1,65 @@
+---
+title: "Plotting cropland biases"
+author: "Lyndon Estes"
+date: "06 October 2014"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+---
+
+## Plotting bias figures
+### Biases in space
+Load in necessary datasets
+
+```{r, eval = FALSE}
+library(raster)
+library(lmisc)
+
+# Paths
+p_root <- proj_root("SAcropland")
+p_fig <- full_path(p_root, "SAcropland/figures/")
+p_data <- full_path(p_root, "SAcropland/data/")
+
+# Load in datasets
+load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
+load(full_path(p_data, "diff_grid_act.rda"))  # actual diffence grids
+```
+
+Plot maps of biases at difference resolutions, for publication output (and display here). 
+```{r, eval = FALSE}
+# Plotting colors
+cols <- colorRampPalette(c("red", "grey80", "blue4"))
+brks <- c(-100.1, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100.1)
+n_cols <- length(brks) - 1
+legtext <- "% Difference"
+cx <- 1.5
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
+snms <- c("sa30", "globmu", "modmu", "glcsh")
+agglev <- c("f1", "f20", "f50")
+agglev2 <- c("1 km", "20 km", "50 km")
+pdf(full_path(p_fig, "bias_map.pdf"), height = 12, width = 8)
+par(mfrow = c(4, 3), mar = c(0, 0, 0, 0), oma = c(7, 5, 2, 0))
+for(i in 1:length(snms)) {
+  for(j in 1:length(agglev)) {
+    plot(sa.shp, lty = 0)
+    plot(diff_list_act$d2011_ns[[agglev[j]]][[snms[i]]], add = TRUE, col = cols(n_cols), breaks = brks, 
+         legend = FALSE)
+  if(j == 1) mtext(mcap[i], side = 2, line = 1, cex = cx)
+  if(i == 1) mtext(agglev2[j], side = 3, line = 0, cex = cx)
+  }
+}
+flex_legend(ncuts = length(brks) - 1, legend.text = legtext, legend.vals = round(brks), 
+            longdims = c(0.2, 0.8), shortdims = c(0.04, 0.01), colvec = cols(length(brks) - 1), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", legend.pos = c(4, 5), 
+            leg.adj = list(c(0.25, 0), c(0.5, -0.5)), cex.val = cx, textcol = lcol, bordercol = lcol)
+dev.off()
+
+```
+
+
+
+
+

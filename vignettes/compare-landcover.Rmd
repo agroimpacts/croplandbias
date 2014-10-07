@@ -46,8 +46,8 @@ names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu", "m
 load(full_path(p_data, "MZshapes.Rdata"))  
 paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_nh_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
 gti_nohort <- lapply(paths, raster)
-paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_h_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
-gti_hort <- lapply(paths, raster)
+# paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_h_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
+# gti_hort <- lapply(paths, raster)
 ```
 [[back to top]][Overview]
 
@@ -69,7 +69,7 @@ diff_list_act <- lapply(1:6, function(x) {
   print(paste("processing", x))
   diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_nh_agg, whichdiff = x)
 })
-names(diff_list_act) <- c("d2007", "d2007_ns", "d2011", "d2011_ns", "dmu", "dmu_ns")  
+names(diff_list_act) <- c("d2007", "d2011", "d2007_ns", "d2011_ns", "dmu", "dmu_ns")  
 
 # Absolute differences
 diff_list_abs <- lapply(1:6, function(x) {
@@ -77,12 +77,13 @@ diff_list_abs <- lapply(1:6, function(x) {
   diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_nh_agg, whichdiff = x, 
                             abs = TRUE)
 })
-names(diff_list_abs) <- c("d2007", "d2007_ns", "d2011", "d2011_ns", "dmu", "dmu_ns")  
+names(diff_list_abs) <- c("d2007", "d2011", "d2007_ns", "d2011_ns", "dmu", "dmu_ns")  
   
 # Between 2007 and 2011 GTI
 diff_list_gti <- diff_rast_list(1:length(gti_nh_agg), gti_nh_agg, gti_nh_agg, 4)
 
-#save(diff_list_act, diff_list_abs, diff_list_gti, file = full_path(p_data, "difference_grid_lists.rda"))
+save(diff_list_act, file = full_path(p_data, "diff_grid_act.rda"))
+save(diff_list_abs, file = full_path(p_data, "diff_grid_abs.rda"))
 ```
 [[back to top]][Overview]
 
