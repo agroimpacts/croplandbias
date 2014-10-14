@@ -25,9 +25,10 @@ p_data <- full_path(p_root, "SAcropland/data/")
 # Load in datasets
 load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
 load(full_path(p_data, "diff_grid_act.rda"))  # actual diffence grids
+load(full_path(p_data, "bias_stats.rda"))  # bias statistics
 ```
 
-Plot maps of biases at difference resolutions, for publication output (and display here). 
+Plot maps of biases at different resolutions, for publication output (and display here). 
 ```{r, eval = FALSE}
 # Plotting colors
 cols <- colorRampPalette(c("red", "grey80", "blue4"))
@@ -58,6 +59,107 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext, legend.vals = round
 dev.off()
 
 ```
+
+The map below was created by the code above, showing biases at 1 km, 20 km, and 50 km from South Africa's landcover product, the mean estimates from GlobCover and MODIS, and GLC-SHARE.  
+
+<p align="center"><img src="../figures/bias_map.pdf" width="400px"></p> 
+
+[[back to top]][Plotting bias figures]
+
+### Bias in relation to field density
+
+```{r, eval = FALSE}
+cols <- c("red", "orange", "green4", "blue")
+lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
+
+pdf(full_path(p_fig, "cee_fig.pdf"), width = 8, height = 3)
+#par(mfcol = c(6, 4), mar = c(0.5, 1, 0, 0), oma = c(3, 3, 0, 0))
+par(mfcol = c(1, 3), mar = c(0.5, 2, 0, 0), oma = c(3, 3, 0, 0), bg = "white")
+#for(i in 1:4) {
+for(i in 4) {
+  d <- act_stats[[i]]
+  n <- (nrow(d[[1]]) - 1)
+  bcol <- rgb(0, 0, 1, alpha = 0.1)
+  #for(j in 1:6) {
+  for(j in c(1, 4, 6)) {
+    #plot(c(-2, 19 * 6 + 2), c(0, 0), ylim = c(-100, 100), xlim = c(0, 19 * 6), type = "l", lwd = 2)
+    plot(c(-2, 21), c(0, 0), ylim = c(-100, 100), xlim = c(1, 19), type = "l", lwd = 2, axes = FALSE)
+    if(i == 3) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
+    if(i != 3) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
+    axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
+    df <- d[[j]]
+    #x <- seq(j - 1, (19 - 1) * 6 + j, 6) 
+    for(k in 1:n) {
+      if(df[k, 1] >= 10) {
+        boxplot_v(k, df[k, 2:7], 400, 10, cols[i], bcol, "black", n, 2)
+      } else if((df[k, 1] > 0) & (df[k, 1] < 10)) {
+        points(k, df[k, 7], pch = 20, col = cols[i], cex = 2)
+      } 
+    }
+    lines(1:19, df[-20, 7], pch = 20, col = "red", lwd = 2)
+    print(mean(df[, 7], na.rm = TRUE))
+  }
+}
+dev.off()
+
+
+# p <- rect_polys(1:(nrow(d) - 1), y1 = d[-nrow(d), 6], y2 = d[-nrow(d), 2])
+# cdens <- d[-nrow(d), 1] / log(d[-nrow(d), 1])
+# cols <- rgb(1, 0, 0, alpha = log(cdens))
+# lapply(1:length(p), function(x) polygon(p[[x]][, 1], p[[x]][, 2], col = cols[x]))
+
+
+x <- c(1:nrow(act_stats$sa30$f1), nrow(act_stats$sa30$f1):1, 1) 
+y <- c(act_stats$sa30$f1[, 2], rev(act_stats$sa30$f1[, 6]), act_stats$sa30$f1[1, 2])
+polygon(x[!is.na(y)], y[!is.na(y)])
+lines(act_stats$sa30$f1[, 7])
+
+plot(act_stats$mod$f1[, 6], type = "l", ylim = c(-100, 100), lwd = 2, col = "blue")
+for(i in 1:5) lines(act_stats$mod$f1[, i])
+lines(act_stats$sa30$f1[, 3])
+
+v <- act_diff_2011_stats$mu
+cols <- c("red", rep("green4", 3), rep("blue4", 3), "black")
+lty <- c(1, 2, 1, 3, 2, 1, 3, 1)
+pts <- c(16, 3, 16, 4, 3, 16, 4, 16)
+x <- 1:nrow(v$L1)
+f <- c(1, 5, 10, 20, 50, 100, 200, 300, 600)
+lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
+mlab <- paste(c(1, 5, 10, 20, 50, 100, 200, 300, 600), "km")
+leg <- c("SA 30", "GCov min", "GCov mean", "GCov max", "Mod min", "Mod mean", "Mod max", "GLC-share")
+
+pdf(full_path(p_fig, "Figure3.pdf"), height = 8, width = 8)
+par(mfrow = c(3, 3), oma = c(5, 3, 0, 0), mar = c(1, 1, 0, 0))
+ylim <- c(-20, 80)
+for(i in 1:length(v)) {
+  plot(x[c(1, length(x))], ylim, pch = "", axes = FALSE, xlab = "% cropcover", ylab = "")
+  lines(c(-1, 21), c(0, 0), lty = 4)
+  mtext(mlab[i], side = 3, line = -2, adj = 0.05)
+  for(j in 1:ncol(v[[i]])) {
+    pv <- which(!is.na(v[[i]][, j]))
+    #lines(pv, v[[i]][pv, j], col = cols[j], lty = lty[j])
+    points(pv, v[[i]][pv, j], col = cols[j], pch = pts[j], cex = 1)
+  }
+  if(i %in% 7:9) {
+    mtext("% cropcover", side = 1, line = 4)
+    axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
+  } else {
+    axis(1, at = 1:20, labels = FALSE, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
+  }
+  if(i %in% c(1, 4, 7)) {
+    mtext("% bias", side = 2, line = 2)
+    axis(2, at = seq(ylim[1], ylim[2], 10), labels = seq(ylim[1], ylim[2], 10), las = 2, mgp = c(1, 0.7, 0), 
+         tcl = -0.3)
+  } else {
+    axis(2, at = seq(ylim[1], ylim[2], 10), labels = FALSE, las = 2, mgp = c(1, 0.7, 0), 
+         tcl = -0.3)
+  } 
+}
+legend("right", leg, col = cols, pch = pts, bty = "n")
+dev.off()        
+
+```
+
 
 
 

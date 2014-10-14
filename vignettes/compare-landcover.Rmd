@@ -149,8 +149,8 @@ bin_abs <- lapply(nms, function(x) {
 })
 names(bin_abs) <- paste("bs", nmrt, sep = "_")
 
-resh <- reshape_diff_list(bin_abs, names(lclist), lev_vec, length(binv) - 2)  # Reshape
-resh_modglob <- reshape_reshape_list(resh, c("mod", "glob"), lev_vec, length(binv) - 2)  # pool modis and glob
+resh <- reshape_diff_list(bin_abs, names(lclist), lev_vec, length(binv) - 1)  # Reshape
+resh_modglob <- reshape_reshape_list(resh, c("mod", "glob"), lev_vec, length(binv) - 1)  # pool modis and glob
 resh_out_abs <- c(resh[c("sa30", "glcsh")], resh_modglob)  # Recombine final reshapes into output list
 
 save(resh_out_act, file = full_path(p_data, "bin_act_reshape.rda"))
@@ -165,8 +165,12 @@ A note: I did checks here to make sure the reshaping was correct, namely by manu
 Now to calculate final statistics per landcover "density" bin (mean, median, 5th, 25th, 75th and 95th percentiles, etc) for each landcover set at each level of aggregation. I am relying on the box_stats function from my lmisc package to generate the necessary statistics for this.
 
 ```{r, eval = FALSE}
-act_stats <- lapply(resh_out_act, function(x) lapply(x, function(y) t(sapply(y, box_stats))))
-abs_stats <- lapply(resh_out_abs, function(x) lapply(x, function(y) t(sapply(y, box_stats))))
+act_stats <- lapply(resh_out_act, function(x) lapply(x, function(y) {
+  t(sapply(y, function(z) c("n" = length(z), box_stats(z))))
+}))
+abs_stats <- lapply(resh_out_abs, function(x) lapply(x, function(y) {
+  t(sapply(y, function(z) c("n" = length(z), box_stats(z))))
+}))
 save(gti_bias, act_stats, abs_stats, file = full_path(p_data, "bias_stats.rda"))
 
 ```
