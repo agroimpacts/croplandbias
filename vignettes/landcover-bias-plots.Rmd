@@ -73,27 +73,27 @@ cols <- c("red", "orange", "green4", "blue")
 lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
 
 pdf(full_path(p_fig, "cee_fig.pdf"), width = 8, height = 3)
-#par(mfcol = c(6, 4), mar = c(0.5, 1, 0, 0), oma = c(3, 3, 0, 0))
-par(mfcol = c(1, 3), mar = c(0.5, 2, 0, 0), oma = c(3, 3, 0, 0), bg = "white")
-#for(i in 1:4) {
-for(i in 4) {
+par(mfcol = c(6, 4), mar = c(0.5, 1, 0, 0), oma = c(3, 3, 0, 0))
+#par(mfcol = c(1, 3), mar = c(0.5, 2, 0, 0), oma = c(3, 3, 0, 0), bg = "white")
+for(i in 1:4) {
+# for(i in 4) {
   d <- act_stats[[i]]
   n <- (nrow(d[[1]]) - 1)
   bcol <- rgb(0, 0, 1, alpha = 0.1)
-  #for(j in 1:6) {
-  for(j in c(1, 4, 6)) {
+  for(j in 1:6) {
+  #for(j in c(1, 4, 6)) {
     #plot(c(-2, 19 * 6 + 2), c(0, 0), ylim = c(-100, 100), xlim = c(0, 19 * 6), type = "l", lwd = 2)
     plot(c(-2, 21), c(0, 0), ylim = c(-100, 100), xlim = c(1, 19), type = "l", lwd = 2, axes = FALSE)
-    if(i == 3) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
-    if(i != 3) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
-    axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
+    if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
+    if(i != 1) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
+    if(j == 6) axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
     df <- d[[j]]
     #x <- seq(j - 1, (19 - 1) * 6 + j, 6) 
     for(k in 1:n) {
       if(df[k, 1] >= 10) {
-        boxplot_v(k, df[k, 2:7], 400, 10, cols[i], bcol, "black", n, 2)
+        boxplot_v(k, df[k, 2:7], n = n, 100, 10, bfill = bcol, pcex = 0.5, lwd = c(1, 2, 2))
       } else if((df[k, 1] > 0) & (df[k, 1] < 10)) {
-        points(k, df[k, 7], pch = 20, col = cols[i], cex = 2)
+        #points(k, df[k, 7], pch = 20, col = cols[i], cex = 2)
       } 
     }
     lines(1:19, df[-20, 7], pch = 20, col = "red", lwd = 2)
