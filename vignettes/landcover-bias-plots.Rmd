@@ -105,6 +105,7 @@ for(i in 1:4) {
 dev.off()
 
 
+##
 # p <- rect_polys(1:(nrow(d) - 1), y1 = d[-nrow(d), 6], y2 = d[-nrow(d), 2])
 # cdens <- d[-nrow(d), 1] / log(d[-nrow(d), 1])
 # cols <- rgb(1, 0, 0, alpha = log(cdens))
