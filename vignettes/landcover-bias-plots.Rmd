@@ -70,33 +70,35 @@ The map below was created by the code above, showing biases at 1 km, 20 km, and 
 
 ```{r, eval = FALSE}
 cols <- c("red", "orange", "green4", "blue")
-lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
+# lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
+bcol <- c("grey50", "grey50", "grey50", "grey50")
+# plot(1:10, pch = 20, cex = 3, col = bcol[1])
+fcol <- "grey"
+lvec <- seq(5, 100, 5)
+pp <- list("x" = c(-2, 21), "y" = c(0, 0), 
+           "x21" = c(-2, 5), "x22" = c(16, 21),
+           "y2" = c(-100, -75, -50, -25, -10, 10, 25, 50, 75, 100), 
+           "y2lwd" = 0.5, #c(1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 1), 
+           "yl" = c(-100, 100), "xl" = c(1, 19))  # plot parameters
 
-pdf(full_path(p_fig, "cee_fig.pdf"), width = 8, height = 3)
+pdf(full_path(p_fig, "bias_plots.pdf"), width = 8, height = 9)
 par(mfcol = c(6, 4), mar = c(0.5, 1, 0, 0), oma = c(3, 3, 0, 0))
-#par(mfcol = c(1, 3), mar = c(0.5, 2, 0, 0), oma = c(3, 3, 0, 0), bg = "white")
 for(i in 1:4) {
-# for(i in 4) {
   d <- act_stats[[i]]
   n <- (nrow(d[[1]]) - 1)
-  bcol <- rgb(0, 0, 1, alpha = 0.1)
   for(j in 1:6) {
-  #for(j in c(1, 4, 6)) {
-    #plot(c(-2, 19 * 6 + 2), c(0, 0), ylim = c(-100, 100), xlim = c(0, 19 * 6), type = "l", lwd = 2)
-    plot(c(-2, 21), c(0, 0), ylim = c(-100, 100), xlim = c(1, 19), type = "l", lwd = 2, axes = FALSE)
-    if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
-    if(i != 1) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
+    plot(pp$x, pp$y, ylim = pp$yl, xlim = pp$xl, type = "l", lwd = 2, axes = FALSE, xlab = "", ylab = "")
+    for(z in 1:length(pp$y2)) lines(rbind(pp$x21, pp$x22), rbind(rep(pp$y2[z], 2)), lwd = pp$y2lwd[z])
+    #if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
+    #if(i != 1) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
     if(j == 6) axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
     df <- d[[j]]
-    #x <- seq(j - 1, (19 - 1) * 6 + j, 6) 
     for(k in 1:n) {
       if(df[k, 1] >= 10) {
-        boxplot_v(k, df[k, 2:7], n = n, 100, 10, bfill = bcol, pcex = 0.5, lwd = c(1, 2, 2))
-      } else if((df[k, 1] > 0) & (df[k, 1] < 10)) {
-        #points(k, df[k, 7], pch = 20, col = cols[i], cex = 2)
-      } 
+        boxplot_v(k, df[k, 2:7], n, 150, 10, bcol, fcol, pcex = 0.5, lwd = c(1, 0.5, 2))
+      }
     }
-    lines(1:19, df[-20, 7], pch = 20, col = "red", lwd = 2)
+    lines(1:19, df[-20, 7], pch = 20, col = cols[i], lwd = 1.5)
     print(mean(df[, 7], na.rm = TRUE))
   }
 }
@@ -113,50 +115,6 @@ x <- c(1:nrow(act_stats$sa30$f1), nrow(act_stats$sa30$f1):1, 1)
 y <- c(act_stats$sa30$f1[, 2], rev(act_stats$sa30$f1[, 6]), act_stats$sa30$f1[1, 2])
 polygon(x[!is.na(y)], y[!is.na(y)])
 lines(act_stats$sa30$f1[, 7])
-
-plot(act_stats$mod$f1[, 6], type = "l", ylim = c(-100, 100), lwd = 2, col = "blue")
-for(i in 1:5) lines(act_stats$mod$f1[, i])
-lines(act_stats$sa30$f1[, 3])
-
-v <- act_diff_2011_stats$mu
-cols <- c("red", rep("green4", 3), rep("blue4", 3), "black")
-lty <- c(1, 2, 1, 3, 2, 1, 3, 1)
-pts <- c(16, 3, 16, 4, 3, 16, 4, 16)
-x <- 1:nrow(v$L1)
-f <- c(1, 5, 10, 20, 50, 100, 200, 300, 600)
-lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
-mlab <- paste(c(1, 5, 10, 20, 50, 100, 200, 300, 600), "km")
-leg <- c("SA 30", "GCov min", "GCov mean", "GCov max", "Mod min", "Mod mean", "Mod max", "GLC-share")
-
-pdf(full_path(p_fig, "Figure3.pdf"), height = 8, width = 8)
-par(mfrow = c(3, 3), oma = c(5, 3, 0, 0), mar = c(1, 1, 0, 0))
-ylim <- c(-20, 80)
-for(i in 1:length(v)) {
-  plot(x[c(1, length(x))], ylim, pch = "", axes = FALSE, xlab = "% cropcover", ylab = "")
-  lines(c(-1, 21), c(0, 0), lty = 4)
-  mtext(mlab[i], side = 3, line = -2, adj = 0.05)
-  for(j in 1:ncol(v[[i]])) {
-    pv <- which(!is.na(v[[i]][, j]))
-    #lines(pv, v[[i]][pv, j], col = cols[j], lty = lty[j])
-    points(pv, v[[i]][pv, j], col = cols[j], pch = pts[j], cex = 1)
-  }
-  if(i %in% 7:9) {
-    mtext("% cropcover", side = 1, line = 4)
-    axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
-  } else {
-    axis(1, at = 1:20, labels = FALSE, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
-  }
-  if(i %in% c(1, 4, 7)) {
-    mtext("% bias", side = 2, line = 2)
-    axis(2, at = seq(ylim[1], ylim[2], 10), labels = seq(ylim[1], ylim[2], 10), las = 2, mgp = c(1, 0.7, 0), 
-         tcl = -0.3)
-  } else {
-    axis(2, at = seq(ylim[1], ylim[2], 10), labels = FALSE, las = 2, mgp = c(1, 0.7, 0), 
-         tcl = -0.3)
-  } 
-}
-legend("right", leg, col = cols, pch = pts, bty = "n")
-dev.off()        
 
 ```
 
