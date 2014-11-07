@@ -11,6 +11,7 @@ Fetching and pre-processing of global landcover datasets to be analyzed relative
 ### Analyses
 #### Set-up
 ```{r, eval = FALSE}
+library(SAcropland)
 library(gdalUtils)
 library(RCurl)
 library(RPostgreSQL)
