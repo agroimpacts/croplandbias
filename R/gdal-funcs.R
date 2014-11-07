@@ -16,7 +16,6 @@ gdal_calc <- function(cstr, x, filename, type = "UInt16", gdformat = "GTiff", ov
   calc_str <- paste("gdal_calc.py ", rnms, " --outfile=", filename, " --type=", type, " --format=", 
                     gdformat, paste(ifelse(overwrite == TRUE, " --overwrite ", " ")), "--calc='", cstr, "'", 
                     sep = "")
-  #print(calc_str)
   print(paste("Running calculation", cstr))
   system(calc_str)
   print(paste("finished in", Sys.time() - dang))
