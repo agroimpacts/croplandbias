@@ -23,11 +23,10 @@ library(lmisc)
 
 Paths
 ```{r, eval = FALSE}
-# rasterOptions(tmpdir = "/var/scratch/lestes")
-setwd("/u/lestes/analyses/SAcropland/")
+#setwd("/u/lestes/analyses/SAcropland/")
 p_root <- proj_root("SAcropland")
-p_fig <- full_path(p_root, "SAcropland/figures/")
-p_data <- full_path(p_root, "SAcropland/data/")
+p_fig <- full_path(p_root, "SAcropland/external/figures/")
+p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 ```
 
 Background data, projections, database connections, and SA grid
@@ -184,13 +183,12 @@ if(length(dir(p_data, pattern = "salc.*.masked.tif") != 2)) {
   
   setwd(path)
   gdal_translate(src_dataset = "landcover", dst_dataset = "sa_lc_2009.tif", of = "GTiff", ot = "BYTE")
-  #salc <- raster(full_path(path, "salandcover2009.tif"))
   #system(paste("rm -r", full_path(path, "landcover")))
   #file.remove("../landcover_2009.zip")
     
   # system call to gdal_calc.py to extract landcover class 2, cultivation, and class 6, plantations
   #calc_str <- c("gdal_calc.py -A ", " --overwrite --calc='A==")
-  salconm <- c("salc_ag.tif", "salc_af.tif")
+  lcnm <- c("sa_ag.tif", "salc_af.tif")
   av <- c(2, 6)
   #setwd("/var/scratch/lestes/")
 
@@ -199,51 +197,40 @@ if(length(dir(p_data, pattern = "salc.*.masked.tif") != 2)) {
   #b <- sa_r
   #x <- list("A" = a, "B" = b)
   #x <- list("A" = a)
-  
-  gdal_calc <- function(cstr, x, filename, type = "UInt16", gdformat = "GTiff", overwrite = TRUE) {
-    dang <- Sys.time()
-    rnm <- function(j) if(is.character(j)) j else if(class(j)[1] == "RasterLayer") j@file@name
-    rnms <- paste("-", names(x), " ",  sapply(x, rnm), sep = "", collapse = " ")
-    calc_str <- paste("gdal_calc.py ", rnms, " --outfile=", filename, " --type=", type, " --format=", 
-                      gdformat, paste(ifelse(overwrite == TRUE, " --overwrite ", " ")), "--calc='", cstr, "'", 
-                      sep = "")
-    #print(calc_str)
-    print(paste("Running calculation", cstr))
-    system(calc_str)
-    print(paste("finished in", Sys.time() - dang))
-  } 
-  
+  j <- 1
   gdal_calc(cstr = "A==2", x = list("A" = a), type = "Byte", filename = "sa_ag.tif")
+  nm <- paste(gsub("\\.tif", "", lcnm[j]), "_1km.tif", sep = "")
+  ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) slot(extent(sa_r), x))
+  gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, r = "average", ot = "Float32", 
+           te = ext, srcnodata = 255, dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
+           overwrite = TRUE)
+  #gdal_calc(cstr = "A*B", x = list("A" = nm, "B" = sa_mask), filename = "sa_ag_masked.tif")
+  
+  r <- raster("sa_ag_1km.tif")
+  plot(r)
+       
 #   getwd()
 #   system(
 #     paste(calc_str[1], "sa_lc_2009.vrt", " --outfile=test.vrt", " --type=UInt16", " --format=GTiff ", 
 #           calc_str[2], av[1], "'", sep = "")
 #     )
-  
-  
-  salc_l <- lapply(1:2, function(x) {
-    gdal_calc(cstr = paste("A==", av[x], sep = ""), x = list("A" = a), type = "Byte", filename = salconm[x])
-    #system(paste(calc_str[1], salc@file@name, " --outfile=", salconm[x], calc_str[2], av[x], "'", sep = ""))
-    r <- raster(full_path(path, salconm[x]))
-    #nms <- c(r@file@name, paste(gsub("\\.tif", "", salconm[x]), "_1km.tif", sep = ""))
-    nms <- c(r@file@name, paste(gsub("\\.tif", "", salconm[x]), "_1km.tif", sep = ""))
-    print(nms)
-    gdalwarp(srcfile = nms[1], t_srs = projection(sa_r), dstfile = nms[2], r = "average", ot = "Float32",
-             srcnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE, overwrite = TRUE)
-    r2 <- raster(full_path(path, nms[2]))
-    r_r <- resample(r2, sa_r, method = "bilinear")
-    nm2 <- paste(gsub("_1km.tif", "", nms[2]), "_masked.tif", sep = "")
-    print(nm2)
-    r_m <- mask(r_r, sa_r, filename = full_path(p_data, nm2), overwrite = TRUE) 
-    file.remove(full_path(path, salconm[x]))
-    file.remove(full_path(path, nm2))
+  lcnm <- c("sa_ag.tif", "salc_af.tif")
+  av <- c(2, 6)
+  a <- "sa_lc_2009.tif"
+  dang <- Sys.time() 
+  salc_l <- lapply(1:2, function(j) {
+    print(paste("extracting cover for", lcnm[j]))
+    gdal_calc(cstr = paste("A==", av[j], sep = ""), x = list("A" = a), type = "Byte", filename = lcnm[j])
+    nm <- full_path(p_data, paste(gsub("\\.tif", "", lcnm[j]), "_masked.tif", sep = ""))
+    ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) slot(extent(sa_r), x))
+    print(paste("warping and masking", gsub(p_data, "", nm)))
+    gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, r = "average", ot = "Float32", 
+             te = ext, srcnodata = 255, dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
+             overwrite = TRUE)
+    file.remove(lcnm[j])
+    r <- raster(nm)
   })
   Sys.time() - dang
-  file.remove(full_path(path, "salandcover2009.tif"))
-  r <- raster(full_path(path, "salc_af_1km.tif"))
-  r - sa_r
-  system(paste(calc_str[1], salc@file@name, " --outfile=", "test_af.vrt", calc_str[2], av[2], "'", sep = ""))
-  system(paste(calc_str[1], salc@file@name, " --outfile=", "test_af.vrt", calc_str[2], av[2], "'", sep = ""))
 
   # Aggregate SA landcover to 1 km resolution also, relying on gdal
   setwd(p_data)
