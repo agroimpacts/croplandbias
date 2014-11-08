@@ -4,8 +4,8 @@ author: "Lyndon Estes"
 date: "29 September 2014"
 output:
   html_document:
-    toc: yes
     theme: spacelab
+    toc: yes
 ---
 
 ## Introduction
@@ -34,24 +34,8 @@ The next step was running
 source("R_ext/grid-fields-intersect-analyze.R")  # this was run on mapper.princeton.edu
 ```
 
-To calculate the area for different cropcover classes in each 1 km$^2$ pixel.  This created two core gridded
+To calculate the area for different cropcover classes in each 1 km^2^ pixel.  This created two core gridded
 datasets, cover2007.tif and cover2011.tif. 
-
-### Processing global landcover products
-A few global landcover datasets were then fetched.  The MODIS 2011 landcover product for South Africa was 
-downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and then South Africa's 2009 landcover product. 
-These were converted to 1 km$^2$ percentage cropland estimates after making several versions of MODIS and 
-GlobCover products to account for mixed cropland classes.  A further processing was applied to the two GTI
-derived cover images.  
-
-```{r, eval = FALSE}
-source("R_ext/fetch-land-cover.R")  # this was run on mapper.princeton.edu
-```
-
-
-
-
-
 
 
 

@@ -67,7 +67,8 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h3>Analyses</h3>
 <div id="set-up" class="section level4">
 <h4>Set-up</h4>
-<pre class="r"><code>library(gdalUtils)
+<pre class="r"><code>library(SAcropland)
+library(gdalUtils)
 library(RCurl)
 library(RPostgreSQL)
 library(rgdal)
@@ -75,11 +76,10 @@ library(rgeos)
 library(raster)
 library(lmisc)</code></pre>
 <p>Paths</p>
-<pre class="r"><code># rasterOptions(tmpdir = &quot;/var/scratch/lestes&quot;)
-setwd(&quot;/u/lestes/analyses/SAcropland/&quot;)
+<pre class="r"><code>#setwd(&quot;/u/lestes/analyses/SAcropland/&quot;)
 p_root &lt;- proj_root(&quot;SAcropland&quot;)
-p_fig &lt;- full_path(p_root, &quot;SAcropland/figures/&quot;)
-p_data &lt;- full_path(p_root, &quot;SAcropland/data/&quot;)</code></pre>
+p_fig &lt;- full_path(p_root, &quot;SAcropland/external/figures/&quot;)
+p_data &lt;- full_path(p_root, &quot;SAcropland/external/ext_data/&quot;)</code></pre>
 <p>Background data, projections, database connections, and SA grid</p>
 <pre class="r"><code># Get SA shape
 if(!file.exists(full_path(p_data, &quot;MZshapes.Rdata&quot;))) {
@@ -217,86 +217,40 @@ if(!file.exists(full_path(moddir, &quot;modis_type_1_alb.tif&quot;))) {
 <p>And then South Africa’s landcover database (30 m)</p>
 <pre class="r"><code>path &lt;- &quot;/u/lestes/spatial_data/sa_lc_2009/&quot;
 setwd(&quot;/u/lestes/spatial_data/&quot;)
-if(length(dir(p_data, pattern = &quot;salc.*.masked.tif&quot;) != 2)) {
-# if(!file.exists(full_path(p_data, &quot;salc_ag_masked.tif&quot;))) {
+lcnm &lt;- c(&quot;sa_ag.tif&quot;, &quot;sa_af.tif&quot;)
+if(length(dir(p_data, pattern = &quot;sa_.*._masked.tif&quot;)) != 2) {
   url &lt;- &quot;http://planet.uwc.ac.za/BGISdownloads/landcover_2009.zip&quot;
   download.file(url, method=&quot;auto&quot;, destfile = &quot;sa_landcover_2009.zip&quot;)
   unzip(&quot;landcover_2009.zip&quot;, exdir = &quot;sa_lc_2009&quot;)
   
   setwd(path)
   gdal_translate(src_dataset = &quot;landcover&quot;, dst_dataset = &quot;sa_lc_2009.tif&quot;, of = &quot;GTiff&quot;, ot = &quot;BYTE&quot;)
-  #salc &lt;- raster(full_path(path, &quot;salandcover2009.tif&quot;))
   #system(paste(&quot;rm -r&quot;, full_path(path, &quot;landcover&quot;)))
   #file.remove(&quot;../landcover_2009.zip&quot;)
     
-  # system call to gdal_calc.py to extract landcover class 2, cultivation, and class 6, plantations
-  #calc_str &lt;- c(&quot;gdal_calc.py -A &quot;, &quot; --overwrite --calc='A==&quot;)
-  salconm &lt;- c(&quot;salc_ag.tif&quot;, &quot;salc_af.tif&quot;)
+  # process masks--extract extract landcover class 2, cultivation, and class 6, plantations, resample, mask 
+  # with gdal tools
   av &lt;- c(2, 6)
-  #setwd(&quot;/var/scratch/lestes/&quot;)
-
-  #a &lt;- &quot;landcover/w001001.adf&quot;
   a &lt;- &quot;sa_lc_2009.tif&quot;
-  #b &lt;- sa_r
-  #x &lt;- list(&quot;A&quot; = a, &quot;B&quot; = b)
-  #x &lt;- list(&quot;A&quot; = a)
-  
-  gdal_calc &lt;- function(cstr, x, filename, type = &quot;UInt16&quot;, gdformat = &quot;GTiff&quot;, overwrite = TRUE) {
-    dang &lt;- Sys.time()
-    rnm &lt;- function(j) if(is.character(j)) j else if(class(j)[1] == &quot;RasterLayer&quot;) j@file@name
-    rnms &lt;- paste(&quot;-&quot;, names(x), &quot; &quot;,  sapply(x, rnm), sep = &quot;&quot;, collapse = &quot; &quot;)
-    calc_str &lt;- paste(&quot;gdal_calc.py &quot;, rnms, &quot; --outfile=&quot;, filename, &quot; --type=&quot;, type, &quot; --format=&quot;, 
-                      gdformat, paste(ifelse(overwrite == TRUE, &quot; --overwrite &quot;, &quot; &quot;)), &quot;--calc='&quot;, cstr, &quot;'&quot;, 
-                      sep = &quot;&quot;)
-    #print(calc_str)
-    print(paste(&quot;Running calculation&quot;, cstr))
-    system(calc_str)
-    print(paste(&quot;finished in&quot;, Sys.time() - dang))
-  } 
-  
-  gdal_calc(cstr = &quot;A==2&quot;, x = list(&quot;A&quot; = a), type = &quot;Byte&quot;, filename = &quot;sa_ag.tif&quot;)
-#   getwd()
-#   system(
-#     paste(calc_str[1], &quot;sa_lc_2009.vrt&quot;, &quot; --outfile=test.vrt&quot;, &quot; --type=UInt16&quot;, &quot; --format=GTiff &quot;, 
-#           calc_str[2], av[1], &quot;'&quot;, sep = &quot;&quot;)
-#     )
-  
-  
-  salc_l &lt;- lapply(1:2, function(x) {
-    gdal_calc(cstr = paste(&quot;A==&quot;, av[x], sep = &quot;&quot;), x = list(&quot;A&quot; = a), type = &quot;Byte&quot;, filename = salconm[x])
-    #system(paste(calc_str[1], salc@file@name, &quot; --outfile=&quot;, salconm[x], calc_str[2], av[x], &quot;'&quot;, sep = &quot;&quot;))
-    r &lt;- raster(full_path(path, salconm[x]))
-    #nms &lt;- c(r@file@name, paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, salconm[x]), &quot;_1km.tif&quot;, sep = &quot;&quot;))
-    nms &lt;- c(r@file@name, paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, salconm[x]), &quot;_1km.tif&quot;, sep = &quot;&quot;))
-    print(nms)
-    gdalwarp(srcfile = nms[1], t_srs = projection(sa_r), dstfile = nms[2], r = &quot;average&quot;, ot = &quot;Float32&quot;,
-             srcnodata = 255, tr = c(1000, 1000), of = &quot;GTiff&quot;, verbose = TRUE, overwrite = TRUE)
-    r2 &lt;- raster(full_path(path, nms[2]))
-    r_r &lt;- resample(r2, sa_r, method = &quot;bilinear&quot;)
-    nm2 &lt;- paste(gsub(&quot;_1km.tif&quot;, &quot;&quot;, nms[2]), &quot;_masked.tif&quot;, sep = &quot;&quot;)
-    print(nm2)
-    r_m &lt;- mask(r_r, sa_r, filename = full_path(p_data, nm2), overwrite = TRUE) 
-    file.remove(full_path(path, salconm[x]))
-    file.remove(full_path(path, nm2))
+  dang &lt;- Sys.time() 
+  salc_l &lt;- lapply(1:2, function(j) {
+    print(paste(&quot;extracting cover for&quot;, lcnm[j]))
+    gdal_calc(cstr = paste(&quot;A==&quot;, av[j], sep = &quot;&quot;), x = list(&quot;A&quot; = a), type = &quot;Byte&quot;, filename = lcnm[j])
+    nm &lt;- full_path(p_data, paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, lcnm[j]), &quot;_masked.tif&quot;, sep = &quot;&quot;))
+    ext &lt;- sapply(c(&quot;xmin&quot;, &quot;ymin&quot;, &quot;xmax&quot;, &quot;ymax&quot;), function(x) slot(extent(sa_r), x))
+    print(paste(&quot;warping and masking&quot;, gsub(p_data, &quot;&quot;, nm)))
+    gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, r = &quot;average&quot;, ot = &quot;Float32&quot;, 
+             te = ext, srcnodata = 255, dstnodata = 255, tr = c(1000, 1000), of = &quot;GTiff&quot;, verbose = TRUE,
+             overwrite = TRUE)
+    file.remove(lcnm[j])
+    r &lt;- raster(nm)
   })
   Sys.time() - dang
-  file.remove(full_path(path, &quot;salandcover2009.tif&quot;))
-  r &lt;- raster(full_path(path, &quot;salc_af_1km.tif&quot;))
-  r - sa_r
-  system(paste(calc_str[1], salc@file@name, &quot; --outfile=&quot;, &quot;test_af.vrt&quot;, calc_str[2], av[2], &quot;'&quot;, sep = &quot;&quot;))
-  system(paste(calc_str[1], salc@file@name, &quot; --outfile=&quot;, &quot;test_af.vrt&quot;, calc_str[2], av[2], &quot;'&quot;, sep = &quot;&quot;))
+  plot(salc_l[[2]])
 
-  # Aggregate SA landcover to 1 km resolution also, relying on gdal
-  setwd(p_data)
-
-#   salc1km &lt;- raster(full_path(p_data, &quot;salc_ag_1km.tif&quot;))
-#   salc1km_r &lt;- resample(salc1km, sa_r, method = &quot;bilinear&quot;)
-#   salc1km_m &lt;- mask(salc1km.r, sa_r, filename = full_path(p_data, &quot;salc_ag_masked.tif&quot;), 
-#                     overwrite = TRUE)
-#   file.remove(full_path(salcpath, salconm))
-#   file.remove(full_path(p_data, &quot;salc_ag_1km.tif&quot;))
 } else {
-  salc1km_m &lt;- raster(full_path(p_data, &quot;salc_ag_masked.tif&quot;))
+  lcmnm &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, lcnm), &quot;_masked.tif&quot;, sep = &quot;&quot;)
+  salc_l &lt;- lapply(lcmnm, function(x) raster(full_path(p_data, x)))
 } </code></pre>
 <p>Create mask to remove sugarcane growing regions</p>
 <pre class="r"><code>if(!file.exists(full_path(p_data, &quot;kzn_cane_masked.tif&quot;))) {
@@ -339,7 +293,7 @@ if(length(dir(p_data, pattern = &quot;salc.*.masked.tif&quot;) != 2)) {
 } else {
   kzn_1km_m &lt;- raster(full_path(p_data, &quot;kzn_cane_masked.tif&quot;))
 } </code></pre>
-<p>Create low, medium, high cover fraction variants from MODIS and GlobCover</p>
+<p>Create low, medium, high cover fraction variants from MODIS classes 12 and 14 (from the IGBP-DIS scheme). Class 14 is a cropland mosaic class, with minimum of 10% and a max of 60%, so create variants of 10%, 35% (mean) and 60%.</p>
 <pre class="r"><code>if(any(!file.exists(full_path(p_data, dir(p_data, pattern = &quot;mod_1*.*1kmrect_sum.tif&quot;))))) {
   # MODIS, using main classification scheme (IGBP-DIS)
   mod_1_crop &lt;- stack(mod_1 == 12, mod_1 == 14)
@@ -366,7 +320,6 @@ if(length(dir(p_data, pattern = &quot;salc.*.masked.tif&quot;) != 2)) {
     crop1km &lt;- mask(crop1km, mask = sa.r, filename = paste(nm, &quot;_1kmrect.tif&quot;, sep = &quot;&quot;), overwrite = TRUE)
     return(crop1km)
   })
-  #modsa_list &lt;- lapply(full_path(p_data, dir(p_data, pattern = &quot;mod_1*.*1kmrect.tif&quot;)[c(2:3, 1)]), brick)
   
   # And them create single raster with summed proportions
   modsa_list_sum &lt;- lapply(modsa_list, function(x) {
@@ -376,13 +329,11 @@ if(length(dir(p_data, pattern = &quot;salc.*.masked.tif&quot;) != 2)) {
   })
 } else {
   modsa_list_sum &lt;- lapply(full_path(p_data, dir(p_data, &quot;mod_1*.*1kmrect_sum.tif&quot;)[c(2:3, 1)]), raster)
-}  
-
-if(any(!file.exists(full_path(p_data, dir(p_data, &quot;globSA*.*1kmrect_sum.tif&quot;))))) {
-  # Globcover: class 11 = irrigated cropland, class 14, rainfed, 20 is 50-70% cropland, 30 is 20-50%
-  l &lt;- lapply(c(11, 14, 20, 30), function(x) r &lt;- globSA_alb == x)
+}  </code></pre>
+<p>And the same for GlobCover. We want Globcover class 11 (irrigated cropland), class 14 (rainfed), 20 (50-70% cropland), and 30 (20-50% cropland). For the latter two classes we create variants assumung the minimum, mean, and max of earh class</p>
+<pre class="r"><code>if(any(!file.exists(full_path(p_data, dir(p_data, &quot;globSA*.*1kmrect_sum.tif&quot;))))) {
+  l &lt;- lapply(c(11, 14, 20, 30), function(x) r &lt;- globSA_alb == x)  # pull out classes
   s &lt;- stack(l)
-  # globSA_cropb &lt;- brick(s, filename = full_path(p_data, &quot;globSA_crop.tif&quot;), overwrite = TRUE)
   globSA_cropb &lt;- brick(full_path(p_data, &quot;globSA_crop.grd&quot;))
   rm(s, l)
   
@@ -418,35 +369,40 @@ if(any(!file.exists(full_path(p_data, dir(p_data, &quot;globSA*.*1kmrect_sum.tif
 } else {
   globsa_list_sum &lt;- lapply(full_path(p_data, dir(p_data, &quot;globSA*.*1kmrect_sum.tif&quot;)[c(2:3, 1)]), raster)
 } </code></pre>
-<p>Set up masks from GTI cropland fractions</p>
+<p>Bring in GTI cropland fractions to set up masks</p>
 <pre class="r"><code># Bring in SA landcover sets and mask
 cover2007 &lt;- brick(full_path(p_data, &quot;cover2007.tif&quot;))
 cover2011 &lt;- brick(full_path(p_data, &quot;cover2011.tif&quot;))
 
 # sum these also with and without horticulture
 sumfun &lt;- function(x) sum(x, na.rm = TRUE)
-gti_nohort &lt;- lapply(list(cover2007, cover2011), function(y) {
+gti &lt;- lapply(list(cover2007, cover2011), function(y) {
   r &lt;- calc(y[[-6]], sumfun)
   r[r &gt; 100] &lt;- 100
-  writeRaster(r, file = gsub(&quot;\\.tif&quot;, &quot;sum_nh.tif&quot;, y@file@name), overwrite = TRUE)
+  writeRaster(r, file = gsub(&quot;\\.tif&quot;, &quot;sum.tif&quot;, y@file@name), overwrite = TRUE)
 }) 
-gti_hort &lt;- lapply(list(cover2007, cover2011), function(y) {
-  r &lt;- calc(y, sumfun)
-  r[r &gt; 100] &lt;- 100
-  writeRaster(r, file = gsub(&quot;\\.tif&quot;, &quot;sum_h.tif&quot;, y@file@name), overwrite = TRUE)
-}) 
+
+# Leave commented out in case want to bring back horticulture class
+# gti_hort &lt;- lapply(list(cover2007, cover2011), function(y) {
+#   r &lt;- calc(y, sumfun)
+#   r[r &gt; 100] &lt;- 100
+#   writeRaster(r, file = gsub(&quot;\\.tif&quot;, &quot;sum_h.tif&quot;, y@file@name), overwrite = TRUE)
+# }) 
 
 # Remove communal farmlands
-sust_mask_2011 &lt;- cover2011[[2]] &gt; 10  
-sust_mask_2007 &lt;- cover2007[[2]] &gt; 10
+sust_mask_2011 &lt;- cover2011[[2]] &gt; 0  
+sust_mask_2007 &lt;- cover2007[[2]] &gt; 0
 
-# Set up SA mask including sugarcane -- add in Mpumalanga sugar cane when it becomes available
+# Set up SA mask including sugarcane and forestry -- add in Mpumalanga sugar cane when it becomes available
 m1 &lt;- kzn_1km_m
 m1[is.na(m1)] &lt;- 0
 m1[m1 &gt; 0] &lt;- NA
+m2 &lt;- salc_l[[2]]
+m2[is.na(m2)] &lt;- 0
+m2[m2 &gt; 0] &lt;- NA
 sa_masks &lt;- sa_r &gt; 0
-sa_masks &lt;- m1 + sa_masks
-rm(m1)
+sa_masks &lt;- m1 + m2 + sa_masks
+rm(m1, m2)
 
 # create additional masks for areas of subsistence agriculture
 mask_list &lt;- lapply(list(sust_mask_2007, sust_mask_2011), function(x) {
@@ -461,26 +417,27 @@ names(mask_list) &lt;- c(&quot;stand&quot;, &quot;nosubs_2007&quot;, &quot;nosub
 brick(stack(mask_list), file = full_path(p_data, &quot;mask_brick.tif&quot;), overwrite = TRUE)
 
 # Fix values greater than 100% and apply masks
-r &lt;- gti_nohort[[1]]
+r &lt;- gti[[1]]
 lapply(1:2, function(x) {
   out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
 })  
-r &lt;- gti_nohort[[2]]
+r &lt;- gti[[2]]
 lapply(c(1, 3), function(x) {
   out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
 })  
-r &lt;- gti_hort[[1]]
-lapply(1:2, function(x) {
-  out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-})  
-r &lt;- gti_hort[[2]]
-lapply(c(1, 3), function(x) {
-  out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-})  </code></pre>
+# Comment out variants including horticulture
+# r &lt;- gti_hort[[1]]
+# lapply(1:2, function(x) {
+#   out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
+#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+# })  
+# r &lt;- gti_hort[[2]]
+# lapply(c(1, 3), function(x) {
+#   out_name &lt;- paste(gsub(&quot;\\.tif&quot;, &quot;&quot;, r@file@name), &quot;_&quot;, names(mask_list)[x], &quot;.tif&quot;, sep = &quot;&quot;)
+#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+# })  </code></pre>
 </div>
 </div>
 

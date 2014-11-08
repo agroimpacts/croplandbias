@@ -175,8 +175,8 @@ And then South Africa's landcover database (30 m)
 ```{r, eval = FALSE}
 path <- "/u/lestes/spatial_data/sa_lc_2009/"
 setwd("/u/lestes/spatial_data/")
-if(length(dir(p_data, pattern = "salc.*.masked.tif") != 2)) {
-# if(!file.exists(full_path(p_data, "salc_ag_masked.tif"))) {
+lcnm <- c("sa_ag.tif", "sa_af.tif")
+if(length(dir(p_data, pattern = "sa_.*._masked.tif")) != 2) {
   url <- "http://planet.uwc.ac.za/BGISdownloads/landcover_2009.zip"
   download.file(url, method="auto", destfile = "sa_landcover_2009.zip")
   unzip("landcover_2009.zip", exdir = "sa_lc_2009")
@@ -186,35 +186,8 @@ if(length(dir(p_data, pattern = "salc.*.masked.tif") != 2)) {
   #system(paste("rm -r", full_path(path, "landcover")))
   #file.remove("../landcover_2009.zip")
     
-  # system call to gdal_calc.py to extract landcover class 2, cultivation, and class 6, plantations
-  #calc_str <- c("gdal_calc.py -A ", " --overwrite --calc='A==")
-  lcnm <- c("sa_ag.tif", "salc_af.tif")
-  av <- c(2, 6)
-  #setwd("/var/scratch/lestes/")
-
-  #a <- "landcover/w001001.adf"
-  a <- "sa_lc_2009.tif"
-  #b <- sa_r
-  #x <- list("A" = a, "B" = b)
-  #x <- list("A" = a)
-  j <- 1
-  gdal_calc(cstr = "A==2", x = list("A" = a), type = "Byte", filename = "sa_ag.tif")
-  nm <- paste(gsub("\\.tif", "", lcnm[j]), "_1km.tif", sep = "")
-  ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) slot(extent(sa_r), x))
-  gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, r = "average", ot = "Float32", 
-           te = ext, srcnodata = 255, dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
-           overwrite = TRUE)
-  #gdal_calc(cstr = "A*B", x = list("A" = nm, "B" = sa_mask), filename = "sa_ag_masked.tif")
-  
-  r <- raster("sa_ag_1km.tif")
-  plot(r)
-       
-#   getwd()
-#   system(
-#     paste(calc_str[1], "sa_lc_2009.vrt", " --outfile=test.vrt", " --type=UInt16", " --format=GTiff ", 
-#           calc_str[2], av[1], "'", sep = "")
-#     )
-  lcnm <- c("sa_ag.tif", "salc_af.tif")
+  # process masks--extract extract landcover class 2, cultivation, and class 6, plantations, resample, mask 
+  # with gdal tools
   av <- c(2, 6)
   a <- "sa_lc_2009.tif"
   dang <- Sys.time() 
@@ -231,18 +204,11 @@ if(length(dir(p_data, pattern = "salc.*.masked.tif") != 2)) {
     r <- raster(nm)
   })
   Sys.time() - dang
+  plot(salc_l[[2]])
 
-  # Aggregate SA landcover to 1 km resolution also, relying on gdal
-  setwd(p_data)
-
-#   salc1km <- raster(full_path(p_data, "salc_ag_1km.tif"))
-#   salc1km_r <- resample(salc1km, sa_r, method = "bilinear")
-#   salc1km_m <- mask(salc1km.r, sa_r, filename = full_path(p_data, "salc_ag_masked.tif"), 
-#                     overwrite = TRUE)
-#   file.remove(full_path(salcpath, salconm))
-#   file.remove(full_path(p_data, "salc_ag_1km.tif"))
 } else {
-  salc1km_m <- raster(full_path(p_data, "salc_ag_masked.tif"))
+  lcmnm <- paste(gsub("\\.tif", "", lcnm), "_masked.tif", sep = "")
+  salc_l <- lapply(lcmnm, function(x) raster(full_path(p_data, x)))
 } 
 ```
 
@@ -291,7 +257,7 @@ if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
 
 ```
 
-Create low, medium, high cover fraction variants from MODIS and GlobCover
+Create low, medium, high cover fraction variants from MODIS classes 12 and 14 (from the IGBP-DIS scheme). Class 14 is a cropland mosaic class, with minimum of 10% and a max of 60%, so create variants of 10%, 35% (mean) and 60%. 
 ```{r, eval = FALSE}
 if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum.tif"))))) {
   # MODIS, using main classification scheme (IGBP-DIS)
@@ -319,7 +285,6 @@ if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum
     crop1km <- mask(crop1km, mask = sa.r, filename = paste(nm, "_1kmrect.tif", sep = ""), overwrite = TRUE)
     return(crop1km)
   })
-  #modsa_list <- lapply(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect.tif")[c(2:3, 1)]), brick)
   
   # And them create single raster with summed proportions
   modsa_list_sum <- lapply(modsa_list, function(x) {
@@ -330,12 +295,13 @@ if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum
 } else {
   modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 }  
+```
 
+And the same for GlobCover. We want Globcover class 11 (irrigated cropland), class 14 (rainfed), 20 (50-70% cropland), and 30 (20-50% cropland). For the latter two classes we create variants assumung the minimum, mean, and max of earh class
+```{r, eval = FALSE}
 if(any(!file.exists(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif"))))) {
-  # Globcover: class 11 = irrigated cropland, class 14, rainfed, 20 is 50-70% cropland, 30 is 20-50%
-  l <- lapply(c(11, 14, 20, 30), function(x) r <- globSA_alb == x)
+  l <- lapply(c(11, 14, 20, 30), function(x) r <- globSA_alb == x)  # pull out classes
   s <- stack(l)
-  # globSA_cropb <- brick(s, filename = full_path(p_data, "globSA_crop.tif"), overwrite = TRUE)
   globSA_cropb <- brick(full_path(p_data, "globSA_crop.grd"))
   rm(s, l)
   
@@ -371,11 +337,9 @@ if(any(!file.exists(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif"))))
 } else {
   globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 } 
-
-
 ```
 
-Set up masks from GTI cropland fractions
+Bring in GTI cropland fractions to set up masks
 ```{r, eval = FALSE}
 # Bring in SA landcover sets and mask
 cover2007 <- brick(full_path(p_data, "cover2007.tif"))
@@ -383,28 +347,33 @@ cover2011 <- brick(full_path(p_data, "cover2011.tif"))
 
 # sum these also with and without horticulture
 sumfun <- function(x) sum(x, na.rm = TRUE)
-gti_nohort <- lapply(list(cover2007, cover2011), function(y) {
+gti <- lapply(list(cover2007, cover2011), function(y) {
   r <- calc(y[[-6]], sumfun)
   r[r > 100] <- 100
-  writeRaster(r, file = gsub("\\.tif", "sum_nh.tif", y@file@name), overwrite = TRUE)
+  writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name), overwrite = TRUE)
 }) 
-gti_hort <- lapply(list(cover2007, cover2011), function(y) {
-  r <- calc(y, sumfun)
-  r[r > 100] <- 100
-  writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
-}) 
+
+# Leave commented out in case want to bring back horticulture class
+# gti_hort <- lapply(list(cover2007, cover2011), function(y) {
+#   r <- calc(y, sumfun)
+#   r[r > 100] <- 100
+#   writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
+# }) 
 
 # Remove communal farmlands
-sust_mask_2011 <- cover2011[[2]] > 10  
-sust_mask_2007 <- cover2007[[2]] > 10
+sust_mask_2011 <- cover2011[[2]] > 0  
+sust_mask_2007 <- cover2007[[2]] > 0
 
-# Set up SA mask including sugarcane -- add in Mpumalanga sugar cane when it becomes available
+# Set up SA mask including sugarcane and forestry -- add in Mpumalanga sugar cane when it becomes available
 m1 <- kzn_1km_m
 m1[is.na(m1)] <- 0
 m1[m1 > 0] <- NA
+m2 <- salc_l[[2]]
+m2[is.na(m2)] <- 0
+m2[m2 > 0] <- NA
 sa_masks <- sa_r > 0
-sa_masks <- m1 + sa_masks
-rm(m1)
+sa_masks <- m1 + m2 + sa_masks
+rm(m1, m2)
 
 # create additional masks for areas of subsistence agriculture
 mask_list <- lapply(list(sust_mask_2007, sust_mask_2011), function(x) {
@@ -419,26 +388,27 @@ names(mask_list) <- c("stand", "nosubs_2007", "nosubs_2011")
 brick(stack(mask_list), file = full_path(p_data, "mask_brick.tif"), overwrite = TRUE)
 
 # Fix values greater than 100% and apply masks
-r <- gti_nohort[[1]]
+r <- gti[[1]]
 lapply(1:2, function(x) {
   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
 })  
-r <- gti_nohort[[2]]
+r <- gti[[2]]
 lapply(c(1, 3), function(x) {
   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
 })  
-r <- gti_hort[[1]]
-lapply(1:2, function(x) {
-  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-})  
-r <- gti_hort[[2]]
-lapply(c(1, 3), function(x) {
-  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-})  
+# Comment out variants including horticulture
+# r <- gti_hort[[1]]
+# lapply(1:2, function(x) {
+#   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+# })  
+# r <- gti_hort[[2]]
+# lapply(c(1, 3), function(x) {
+#   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
+#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+# })  
 
 ```
 
