@@ -77,7 +77,6 @@ if(!file.exists(full_path(p_data, "sagrid.tif"))) {  # Wrap in if statement in c
 Let's start with the improved/fusion datasets, GLC share and geo-wiki's
 ```{r, eval = FALSE}
 if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists, to avoid redoing step
-  setwd("/u/lestes/spatial_data/")
   path <- "/u/lestes/spatial_data/glc_share/"
   url <- "http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&fname=GlcShare_v10_02.zip&acces=private"
   download.file(url, method = "auto", destfile = "glc_share.zip")
@@ -97,7 +96,6 @@ if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists,
 }
 
 if(!file.exists(full_path(p_data, "geowikisa_masked.tif"))) {  # see if file exists, to avoid redoing step 
-  setwd("/u/lestes/spatial_data/")
    # first downloaded manually from password protected geo-wiki site
   path <- "/u/lestes/spatial_data/geowiki/"
   unzip("cropland_hybrid_14052014v8.zip", exdir= "geowiki") 
@@ -204,12 +202,12 @@ if(length(dir(p_data, pattern = "sa_.*._masked.tif")) != 2) {
     r <- raster(nm)
   })
   Sys.time() - dang
-  plot(salc_l[[2]])
 
 } else {
   lcmnm <- paste(gsub("\\.tif", "", lcnm), "_masked.tif", sep = "")
   salc_l <- lapply(lcmnm, function(x) raster(full_path(p_data, x)))
 } 
+setwd(p_data)
 ```
 
 Create mask to remove sugarcane growing regions
@@ -244,12 +242,12 @@ if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
   
   # Warp and resample to SA grid
   setwd(p_data)
-  gdalwarp(srcfile = kzn_cane@file@name, t_srs = projection(sa.r), dstfile = "kzn_cane_1km.tif", 
+  gdalwarp(srcfile = kzn_cane@file@name, t_srs = projection(sa_r), dstfile = "kzn_cane_1km.tif", 
            r = "average", ot = "Float32", srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
            verbose = TRUE, overwrite = TRUE)
   kzn_1km <- raster(full_path(p_data, "kzn_cane_1km.tif"))
-  kzn_1km_r <- resample(kzn_1km, sa.r, method = "bilinear")
-  kzn_1km_m <- mask(kzn_1km_r, sa.r, filename = full_path(p_data, "kzn_cane_masked.tif"), 
+  kzn_1km_r <- resample(kzn_1km, sa_r, method = "bilinear")
+  kzn_1km_m <- mask(kzn_1km_r, sa_r, filename = full_path(p_data, "kzn_cane_masked.tif"), 
                     overwrite = TRUE)
 } else {
   kzn_1km_m <- raster(full_path(p_data, "kzn_cane_masked.tif"))
@@ -280,9 +278,9 @@ if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum
     print("...aggregating")
     agg <- aggregate(x, fact = 2, na.rm = TRUE)  
     print("...resampling")
-    crop1km <- resample(agg, sa.r, method = "bilinear")
+    crop1km <- resample(agg, sa_r, method = "bilinear")
     print("...masking")
-    crop1km <- mask(crop1km, mask = sa.r, filename = paste(nm, "_1kmrect.tif", sep = ""), overwrite = TRUE)
+    crop1km <- mask(crop1km, mask = sa_r, filename = paste(nm, "_1kmrect.tif", sep = ""), overwrite = TRUE)
     return(crop1km)
   })
   
@@ -295,6 +293,7 @@ if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum
 } else {
   modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 }  
+setwd(p_data)
 ```
 
 And the same for GlobCover. We want Globcover class 11 (irrigated cropland), class 14 (rainfed), 20 (50-70% cropland), and 30 (20-50% cropland). For the latter two classes we create variants assumung the minimum, mean, and max of earh class
@@ -321,9 +320,9 @@ if(any(!file.exists(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif"))))
     print("...aggregating")
     agg <- aggregate(x, fact = 3, na.rm = TRUE)  # equivalent to summing, dividing by 900
     print("...resampling")
-    crop1km <- resample(agg, sa.r, method = "bilinear")
+    crop1km <- resample(agg, sa_r, method = "bilinear")
     print("...masking")
-    crop1km <- mask(crop1km, mask = sa.r, filename = paste(nm, "_1kmrect.tif", sep = ""), 
+    crop1km <- mask(crop1km, mask = sa_r, filename = paste(nm, "_1kmrect.tif", sep = ""), 
                     overwrite = TRUE)
     return(crop1km)
   })
@@ -361,8 +360,8 @@ gti <- lapply(list(cover2007, cover2011), function(y) {
 # }) 
 
 # Remove communal farmlands
-sust_mask_2011 <- cover2011[[2]] > 0  
-sust_mask_2007 <- cover2007[[2]] > 0
+sust_mask <- !is.na(cover2007[[2]]) | !is.na(cover2011[[2]])  # remove communal areas from both dates
+sust_mask[sust_mask > 0] <- NA
 
 # Set up SA mask including sugarcane and forestry -- add in Mpumalanga sugar cane when it becomes available
 m1 <- kzn_1km_m
@@ -374,41 +373,13 @@ m2[m2 > 0] <- NA
 sa_masks <- sa_r > 0
 sa_masks <- m1 + m2 + sa_masks
 rm(m1, m2)
+full_mask <- writeRaster(sa_masks + sust_mask, file = full_path(p_data, "mask.tif"), overwrite = TRUE)
 
-# create additional masks for areas of subsistence agriculture
-mask_list <- lapply(list(sust_mask_2007, sust_mask_2011), function(x) {
-  m <- x
-  m[is.na(m)] <- 0
-  m[m > 0] <- NA
-  mr <- m + sa_masks
-  mr
-})
-mask_list <- c(sa_masks, mask_list)
-names(mask_list) <- c("stand", "nosubs_2007", "nosubs_2011")
-brick(stack(mask_list), file = full_path(p_data, "mask_brick.tif"), overwrite = TRUE)
-
-# Fix values greater than 100% and apply masks
-r <- gti[[1]]
-lapply(1:2, function(x) {
-  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
+# Apply masks
+lapply(gti, function(x) {
+  out_name <- paste(gsub("\\.tif", "", x@file@name), "_mask.tif", sep = "")
+  mask(x, full_mask, file = out_name, overwrite = TRUE)
 })  
-r <- gti[[2]]
-lapply(c(1, 3), function(x) {
-  out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-  mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-})  
-# Comment out variants including horticulture
-# r <- gti_hort[[1]]
-# lapply(1:2, function(x) {
-#   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-# })  
-# r <- gti_hort[[2]]
-# lapply(c(1, 3), function(x) {
-#   out_name <- paste(gsub("\\.tif", "", r@file@name), "_", names(mask_list)[x], ".tif", sep = "")
-#   mask(r, mask_list[[x]], file = out_name, overwrite = TRUE)
-# })  
 
 ```
 
