@@ -26,14 +26,14 @@ library(lmisc)
 library(raster)
 library(SAcropland)
 p_root <- proj_root("SAcropland")
-p_data <- full_path(p_root, "SAcropland/data/")
+p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 ```
 
 2. Load cropland grids 
   + Derived from global landcover products
 
 ```{r, eval = FALSE}
-salc <- raster(full_path(p_data, "salc_ag_masked.tif")) * 100
+salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
 globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 glcsa <- raster(full_path(p_data, "glcsa_masked.tif"))
@@ -45,8 +45,8 @@ names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu", "m
   + SA landcover data
 ```{r, eval = FALSE}
 load(full_path(p_data, "MZshapes.Rdata"))  
-paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_nh_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
-gti_nohort <- lapply(paths, raster)
+paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
+gti <- lapply(paths, raster)
 # paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_h_[subs|stand]*", sep = "")))[c(2, 4, 1, 3)]
 # gti_hort <- lapply(paths, raster)
 ```
