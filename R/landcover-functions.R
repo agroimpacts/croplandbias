@@ -158,7 +158,7 @@ reshape_diff_list <- function(diff.list, sens.ind, level.vec, bin.len) {
     print(v)
     agg <- lapply(1:length(level.vec), function(x) {
       bin_pool <- lapply(1:bin.len, function(z) {  # apply across bins
-        dat <- do.call(rbind, lapply(1:3, function(y) diff.list[[y]][[x]][[v]]))  # bind sens by scale by gti
+        dat <- do.call(rbind, lapply(1:length(diff.list), function(y) diff.list[[y]][[x]][[v]]))
         v  <- dat[dat[, "bin"] == z, "val"]  # pool bias values
       })
       names(bin_pool) <- paste("b", 1:bin.len, sep = "")

@@ -6,7 +6,7 @@ output:
   html_document:
     highlight: tango
     theme: spacelab
-    toc: yes 
+    toc: yes
 ---
 
 ## Overview
@@ -21,8 +21,9 @@ One things I am noticing is that the knit process for compiling the notebook doe
 
 ### Load in data 
 1. Set up paths
-```{r, eval = FALSE}
+```{r, message = FALSE}
 library(lmisc)
+library(Hmisc)
 library(raster)
 library(SAcropland)
 p_root <- proj_root("SAcropland")
@@ -32,7 +33,7 @@ p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 2. Load cropland grids 
   + Derived from global landcover products
 
-```{r, eval = FALSE}
+```{r, message = FALSE}
 salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
 globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
@@ -43,7 +44,7 @@ names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu", "m
 ```
 
   + SA landcover data
-```{r, eval = FALSE}
+```{r, message = FALSE}
 load(full_path(p_data, "MZshapes.Rdata"))  
 paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_mask*", sep = "")))
 gti <- lapply(paths, raster)
@@ -52,7 +53,8 @@ gti <- lapply(paths, raster)
 
 ### Calculate differences at different levels of aggregation
 This steps draws on functions I wrote to calculate the actual and absolute differences between a given "master" grid and lists of other grids. This comparison is done at multiple aggregations, ranging from 1-600 km resolution cropland averages. The lists have two levels of nesting, here the upper provides the resolution, the inner provides the different landcover datasets. 
-```{r, eval = FALSE}
+
+```{r, message = FALSE}
 # Mean landcover between 2007 and 2011
 gti2 <- c(gti, calc(stack(gti), mean))
 names(gti2) <- c("gti2007", "gti2011", "gtimu")
@@ -61,7 +63,9 @@ names(gti2) <- c("gti2007", "gti2011", "gtimu")
 fact <- c(5, 10, 20, 50, 100, 200)
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti2)  # GTI rasters
+```
 
+```{r, eval = FALSE}
 # Actual differences
 diff_list_act <- lapply(1:length(gti2), function(x) {
   print(paste("processing", x))
@@ -84,6 +88,66 @@ save(diff_list_act, file = full_path(p_data, "diff_grid_act.rda"))
 save(diff_list_abs, file = full_path(p_data, "diff_grid_abs.rda"))
 ```
 [[back to top]][Overview]
+
+14/11/14 - Here I ran into the issue of needing to weight quantiles according to how many pixels went into values in aggregated pixels, otherwise statistics are biased. I explored here different ways of doing this. I am document this here before committing changes so that I can roll this back and look at what I did as needed. I compared original methods statistics with two ways of applying weightings.  
+
+First test method 1. Create a mask for nodata areas, then take aggregated pixels for both the GTI data and the difference grids, disaggregate them, and crop them to the extent of the NA grid. The GTI grid is "cut" into bins, which is less clunky then the previous incarnation.  We then loop through the lists (here I test on just the geowiki differences at 20 km aggregation) by the 2007, 2011, and mean of those two, and extract just the bin I want (now a class), set 0s to NA, multiply by the corresponding difference grid, pooling differences from across all 3 gti version, and then I run box_stats on that. *Note: if I run this on the original aggregated geowiki dataset, without disaggregating, I get the same answer as the final statistics for geowiki at 20 km resolution.*  
+```{r, message = FALSE}
+load(full_path(p_data, "diff_grid_act.rda"))  # here we'll cheat by loading in the diff grid w/o re-running
+namask <- !is.na(gti2$gtimu)
+area_wgts <- aggregate(namask, fact = 20, fun = sum)
+namask[namask == 0] <- NA
+
+binv <- seq(0, 100, 5)  # cropland bins
+rl <- lapply(1:3, function(x) {
+  r <- disaggregate(gti_agg$f20[[x]]$geow, fact = 20)
+  r <- raster::mask(crop(r, namask), namask)
+  rcl <- cut(r, breaks = binv, include.lowest = TRUE)
+})
+
+r3l <- lapply(1:3, function(x) {
+  r <- disaggregate(diff_list_act[[x]]$f20$geow, fact = 20)
+  r <- raster::mask(crop(r, namask), namask)
+})
+
+t1 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
+  print(x)
+  l1 <- unlist(lapply(1:length(rl), function(k) {
+    rs <- rl[[k]] == x
+    rs[rs == 0] <- NA
+    o <- rs * r3l[[k]]
+    getValues(o)
+  }))
+  box_stats(l1)
+}))
+```
+
+In the next version, I don't do any disaggregation, but I aggregate the NA mask dataset by summing, to get the count of pixels that went into each pixel at each level of aggregation (done in the previous chunk.  This then effectively becomes a weighting raster, which I extract for each aggregated difference.  I then use this as the weights within the Hmisc package.  The result is the same as the first version, but much faster. 
+```{r}
+
+p <- c(0.025, 0.25, 0.5, 0.75, 0.975)
+rl <- lapply(gti_agg$f20, function(x) cut(x, breaks = binv, include.lowest = TRUE))
+r3l <- lapply(1:3, function(x) diff_list_act[[x]]$f20$geow)
+t2 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
+  print(x)
+  l1 <- do.call(rbind, lapply(1:length(rl), function(k) {
+    rs <- rl[[k]] == x
+    rs[rs == 0] <- NA
+    o <- rs * r3l[[k]]
+    w <- area_wgts * rs
+    oo <- cbind(getValues(o), getValues(w))
+  }))
+  l12 <- l1[!is.na(l1[, 1]), ]
+  if(nrow(l12) > 0) {
+    qs <- c(nrow(l12), wtd.quantile(l12[, 1], weights = l12[, 2], probs = p, na.rm = FALSE), 
+          wtd.mean(l12[, 1], weights = l12[, 2], na.rm = FALSE))
+  } else {
+    qs <- rep(NA, 6)
+  }
+  qs
+}))
+t2; t1
+```
 
 ### Bias as function of cropcover
 Values from the bias rasters calculated in the previous section are binned by percent cropland cover.  There are a couple of tricky aspects here, related to choosing which cropland map provides the bins. The 2011 GTI mapset more closely corresponds to the MODIS and GLC-SHARE datasets in time, whereas GlobCover and the SA landcover dataset fall closer to or are between the 2007 mapset. __Wayforward__: Calculate whether there is any bias between the 2007 and 2011 cropland estimates by GTI. And also see how much difference exists in bias estimates _as a function of cropcover_ when 2011 GTI provides the bin estimates, and the difference rasters are calculated against different GTI datasets (2007, the mean of 2007 and 2011, and 2011). 
@@ -110,7 +174,6 @@ onm <- paste("abs", nmrt, sep = "_")# c("abs_2011_ns_bin", "abs_mu_ns_bin", "abs
 lapply(1:3, function(x) {
   extract_bin_values(gti_agg, mind[x], diff_list_abs[[dind[x]]], binv, full_path(p_data, onm[x]))
 })
-
 rm(diff_list_abs, diff_list_act, diff_list_gti)
 ```
 [[back to top]][Overview]
