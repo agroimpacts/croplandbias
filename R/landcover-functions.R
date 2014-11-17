@@ -26,11 +26,11 @@ assignLCPct <- function(x, y, fname) {
 #' @param rlist List of rasters to be aggregated
 #' @return List of rasters aggregated by specified factors, with original raster or list prepended to it 
 #' @export
-aggregate_rast_list <- function(fact, rlist) {
+aggregate_rast_list <- function(fact, rlist, fun = mean) {
   aggs <- lapply(fact, function(x) {
     print(paste("aggregating by factor of", x))
     rl <- lapply(rlist, function(j) {
-      aggregate(j, fact = x)
+      aggregate(j, fact = x, fun = fun)
     })
     names(rl) <- names(rlist)
     return(rl)
@@ -42,29 +42,83 @@ aggregate_rast_list <- function(fact, rlist) {
   return(aggs2)
 }
 
-#' Takes difference between single raster and each raster in list of rasters, organized by aggregation level
-#' 
-#' @param ind Vector of integers used to index into first level of raster lists
-#' @param subtractor Two level list of rasters, with first level being aggregation level
-#' @param subtractee Raster/raster list to difference against, with same structure as subtractor
-#' @param whichdiff Index or name determing which raster from rdifflist per factor level will be used to diff
-#' @param abs TRUE or FALSE, for whether actual or absolute difference should be taken (default is FALSE)
+# #' Takes difference between single raster and each raster in list of rasters, organized by aggregation level
+# #' 
+# #' @param ind Vector of integers used to index into first level of raster lists
+# #' @param subtractor Two level list of rasters, with first level being aggregation level
+# #' @param subtractee Raster/raster list to difference against, with same structure as subtractor
+# #' @param whichdiff Index or name determing which raster from rdifflist per factor level will be used to diff
+# #' @param abs TRUE or FALSE, for whether actual or absolute difference should be taken (default is FALSE)
+# #' @export
+# diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) {
+#   diffs <- lapply(ind, function(x) {
+#     print(paste("differencing at level", x))
+#     rl <- lapply(1:length(subtractor[[x]]), function(j) {
+#       if(abs == TRUE) {
+#         abs(subtractee[[x]][[whichdiff]] - subtractor[[x]][[j]])
+#       } else {
+#         subtractee[[x]][[whichdiff]] - subtractor[[x]][[j]]
+#       }
+#     })
+#     names(rl) <- names(subtractor[[x]])
+#     return(rl)
+#   })
+#   names(diffs) <- names(subtractor)[ind]
+#   return(diffs)
+# }
+
+#' @title Apply math on two lists
+#' @description Apply arbitrary math to two objects within two lists 
+#' @param ilist A 3 element list of list indices (names or index numbers). See details. 
+#' @param list1 A two-level list
+#' @param list2 A two-level list
+#' @param expr A character vector describing the calculation between each list element, e.g. "a - b"
+#' @param silent TRUE (default) or FALSE, to print (or not) which level of list is being operated on
+#' @details This allows aribtrary operations to be performed on lists with two levels. The expression that 
+#' is passed to the function requires that "a" reference the element within list1, and "b" the element within 
+#' list2 that has the operation applied to it. As written, this performs operations on nested loops (lapply), 
+#' with the outer driven by the index in ilist[[1]], the second level driven by ilist[[2]], and the innermost
+#' by ilist[[3]]. The innermost loop performs the operation specified by eval on each list element, where 
+#' a = list1[[ilist[[2]]]][[ilist[[3]]]], and b = list2[[ilist[[2]]]][[ilist[[1]]]]. The expression must 
+#' therefore always have a and b as its variables. Input lists should be equal on their first dimensions. If 
+#' one can understand the complex looping structure, it should be possible to shape lists and indices to use
+#' the function differently 
+#' @examples
+#' library(raster)
+#' list1 <- lapply(1:5, function(x) lapply(1:2, function(j) {
+#'   r <- raster(nrow = 10, ncol = 10)
+#'   r[] <- sample(1:20, size = ncell(r), replace = TRUE)
+#'   r
+#' }))
+#' list2 <- lapply(1:5, function(x) lapply(1:6, function(j) {
+#'   r <- raster(nrow = 10, ncol = 10)
+#'   r[] <- sample(1:2, size = ncell(r), replace = TRUE)
+#'   r
+#' }))
+#' o <- rast_list_math(ilist = list(1:6, 1:5, 1:2), list1 = list1, list2 = list2, expr = "a * b", 
+#'                     silent = FALSE)
+#' plot(o[[1]][[2]][[1]])
+#' plot(o[[5]][[2]][[1]])
 #' @export
-diff_rast_list <- function(ind, subtractor, subtractee, whichdiff, abs = FALSE) {
-  diffs <- lapply(ind, function(x) {
-    print(paste("differencing at level", x))
-    rl <- lapply(1:length(subtractor[[x]]), function(j) {
-      if(abs == TRUE) {
-        abs(subtractee[[x]][[whichdiff]] - subtractor[[x]][[j]])
-      } else {
-        subtractee[[x]][[whichdiff]] - subtractor[[x]][[j]]
-      }
+rast_list_math <- function(ilist, list1, list2, expr, silent = TRUE) {
+  l1 <- lapply(ilist[[1]], function(x) {
+    if(silent == FALSE) print(paste("outer:", x))
+    l2 <- lapply(ilist[[2]], function(j) {
+      if(silent == FALSE) print(paste("middle:", j))
+      l3 <- lapply(ilist[[3]], function(k) {
+        a <- list1[[j]][[k]] 
+        b <- list2[[j]][[x]]
+        if(silent == FALSE) print(paste("inner:", x))
+        r <- eval(parse(text = expr))
+      })
+      names(l3) <- ilist[[3]]
+      l3
     })
-    names(rl) <- names(subtractor[[x]])
-    return(rl)
+    names(l2) <- ilist[[2]]
+    l2
   })
-  names(diffs) <- names(subtractor)[ind]
-  return(diffs)
+  names(l1) <- ilist[[1]]
+  return(l1)
 }
 
 #' Groups the values of one raster into bins that correspond to ranges of values in another raster

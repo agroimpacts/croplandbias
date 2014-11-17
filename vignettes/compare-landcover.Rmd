@@ -14,14 +14,9 @@ This section of the analysis calculates the differences between the GTI cropland
 github).
 
 ## Analyses
-### Sidebar
-I am just learning how to use Rmarkdown with Rmd files to document analyses, primarily analyses that are more interactive in nature and notrepeated many times. Code that will be re-used multiple times will go into a library. 
-
-One things I am noticing is that the knit process for compiling the notebook does not find functions within code chunks unless the libraries are called within the code chunks themselves. It seems like each code chunk is its own environment.  The solution to this is to do something like `raster::raster()` when you want a function, or run this where chunks are set to {r, eval = FALSE}, and just run the code chunk as if you were in a normal R script working interactively.  I have already set up the library for SAcropland to call the packages its needs so they are loaded up in the global environment. 
-
 ### Load in data 
 1. Set up paths
-```{r, message = FALSE}
+```{r, eval = FALSE}
 library(lmisc)
 library(Hmisc)
 library(raster)
@@ -44,109 +39,148 @@ names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu", "m
 ```
 
   + SA landcover data
-```{r, message = FALSE}
+```{r, eval = FALSE}
 load(full_path(p_data, "MZshapes.Rdata"))  
 paths <- full_path(p_data, dir(p_data, paste("cover*.*sum_mask*", sep = "")))
 gti <- lapply(paths, raster)
+names(gti) <- c("g2007", "g2011")
 ```
 [[back to top]][Overview]
 
 ### Calculate differences at different levels of aggregation
 This steps draws on functions I wrote to calculate the actual and absolute differences between a given "master" grid and lists of other grids. This comparison is done at multiple aggregations, ranging from 1-600 km resolution cropland averages. The lists have two levels of nesting, here the upper provides the resolution, the inner provides the different landcover datasets. 
 
-```{r, message = FALSE}
-# Mean landcover between 2007 and 2011
-gti2 <- c(gti, calc(stack(gti), mean))
-names(gti2) <- c("gti2007", "gti2011", "gtimu")
-
-# Aggregate rasters
-fact <- c(5, 10, 20, 50, 100, 200)
-lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
-gti_agg <- aggregate_rast_list(fact, gti2)  # GTI rasters
-```
-
 ```{r, eval = FALSE}
+# Aggregate rasters
+fact <- c(5, 10, 20, 50, 100, 200, 300)
+lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
+gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
+
+f <- "a-b"
 # Actual differences
-diff_list_act <- lapply(1:length(gti2), function(x) {
+diff_list_act <- lapply(names(lclist), function(x) {
+  print(paste("processing", x))
+  l2 <- lapply(names(lc_agg), function(j) {
+    #j <- names(lc_agg)[1]
+    print(j)
+    l3 <- lapply(names(gti), function(k) {
+      #k <- names(gti)[2]
+      a <- gti_agg[[j]][[k]] 
+      b <- lc_agg[[j]][[x]]
+      print(k)
+      r <- eval(parse(text = f))#gti_agg[[j]][[k]] - lc_agg[[j]][[x]]
+    })
+    names(l3) <- names(gti)
+    l3
+  })
+  names(l2) <- names(lc_agg)
+  l2
+})
+names(diff_list_act) <- names(lclist)
+
+
+dlist_act <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "a - b", 
+                            silent = FALSE)
+
+
+diff_list_act <- lapply(1:length(gti), function(x) {
   print(paste("processing", x))
   diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_agg, whichdiff = x)
 })
-names(diff_list_act) <- c("d2007", "d2011", "dmu")  
+names(diff_list_act) <- c("d2007", "d2011")  
 
 # Absolute differences
-diff_list_abs <- lapply(1:length(gti2), function(x) {
+diff_list_abs <- lapply(1:length(gti), function(x) {
   print(paste("processing", x))
   diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_agg, whichdiff = x, 
                             abs = TRUE)
 })
-names(diff_list_abs) <- c("d2007", "d2011", "dmu")  
+names(diff_list_abs) <- c("d2007", "d2011")  
   
 # Between 2007 and 2011 GTI
-diff_list_gti <- diff_rast_list(1:7, gti_agg, gti_agg, 3)
+diff_list_gti <- diff_rast_list(1:(length(fact) + 1), gti_agg, gti_agg, 2)
+diff_list_gti <- lapply(diff_list_gti, function(x) x[[1]])  # remove 2011 versus 2011
 
 save(diff_list_act, file = full_path(p_data, "diff_grid_act.rda"))
 save(diff_list_abs, file = full_path(p_data, "diff_grid_abs.rda"))
 ```
 [[back to top]][Overview]
 
-14/11/14 - Here I ran into the issue of needing to weight quantiles according to how many pixels went into values in aggregated pixels, otherwise statistics are biased. I explored here different ways of doing this. I am document this here before committing changes so that I can roll this back and look at what I did as needed. I compared original methods statistics with two ways of applying weightings.  
-
 First test method 1. Create a mask for nodata areas, then take aggregated pixels for both the GTI data and the difference grids, disaggregate them, and crop them to the extent of the NA grid. The GTI grid is "cut" into bins, which is less clunky then the previous incarnation.  We then loop through the lists (here I test on just the geowiki differences at 20 km aggregation) by the 2007, 2011, and mean of those two, and extract just the bin I want (now a class), set 0s to NA, multiply by the corresponding difference grid, pooling differences from across all 3 gti version, and then I run box_stats on that. *Note: if I run this on the original aggregated geowiki dataset, without disaggregating, I get the same answer as the final statistics for geowiki at 20 km resolution.*  
-```{r, message = FALSE}
-load(full_path(p_data, "diff_grid_act.rda"))  # here we'll cheat by loading in the diff grid w/o re-running
-namask <- !is.na(gti2$gtimu)
-area_wgts <- aggregate(namask, fact = 20, fun = sum)
+
+First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
+```{r, eval = FALSE}
+# NA mask and weights
+namask <- !is.na(gti[[1]])  
+area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
 namask[namask == 0] <- NA
 
-binv <- seq(0, 100, 5)  # cropland bins
-rl <- lapply(1:3, function(x) {
-  r <- disaggregate(gti_agg$f20[[x]]$geow, fact = 20)
-  r <- raster::mask(crop(r, namask), namask)
-  rcl <- cut(r, breaks = binv, include.lowest = TRUE)
-})
-
-r3l <- lapply(1:3, function(x) {
-  r <- disaggregate(diff_list_act[[x]]$f20$geow, fact = 20)
-  r <- raster::mask(crop(r, namask), namask)
-})
-
-t1 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
-  print(x)
-  l1 <- unlist(lapply(1:length(rl), function(k) {
-    rs <- rl[[k]] == x
-    rs[rs == 0] <- NA
-    o <- rs * r3l[[k]]
-    getValues(o)
-  }))
-  box_stats(l1)
-}))
+# cropland cover bins
+binv <- seq(0, 100, 5)  
+gti_bins <- lapply(gti_agg, function(x) lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE)))
 ```
 
-In the next version, I don't do any disaggregation, but I aggregate the NA mask dataset by summing, to get the count of pixels that went into each pixel at each level of aggregation (done in the previous chunk.  This then effectively becomes a weighting raster, which I extract for each aggregated difference.  I then use this as the weights within the Hmisc package.  The result is the same as the first version, but much faster. 
-```{r}
 
-p <- c(0.025, 0.25, 0.5, 0.75, 0.975)
+```{r, eval = FALSE}
+diff.list$d2007$f1$sa30
+
+
+reshape_diff_list <- function(diff.list, sens.ind, level.vec, bin.len) {
+  diff.list <- diff_list_act
+  sens.ind <- names(lclist)
+  level.vec <- lev_vec
+  bin.len <- length(binv) - 1
+  resh <- lapply(sens.ind, function(v) {
+    v <- sens.ind[1]
+    print(v)
+    
+    
+    
+    agg <- lapply(1:length(level.vec), function(x) {
+      bin_pool <- lapply(1:bin.len, function(z) {  # apply across bins
+        dat <- do.call(rbind, lapply(1:length(diff.list), function(y) diff.list[[y]][[x]][[v]]))
+        v  <- dat[dat[, "bin"] == z, "val"]  # pool bias values
+      })
+      names(bin_pool) <- paste("b", 1:bin.len, sep = "")
+      return(bin_pool)
+    })
+    names(agg) <- level.vec
+    return(agg)
+  })
+  names(resh) <- sens.ind
+  return(resh)
+}
+
+
+diff_list_act
+
+
+gti_bins$f1[[2]]
+
+
+
+
+
 rl <- lapply(gti_agg$f20, function(x) cut(x, breaks = binv, include.lowest = TRUE))
-r3l <- lapply(1:3, function(x) diff_list_act[[x]]$f20$geow)
+r3l <- lapply(1:2, function(x) diff_list_act[[x]]$f20$geow)
 t2 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
   print(x)
   l1 <- do.call(rbind, lapply(1:length(rl), function(k) {
     rs <- rl[[k]] == x
     rs[rs == 0] <- NA
     o <- rs * r3l[[k]]
-    w <- area_wgts * rs
+    w <- area_wgts$f20[[1]] * rs
     oo <- cbind(getValues(o), getValues(w))
   }))
   l12 <- l1[!is.na(l1[, 1]), ]
   if(nrow(l12) > 0) {
-    qs <- c(nrow(l12), wtd.quantile(l12[, 1], weights = l12[, 2], probs = p, na.rm = FALSE), 
-          wtd.mean(l12[, 1], weights = l12[, 2], na.rm = FALSE))
+    qs <- c(nrow(l12), box_stats(x = l12[, 1], weighted = TRUE, weight.opts = list("weights" = l12[, 2])))
   } else {
-    qs <- rep(NA, 6)
+    qs <- rep(NA, 7)
   }
   qs
 }))
-t2; t1
+t2
 ```
 
 ### Bias as function of cropcover
