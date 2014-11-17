@@ -104,11 +104,11 @@ rast_list_math <- function(ilist, list1, list2, expr, silent = TRUE) {
   l1 <- lapply(ilist[[1]], function(x) {
     if(silent == FALSE) print(paste("outer:", x))
     l2 <- lapply(ilist[[2]], function(j) {
-      if(silent == FALSE) print(paste("middle:", j))
+      if(silent == FALSE) print(paste("  middle:", j))
       l3 <- lapply(ilist[[3]], function(k) {
         a <- list1[[j]][[k]] 
         b <- list2[[j]][[x]]
-        if(silent == FALSE) print(paste("inner:", x))
+        if(silent == FALSE) print(paste("    inner:", k))
         r <- eval(parse(text = expr))
       })
       names(l3) <- ilist[[3]]

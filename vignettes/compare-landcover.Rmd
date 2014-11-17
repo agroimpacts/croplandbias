@@ -28,7 +28,7 @@ p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 2. Load cropland grids 
   + Derived from global landcover products
 
-```{r, message = FALSE}
+```{r, eval = FALSE}
 salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
 globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
 modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
@@ -56,59 +56,22 @@ fact <- c(5, 10, 20, 50, 100, 200, 300)
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 
-f <- "a-b"
-# Actual differences
-diff_list_act <- lapply(names(lclist), function(x) {
-  print(paste("processing", x))
-  l2 <- lapply(names(lc_agg), function(j) {
-    #j <- names(lc_agg)[1]
-    print(j)
-    l3 <- lapply(names(gti), function(k) {
-      #k <- names(gti)[2]
-      a <- gti_agg[[j]][[k]] 
-      b <- lc_agg[[j]][[x]]
-      print(k)
-      r <- eval(parse(text = f))#gti_agg[[j]][[k]] - lc_agg[[j]][[x]]
-    })
-    names(l3) <- names(gti)
-    l3
-  })
-  names(l2) <- names(lc_agg)
-  l2
-})
-names(diff_list_act) <- names(lclist)
-
-
+# Calculate differences
 dlist_act <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "a - b", 
-                            silent = FALSE)
+                            silent = FALSE)  # actual
+plot(dlist_act$geow$f20$g2011 - (gti_agg$f20$g2011 - lc_agg$f20$geow))
 
 
-diff_list_act <- lapply(1:length(gti), function(x) {
-  print(paste("processing", x))
-  diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_agg, whichdiff = x)
-})
-names(diff_list_act) <- c("d2007", "d2011")  
+dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "abs(a - b)", 
+                            silent = FALSE)  # absolute
+dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), gti_agg, gti_agg, "a - b", silent = FALSE)
 
-# Absolute differences
-diff_list_abs <- lapply(1:length(gti), function(x) {
-  print(paste("processing", x))
-  diffr <- diff_rast_list(1:length(lc_agg), subtractor = lc_agg, subtractee = gti_agg, whichdiff = x, 
-                            abs = TRUE)
-})
-names(diff_list_abs) <- c("d2007", "d2011")  
-  
-# Between 2007 and 2011 GTI
-diff_list_gti <- diff_rast_list(1:(length(fact) + 1), gti_agg, gti_agg, 2)
-diff_list_gti <- lapply(diff_list_gti, function(x) x[[1]])  # remove 2011 versus 2011
-
-save(diff_list_act, file = full_path(p_data, "diff_grid_act.rda"))
-save(diff_list_abs, file = full_path(p_data, "diff_grid_abs.rda"))
+save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
+save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 ```
 [[back to top]][Overview]
-
-First test method 1. Create a mask for nodata areas, then take aggregated pixels for both the GTI data and the difference grids, disaggregate them, and crop them to the extent of the NA grid. The GTI grid is "cut" into bins, which is less clunky then the previous incarnation.  We then loop through the lists (here I test on just the geowiki differences at 20 km aggregation) by the 2007, 2011, and mean of those two, and extract just the bin I want (now a class), set 0s to NA, multiply by the corresponding difference grid, pooling differences from across all 3 gti version, and then I run box_stats on that. *Note: if I run this on the original aggregated geowiki dataset, without disaggregating, I get the same answer as the final statistics for geowiki at 20 km resolution.*  
-
-First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
+### Bias as function of cropcover
++ First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
 ```{r, eval = FALSE}
 # NA mask and weights
 namask <- !is.na(gti[[1]])  
@@ -116,64 +79,69 @@ area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
 namask[namask == 0] <- NA
 
 # cropland cover bins
-binv <- seq(0, 100, 5)  
+binv <- seq(0, 100, 5)
 gti_bins <- lapply(gti_agg, function(x) lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE)))
+
 ```
 
-
++ Calculate biases, pooling MODIS and GlobCover across all version
+Step 1. Reshape lists, so that all MODIS and GlobCover variants are pooled by scale
 ```{r, eval = FALSE}
-diff.list$d2007$f1$sa30
+# Set up indexing parameters
+fact_all <- c(1, fact)# full aggregation levels
+lev_vec <- paste("f", fact_all, sep = "") 
+nm_rt <- c("sa30", "glob", "mod", "glcsh", "geow")
 
-
-reshape_diff_list <- function(diff.list, sens.ind, level.vec, bin.len) {
-  diff.list <- diff_list_act
-  sens.ind <- names(lclist)
-  level.vec <- lev_vec
-  bin.len <- length(binv) - 1
-  resh <- lapply(sens.ind, function(v) {
-    v <- sens.ind[1]
-    print(v)
-    
-    
-    
-    agg <- lapply(1:length(level.vec), function(x) {
-      bin_pool <- lapply(1:bin.len, function(z) {  # apply across bins
-        dat <- do.call(rbind, lapply(1:length(diff.list), function(y) diff.list[[y]][[x]][[v]]))
-        v  <- dat[dat[, "bin"] == z, "val"]  # pool bias values
-      })
-      names(bin_pool) <- paste("b", 1:bin.len, sep = "")
-      return(bin_pool)
-    })
-    names(agg) <- level.vec
-    return(agg)
+# Reshape the list of actual landcover differences
+inlist <- dlist_act
+dlist_act_resh <- lapply(nm_rt, function(x) {  # select sensor
+  l2 <- lapply(lev_vec, function(y) {  # isolate by scale
+    l3 <- lapply(inlist[grep(x, names(inlist))], function(z) z[[y]])  # sensor by scale
+    named_out(l3, names(inlist)[grep(x, names(inlist))])
   })
-  names(resh) <- sens.ind
-  return(resh)
-}
+  named_out(l2, lev_vec)
+})
+names(dlist_act_resh) <- nm_rt
 
+# And then absolute landcover differences
+inlist <- dlist_abs
+dlist_abs_resh <- lapply(nm_rt, function(x) {  # select sensor
+  l2 <- lapply(lev_vec, function(y) {  # isolate by scale
+    l3 <- lapply(inlist[grep(x, names(inlist))], function(z) z[[y]])  # sensor by scale
+    named_out(l3, names(inlist)[grep(x, names(inlist))])
+  })
+  named_out(l2, lev_vec)
+})
+names(dlist_abs_resh) <- nm_rt
+```
 
-diff_list_act
-
-
-gti_bins$f1[[2]]
-
-
-
-
-
++ Then calculate biases across datasets
+```{r, eval = FALSE}
+# p <- c(0.025, 0.25, 0.5, 0.75, 0.975)
+#rl <- gti_bins$f20
 rl <- lapply(gti_agg$f20, function(x) cut(x, breaks = binv, include.lowest = TRUE))
-r3l <- lapply(1:2, function(x) diff_list_act[[x]]$f20$geow)
+r3l <- dlist_act$geow$f20
+
 t2 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
+#t2 <- lapply(1:(length(binv) - 1), function(x) {
   print(x)
+  #x <- 1
   l1 <- do.call(rbind, lapply(1:length(rl), function(k) {
+    #k <- 1
     rs <- rl[[k]] == x
     rs[rs == 0] <- NA
+    hist(rs, plot = F)$counts
+    #plot(rs)
     o <- rs * r3l[[k]]
     w <- area_wgts$f20[[1]] * rs
+    #plot(w)
     oo <- cbind(getValues(o), getValues(w))
   }))
+  #})
   l12 <- l1[!is.na(l1[, 1]), ]
   if(nrow(l12) > 0) {
+#     qs <- c(nrow(l12), wtd.quantile(l12[, 1], weights = l12[, 2], probs = p, na.rm = FALSE), 
+#             wtd.mean(l12[, 1], weights = l12[, 2], na.rm = FALSE))
     qs <- c(nrow(l12), box_stats(x = l12[, 1], weighted = TRUE, weight.opts = list("weights" = l12[, 2])))
   } else {
     qs <- rep(NA, 7)
@@ -181,7 +149,11 @@ t2 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
   qs
 }))
 t2
+nrow(l1[[2]])
+lapply(1:2, function(x) nrow(l1[[x]][!is.na(l1[[x]][, 1]), ]))
 ```
+
+Checks: compared number of non-NA cells coming out of each GTI version at each level of aggregation (fine); compared cell counts between previous committed version and this one (difference exists, but due to fact that gtimu is no longer considered; checked that previous versions of difference rasters and reshapes of them were referencing the correct GTI-landcover bias rasters (i.e. to make sure rasters weren't incorrectly indexed: all fine)); box_stats with weighted quantile option compared to previous commit where wtd.quantile was used separately (fine). 
 
 ### Bias as function of cropcover
 Values from the bias rasters calculated in the previous section are binned by percent cropland cover.  There are a couple of tricky aspects here, related to choosing which cropland map provides the bins. The 2011 GTI mapset more closely corresponds to the MODIS and GLC-SHARE datasets in time, whereas GlobCover and the SA landcover dataset fall closer to or are between the 2007 mapset. __Wayforward__: Calculate whether there is any bias between the 2007 and 2011 cropland estimates by GTI. And also see how much difference exists in bias estimates _as a function of cropcover_ when 2011 GTI provides the bin estimates, and the difference rasters are calculated against different GTI datasets (2007, the mean of 2007 and 2011, and 2011). 
