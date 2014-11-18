@@ -18,7 +18,6 @@ github).
 1. Set up paths
 ```{r, eval = FALSE}
 library(lmisc)
-library(Hmisc)
 library(raster)
 library(SAcropland)
 p_root <- proj_root("SAcropland")
@@ -59,15 +58,15 @@ gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 # Calculate differences
 dlist_act <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "a - b", 
                             silent = FALSE)  # actual
-plot(dlist_act$geow$f20$g2011 - (gti_agg$f20$g2011 - lc_agg$f20$geow))
-
-
 dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "abs(a - b)", 
                             silent = FALSE)  # absolute
 dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), gti_agg, gti_agg, "a - b", silent = FALSE)
 
 save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
+# load(full_path(p_data, "d_grid_act.rda"))
+# load(full_path(p_data, "d_grid_abs.rda"))
+
 ```
 [[back to top]][Overview]
 ### Bias as function of cropcover
@@ -81,7 +80,6 @@ namask[namask == 0] <- NA
 # cropland cover bins
 binv <- seq(0, 100, 5)
 gti_bins <- lapply(gti_agg, function(x) lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE)))
-
 ```
 
 + Calculate biases, pooling MODIS and GlobCover across all version
@@ -93,64 +91,90 @@ lev_vec <- paste("f", fact_all, sep = "")
 nm_rt <- c("sa30", "glob", "mod", "glcsh", "geow")
 
 # Reshape the list of actual landcover differences
-inlist <- dlist_act
-dlist_act_resh <- lapply(nm_rt, function(x) {  # select sensor
-  l2 <- lapply(lev_vec, function(y) {  # isolate by scale
-    l3 <- lapply(inlist[grep(x, names(inlist))], function(z) z[[y]])  # sensor by scale
-    named_out(l3, names(inlist)[grep(x, names(inlist))])
+dlists <- lapply(list(dlist_act, dlist_abs), function(i) {
+  resh <- lapply(nm_rt, function(x) {  # select sensor
+    l2 <- lapply(lev_vec, function(y) {  # isolate by scale
+      l3 <- lapply(i[grep(x, names(i))], function(z) z[[y]])  # sensor by scale
+      named_out(l3, names(i)[grep(x, names(i))])
+      })
+    named_out(l2, lev_vec)
   })
-  named_out(l2, lev_vec)
+  named_out(resh, nm_rt)
 })
-names(dlist_act_resh) <- nm_rt
-
-# And then absolute landcover differences
-inlist <- dlist_abs
-dlist_abs_resh <- lapply(nm_rt, function(x) {  # select sensor
-  l2 <- lapply(lev_vec, function(y) {  # isolate by scale
-    l3 <- lapply(inlist[grep(x, names(inlist))], function(z) z[[y]])  # sensor by scale
-    named_out(l3, names(inlist)[grep(x, names(inlist))])
-  })
-  named_out(l2, lev_vec)
-})
-names(dlist_abs_resh) <- nm_rt
+names(dlists) <- c("act", "abs")
+rm(dlist_act, dlist_abs)  # remove original to make space
 ```
 
 + Then calculate biases across datasets
 ```{r, eval = FALSE}
-# p <- c(0.025, 0.25, 0.5, 0.75, 0.975)
-#rl <- gti_bins$f20
+dang <- Sys.time()
+dstats_all <- lapply(dlists, function(i) {
+  #i <- dlists[[1]]
+  print("processing 1 of 2 main bias lists")
+  dstats <- lapply(names(i), function(x) {
+    #x <- names(i)[1]
+    print(paste("..", x))
+    l1 <- lapply(lev_vec, function(y) {
+      #y <- lev_vec[1]
+      print(paste("....", y))
+      d1 <- do.call(rbind, lapply(1:(length(binv) - 1), function(j) {
+        #j <- 1
+        print(paste("......bin", j))
+        d2 <- do.call(rbind, lapply(1:length(i[[x]][[y]]), function(z) {
+          print(paste("........variant", z))
+          #z <- 1
+          l3 <- i[[x]][[y]][[z]]
+          d3 <- do.call(rbind, lapply(1:length(l3), function(k) {
+            #print(paste("..........gti set", k))
+            #cbind(k, k, k)
+            rs <- gti_bins[[y]][[k]] == j    
+            rs[rs == 0] <- NA
+            o <- rs * l3[[k]]
+            w <- area_wgts[[y]][[1]] * rs
+            oo <- cbind.data.frame("lc" = rep(names(i)[z], length(w)), getValues(o), getValues(w))
+          }))
+          d3f <- d3[!is.na(d3[, 2]), ]
+        }))
+        if(nrow(d2) > (length(i[[x]][[y]]) * 10)) {
+        qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, weight.opts = list("weights" = d2[, 3])))
+        } else if((nrow(d2) > 0) & (nrow(d2) < length(i[[x]][[y]]) * 20)) {
+          qs <- c(rep(NA, 6), Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], na.rm = FALSE))
+        } else {
+          qs <- rep(NA, 7)
+        }
+      }))
+      cbind(binv[-1], d1)
+      })
+    named_out(l1, lev_vec)
+  })
+  named_out(dstats, names(i))
+})
+dut <- Sys.time() - dang  # 33 minutes
+
+save(dstats_all, file = full_path(p_data, "bias_stats.rda"))
+
 rl <- lapply(gti_agg$f20, function(x) cut(x, breaks = binv, include.lowest = TRUE))
-r3l <- dlist_act$geow$f20
+r3l <- dlists$act$geow$f20$geow
 
 t2 <- do.call(rbind, lapply(1:(length(binv) - 1), function(x) {
-#t2 <- lapply(1:(length(binv) - 1), function(x) {
   print(x)
-  #x <- 1
   l1 <- do.call(rbind, lapply(1:length(rl), function(k) {
-    #k <- 1
     rs <- rl[[k]] == x
     rs[rs == 0] <- NA
-    hist(rs, plot = F)$counts
-    #plot(rs)
     o <- rs * r3l[[k]]
     w <- area_wgts$f20[[1]] * rs
-    #plot(w)
     oo <- cbind(getValues(o), getValues(w))
   }))
-  #})
   l12 <- l1[!is.na(l1[, 1]), ]
   if(nrow(l12) > 0) {
-#     qs <- c(nrow(l12), wtd.quantile(l12[, 1], weights = l12[, 2], probs = p, na.rm = FALSE), 
-#             wtd.mean(l12[, 1], weights = l12[, 2], na.rm = FALSE))
     qs <- c(nrow(l12), box_stats(x = l12[, 1], weighted = TRUE, weight.opts = list("weights" = l12[, 2])))
   } else {
     qs <- rep(NA, 7)
   }
   qs
 }))
-t2
-nrow(l1[[2]])
-lapply(1:2, function(x) nrow(l1[[x]][!is.na(l1[[x]][, 1]), ]))
+#t2[, -1] - dstats_all$act$geow$f20[, -c(1:2)]
+
 ```
 
 Checks: compared number of non-NA cells coming out of each GTI version at each level of aggregation (fine); compared cell counts between previous committed version and this one (difference exists, but due to fact that gtimu is no longer considered; checked that previous versions of difference rasters and reshapes of them were referencing the correct GTI-landcover bias rasters (i.e. to make sure rasters weren't incorrectly indexed: all fine)); box_stats with weighted quantile option compared to previous commit where wtd.quantile was used separately (fine). 
