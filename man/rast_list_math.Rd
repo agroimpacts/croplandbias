@@ -6,21 +6,6 @@
 rast_list_math(ilist, list1, list2, expr, silent = TRUE)
 }
 \arguments{
-\item{ind}{Vector of integers used to index into first level of raster lists
-#}
-
-\item{subtractor}{Two level list of rasters, with first level being aggregation level
-#}
-
-\item{subtractee}{Raster/raster list to difference against, with same structure as subtractor
-#}
-
-\item{whichdiff}{Index or name determing which raster from rdifflist per factor level will be used to diff
-#}
-
-\item{abs}{TRUE or FALSE, for whether actual or absolute difference should be taken (default is FALSE)
-#}
-
 \item{ilist}{A 3 element list of list indices (names or index numbers). See details.}
 
 \item{list1}{A two-level list}
@@ -35,10 +20,6 @@ rast_list_math(ilist, list1, list2, expr, silent = TRUE)
 Apply arbitrary math to two objects within two lists
 }
 \details{
-#Takes difference between single raster and each raster in list of rasters, organized by aggregation level
-#
-#
-
 This allows aribtrary operations to be performed on lists with two levels. The expression that
 is passed to the function requires that "a" reference the element within list1, and "b" the element within
 list2 that has the operation applied to it. As written, this performs operations on nested loops (lapply),

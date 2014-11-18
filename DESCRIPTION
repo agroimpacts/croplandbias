@@ -14,7 +14,6 @@ Depends:
     rgdal,
     lmisc
 Imports:
-    TeachingDemos,
     raster,
     rgdal,
     lmisc
