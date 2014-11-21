@@ -81,170 +81,138 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext, legend.vals = round
             leg.adj = list(c(0.25, 0), c(0.5, -0.5)), cex.val = cx, textcol = lcol, bordercol = lcol)
 dev.off()
 ```
-The map below was created by the code above, showing biases at 1 km, 20 km, 50 km, and 100 km from South Africa's landcover product, the mean estimates from GlobCover and MODIS, and GLC-SHARE.  
+The map below was created by the code above, showing biases at 1 km, 20 km, 50 km, and 100 km from South Africa's landcover product, the mean estimates from GlobCover and MODIS, and Geowiki/GLC-SHARE.  
 
-<p align="center"><img src="../figures/bias_map.pdf" width="400px"></p> 
+<p align="center"><img src="../external/figures/bias_map.pdf" width="400px"></p> 
 
 [[back to top]][Plotting bias figures]
 
 ### Bias in relation to field density
 
 ```{r, eval = FALSE}
-cols <- c("red", "orange3", "green4", "blue", "yellow")
-# cols <- c("salmon", "orange", "palegreen", "cadetblue1")
-# lvec <- paste(seq(0, 100, 5)[-21], seq(0, 100, 5)[-1], sep = "-")
-bcol <- c("grey50", "grey50", "grey50", "grey")
-lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
-levnms <- paste(gsub("f", "", lev), "km")
-# plot(1:10, pch = 20, cex = 3, col = bcol[1])
-fcol <- "grey"
-lev <- names(dstats_all$act$sa30)
-lvec <- seq(5, 100, 5)
-pp <- list("x" = c(-2, 21), "y" = c(0, 0), 
-           "x21" = list(c(0, 9), c(9, 21)),
-           "y2" = c(seq(-100, -10, 10), seq(10, 100, 10)), 
-           "y2lwd" = 0.5, #c(1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 1),
-           #"y2lwd" = c(1.5, rep(0.5, 4), 1.5, rep(0.5, 4), rep(0.5, 4), 1.5, rep(0.5, 4), 1.5),
-           "y2lc" = c("black", rep("grey80", 4), "black", rep("grey80", 4), 
-                      rep("grey80", 4), "black", rep("grey80", 4), "black"),
-           #"y3lwd" = seq(0.5, 3, 2.5 / (length(lev))), 
-           "y3lwd" = rep(2, length(lev)), 
-           "yl" = c(-100, 100), "yl2" = c(-40, 40), "xl" = c(1, 20),
-           "xaxl" = unlist(lapply(seq(5, 100, 10), function(x) c(x, " "))),
-           "xaxl2" = ifelse(seq(5, 100, 5) %in% c(25, 50, 75), seq(5, 100, 5), " "), 
-           #"xaxl2" = unlist(lapply(seq(5, 100, 15), function(x) c(x, " "))), 
-           #"yax2" = c(-25, -10, 0, 10, 25, 50, 75, 100),
-           "yax2" = unlist(lapply(seq(-40, 40, 20), function(x) c(" ", x)))[-1],
-           "ycol" = c("grey70"))  # plot parameters
-
-pdf(full_path(p_fig, "bias_plots_.pdf"), width = 7, height = 7)
-# m <- matrix(rep(c(rep(1, 6), rep(2, 6), rep(3, 6), rep(4, 6)), 2), nrow = 24, ncol = 4, byrow = FALSE) 
-# m2 <- unlist(lapply(seq(5, by = 1, length = 8 * 4), function(x) rep(x, 3)))
-# m3 <- do.call(rbind, lapply(seq(1, length(m2), by = 4 * 3), function(x) {
-#   do.call(rbind, rep(list(m2[x:(x + 4 * 3 - 1)]), 3))
-# })) 
-# lmat <- cbind(m, m3)
-
+btype <- c("bias_act.pdf", "bias_abs.pdf")
+# plot matrix
 nc <- 4
 m <- matrix(rep(c(rep(1, 8), rep(2, 8), rep(3, 8), rep(4, 8)), 2), nrow = 6, ncol = 32, byrow = TRUE) 
 m2 <- unlist(lapply(seq(5, by = 1, length = 8 * 4), function(x) rep(x, nc)))
 m3 <- do.call(rbind, lapply(seq(1, length(m2), by = 8 * nc), function(x) {
   do.call(rbind, rep(list(m2[x:(x + 8 * nc - 1)]), nc))
 })) 
-lmat <- rbind(m, m3)
-l <- layout(lmat)
+cols <- c("red", "orange3", "green4", "blue", "yellow")
+bcol <- c("grey50", "grey50", "grey50", "grey")
+lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+levnms <- paste(gsub("f", "", lev), "km")
+fcol <- "grey"
+lev <- names(dstats_all$act$sa30)
+lvec <- seq(5, 100, 5)
+pp <- list("x" = c(-2, 21), "y" = c(0, 0), 
+           "x21" = list(c(0, 9), c(9, 21)),
+           "y2" = list(c(seq(-100, -10, 10), seq(10, 100, 10)), seq(10, 100, 10)), 
+           "y1lwd" = list(2, 1),  
+           "y2lwd" = 0.5, #c(1, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 1),
+           "y2lc" = list(c("black", rep("grey80", 4), "black", rep("grey80", 4), 
+                           rep("grey80", 4), "black", rep("grey80", 4), "black"),  rep("grey80", 10)),
+           "y3lwd" = rep(2, length(lev)), 
+           "yl" = list(c(-100, 100), c(0, 100)), "yl2" = list(c(-40, 40), c(0, 60)), "xl" = c(1, 20),
+           "xaxl" = unlist(lapply(seq(5, 100, 10), function(x) c(x, " "))),
+           "xaxl2" = ifelse(seq(5, 100, 5) %in% c(25, 50, 75), seq(5, 100, 5), " "),
+           "yax1" = list(seq(-100, 100, 50), seq(0, 100, 20)), 
+           "yax2" = list(unlist(lapply(seq(-40, 40, 20), function(x) c(" ", x)))[-1], 
+                         unlist(lapply(seq(0, 60, 20), function(x) c(" ", x)))[-1]),
+           "yaxp" = list(-100, 0), 
+           "ycol" = c("grey70"))  # plot parameters
 
-par(mar = c(3, 0, 0, 0), oma = c(3, 4, 2, 2))
-#layout.show(l)
 
-#par(mfrow = c(2, 4), mar = c(0.5, 0.1, 0, 0), oma = c(3, 3, 0, 0))
-#par(mfrow = c(1, 1))
-snms <- names(dstats_all$act)[names(dstats_all$act) != "glcsh"]
-dset <- dstats_all$act[snms]
-for(i in 1:length(snms)) {
-  #i <- 1
-  d <- dset[[snms[i]]]$f1
-  n <- nrow(d)
-  plot(pp$x, pp$y, ylim = pp$yl, xlim = pp$xl, type = "l", lwd = 2, axes = FALSE, xlab = "", ylab = "")
-  if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2, mgp = c(1, 0.6, 0))
-  axis(1, at = 1:20, labels = pp$xaxl, las = 2, mgp = c(1, 0.4, 0), tcl = -0.3, pos = -100, cex = 0.8)
-  for(z in 1:length(pp$y2)) {
-    for(q in pp$x21) lines(q, rep(pp$y2[z], 2), lwd = pp$y2lwd[z], col = pp$y2lc[z])
-  }
-  for(k in 1:n) {
-    a <- seq(grep("2.5", colnames(d)), by = 1, length.out = 6)
-    if(!is.na(d[k, 2])) boxplot_v(k, d[k, a], n, 150, 10, bcol, fcol, pcex = 0.5, lwd = c(1, 0.5, 2))
-  }
-  #lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = 1.5)
-  lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = 3)
-  if(i == 1) mtext("% bias", side = 2, line = 2.2, cex = 0.8)
-  mtext(lcnms[i], side = 3, line = 0, col = cols[i])
-}
-mtext("% cropland", side = 1, outer = TRUE, line = -36.7, cex = 0.8)
-par(mar = c(0.5, 0, 0.5, 0.3))
-for(i in 1:length(snms)) {
-  highcounter <- rep(0, length(lev))
-  for(j in 1:length(lev)) {
-    plot(pp$x, pp$y, ylim = pp$yl2, xlim = pp$xl, type = "l", lwd = 1, axes = FALSE, xlab = "", ylab = "", 
-         xaxs = "i")
-    for(z in 1:length(pp$y2)) {
-      for(q in pp$x21) lines(q, rep(pp$y2[z], 2), lwd = pp$y2lwd[z], col = pp$y2lc[z])
-    }
-    #j <- 6
-    #i <- 2; j <- 5
-    d <- dset[[i]][[lev[j]]]
-    #max(which(!is.na(d[, "mu"])))
+for(bt in 1:2) {
+  pdf(full_path(p_fig, btype[bt]), width = 7, height = 7)
+  lmat <- rbind(m, m3)
+  l <- layout(lmat)
+  par(mar = c(3, 0, 0, 0), oma = c(3, 4, 2, 2))
+  snms <- names(dstats_all[[bt]])[names(dstats_all[[bt]]) != "glcsh"]
+  dset <- dstats_all[[bt]][snms]
+  for(i in 1:length(snms)) {
+    #bt <- 1
+    d <- dset[[snms[i]]]$f1
     n <- nrow(d)
-    lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = pp$y3lwd[j])
-    muv <- round(mean(d[, 8], na.rm = TRUE))
-    #pval <- substitute(mu==k, list(k = muv))
-    #if(j == 1) text(10, pp$yl2[1] + 10, labels = pval, cex = 1.3, col = cols[i])
-    if(j == length(lev)) {
-      mtext(expression(mu), side = 1, cex = 0.8, col = cols[i], line = -1.5, adj = 1.1)
+    plot(pp$x, pp$y, ylim = pp$yl[[bt]], xlim = pp$xl, type = "l", lwd = pp$y1lwd[[bt]], axes = FALSE, 
+         xlab = "", ylab = "")
+    if(i == 1) axis(2, at = pp$yax1[[bt]], labels = pp$yax1[[bt]], las = 2, mgp = c(1, 0.6, 0))
+    axis(1, at = 1:20, labels = pp$xaxl, las = 2, mgp = c(1, 0.4, 0), tcl = -0.3, pos = pp$yaxp[[bt]], 
+         cex = 0.8)
+    for(z in 1:length(pp$y2[[bt]])) lines(pp$x, rep(pp$y2[[bt]][z], 2), lwd = pp$y2lwd, col = pp$y2lc[[bt]][z])
+    for(k in 1:n) {
+      a <- seq(grep("2.5", colnames(d)), by = 1, length.out = 6)
+      if(!is.na(d[k, 2])) boxplot_v(k, d[k, a], n, 150, 10, bcol, fcol, pcex = 0.5, lwd = c(1, 0.5, 2))
     }
-    text(10, pp$yl2[1] + 10, labels = muv, cex = 1.3, col = cols[i])
-    toohigh <- which(d[, "mu"] > pp$yl2[2])
-    if(length(toohigh) > 0) {
-      highcounter[j] <- 1
-      xi <- toohigh[which.max(d[toohigh, "mu"])]
-      text(xi, y = pp$yl2[2], labels = round(d[xi, "mu"]), col = cols[i], xpd = NA)
-    }
-    if(j == length(lev)) {
-      if(sum(highcounter) > 0) mtext("max", side = 3, cex = 0.7, col = cols[i], line = -0.7, adj = 1.1)
-    }
-    #if(j == 1) axis(2, at = pp$yax2, labels = pp$yax2, las = 2)
-    if(j == 1) axis(2, at = seq(pp$yl2[1], pp$yl2[2], 10), labels = pp$yax2, las = 2, mgp = c(1, 0.6, 0))
-    if(i == 1) mtext(levnms[j], side = 3, line = -0.4, cex = 0.8)
-    axis(1, at = c(1, 5, 10, 15, 20), labels = rep("", 5), mgp = c(1, 1, 0), tcl = -0.7, lwd.ticks = 1.2, 
-         pos = pp$yl2[1])
-    axis(1, at = 1:20, labels = rep("", 20), las = 2, mgp = c(1, 0.4, 0), tcl = -0.3, pos = pp$yl2[1])
-    if(i == length(snms)) {
-      axis(1, at = 1:20, labels = pp$xaxl2, las = 2, mgp = c(1, 0.8, 0), tcl = -0.3, pos = pp$yl2[1])
-    }
+    lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = 3)
+    if(i == 1) mtext(ifelse(bt == 1, "% bias", "% bias (absolute)"), side = 2, line = 2.2, cex = 0.8)
+    mtext(lcnms[i], side = 3, line = 0, col = cols[i])
   }
-}
-mtext("% bias", side = 2, line = 2.2, cex = 0.8, outer = TRUE, adj = 0.35)
-mtext("% cropland", side = 1, outer = TRUE, line = 1.5, cex = 0.8)
-dev.off()
-
-
-
-  for(j in 1:6) { #j <- 1
-    plot(pp$x, pp$y, ylim = pp$yl, xlim = pp$xl, type = "l", lwd = 2, axes = FALSE, xlab = "", ylab = "")
-    for(z in 1:length(pp$y2)) {
-      for(q in pp$x21) lines(q, rep(pp$y2[z], 2), lwd = pp$y2lwd[z], col = pp$ycol)
+  mtext("% cropland", side = 1, outer = TRUE, line = -36.7, cex = 0.8)
+  par(mar = c(0.5, 0, 0.5, 0.3))
+  for(i in 1:length(snms)) {
+    highcounter <- rep(0, length(lev))
+    for(j in 1:length(lev)) {
+      plot(pp$x, pp$y, ylim = pp$yl2[[bt]], xlim = pp$xl, type = "l", lwd = 1, axes = FALSE, xlab = "", 
+           ylab = "", xaxs = "i")
+      for(z in 1:length(pp$y2[[bt]])) {
+        lines(pp$x, rep(pp$y2[[bt]][z], 2), lwd = pp$y2lwd, col = pp$y2lc[[bt]][z])
+      }
+      d <- dset[[i]][[lev[j]]]
+      n <- nrow(d)
+      lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = pp$y3lwd[j])
+      muv <- round(mean(d[, 8], na.rm = TRUE))
+      if(j == length(lev)) {
+        mtext(expression(mu), side = 1, cex = 0.8, col = "grey10", line = ifelse(bt == 1, -1.5, -1.8), 
+              adj = 1.1)
+      }
+      text(10, pp$yl2[[bt]][1] + 10, labels = muv, cex = 1.3, col = "grey10")
+      toohigh <- which(d[, "mu"] > pp$yl2[[bt]][2])
+      if(length(toohigh) > 0) {
+        highcounter[j] <- 1
+        xi <- toohigh[which.max(d[toohigh, "mu"])]
+        text(xi, y = pp$yl2[[bt]][2], labels = round(d[xi, "mu"]), col = "grey50", xpd = NA)
+      }
+      if(j == length(lev)) {
+        if(sum(highcounter) > 0) mtext("max", side = 3, cex = 0.7, col = "grey50", line = -0.7, adj = 1.1)
+      }
+      if(j == 1) {
+        axis(2, at = seq(pp$yl2[[bt]][1], pp$yl2[[bt]][2], 10), labels = pp$yax2[[bt]], las = 2, 
+             mgp = c(1, 0.6, 0))
+      }
+      if(i == 1) mtext(levnms[j], side = 3, line = -0.4, cex = 0.8)
+      axis(1, at = c(1, 5, 10, 15, 20), labels = rep("", 5), mgp = c(1, 1, 0), tcl = -0.7, lwd.ticks = 1.2, 
+           pos = pp$yl2[[bt]][1])
+      axis(1, at = 1:20, labels = rep("", 20), las = 2, mgp = c(1, 0.4, 0), tcl = -0.3, pos = pp$yl2[[bt]][1])
+      if(i == length(snms)) {
+        axis(1, at = 1:20, labels = pp$xaxl2, las = 2, mgp = c(1, 0.8, 0), tcl = -0.3, pos = pp$yl2[[bt]][1])
+      }
+      }
     }
-    if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
-    #if(i != 1) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
-    if(j == 6) axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
-    df <- d[[j]]
-    for(k in 2:n) {
-      a <- seq(grep("2.5", colnames(df)), by = 1, length.out = 6)
-      if(!is.na(df[k, 2])) boxplot_v(k, df[k, a], n, 150, 10, bcol, fcol, pcex = 0.5, lwd = c(1, 0.5, 2))
-      if(!is.na(df[k, 7])) lines(1:19, df[-20, "mu"], pch = 20, col = cols[i], lwd = 1.5)
-    }
-    print(mean(df[, 8], na.rm = TRUE))
-  }
-}
-dev.off()
+  mtext(ifelse(bt == 1, "% bias", "% bias (absolute)"), side = 2, line = 2.2, cex = 0.8, outer = TRUE, 
+        adj = 0.35)
+  mtext("% cropland", side = 1, outer = TRUE, line = 1.5, cex = 0.8)
+  dev.off()
+}  
 
-
-
-cbind(rep(pp$y2[z], 2), rep(pp$y2[z + 5], 2))
-
-sapply(1:2, function(q) rep(pp$y2[z], 2))
-
-##
-# p <- rect_polys(1:(nrow(d) - 1), y1 = d[-nrow(d), 6], y2 = d[-nrow(d), 2])
-# cdens <- d[-nrow(d), 1] / log(d[-nrow(d), 1])
-# cols <- rgb(1, 0, 0, alpha = log(cdens))
-# lapply(1:length(p), function(x) polygon(p[[x]][, 1], p[[x]][, 2], col = cols[x]))
-
-
-x <- c(1:nrow(act_stats$sa30$f1), nrow(act_stats$sa30$f1):1, 1) 
-y <- c(act_stats$sa30$f1[, 2], rev(act_stats$sa30$f1[, 6]), act_stats$sa30$f1[1, 2])
-polygon(x[!is.na(y)], y[!is.na(y)])
-lines(act_stats$sa30$f1[, 7])
+#   for(j in 1:6) { #j <- 1
+#     plot(pp$x, pp$y, ylim = pp$yl, xlim = pp$xl, type = "l", lwd = 2, axes = FALSE, xlab = "", ylab = "")
+#     for(z in 1:length(pp$y2)) {
+#       for(q in pp$x21) lines(q, rep(pp$y2[z], 2), lwd = pp$y2lwd[z], col = pp$ycol)
+#     }
+#     if(i == 1) axis(2, at = seq(-100, 100, 50), labels = seq(-100, 100, 50), las = 2)
+#     #if(i != 1) axis(2, at = seq(-100, 100, 50), labels = rep("", 5))
+#     if(j == 6) axis(1, at = 1:20, labels = lvec, las = 2, mgp = c(1, 0.7, 0), tcl = -0.3)
+#     df <- d[[j]]
+#     for(k in 2:n) {
+#       a <- seq(grep("2.5", colnames(df)), by = 1, length.out = 6)
+#       if(!is.na(df[k, 2])) boxplot_v(k, df[k, a], n, 150, 10, bcol, fcol, pcex = 0.5, lwd = c(1, 0.5, 2))
+#       if(!is.na(df[k, 7])) lines(1:19, df[-20, "mu"], pch = 20, col = cols[i], lwd = 1.5)
+#     }
+#     print(mean(df[, 8], na.rm = TRUE))
+#   }
+# }
+# dev.off()
 
 ```
 

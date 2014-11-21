@@ -15,3 +15,6 @@ markdownToHTML("vignettes/overview.md", "vignettes/overview.html", options=c("us
 knit("vignettes/compare-landcover.Rmd", output = "vignettes/compare-landcover.md")
 markdownToHTML("vignettes/compare-landcover.md", "vignettes/compare-landcover.html", options=c("use_xhml"))
 
+knit("vignettes/landcover-bias-plots.Rmd", output = "vignettes/landcover-bias-plots.md")
+markdownToHTML("vignettes/landcover-bias-plots.md", "vignettes/landcover-bias-plots.html", 
+               options=c("use_xhml"))
