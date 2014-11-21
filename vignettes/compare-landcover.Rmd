@@ -25,7 +25,7 @@ p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 ```
 
 2. Load cropland grids 
-  + Derived from global landcover products
+  + Derived from global landcover products (note: it turns out GLC-Share and geowiki are the same thing)
 
 ```{r, eval = FALSE}
 salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
@@ -73,6 +73,7 @@ save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 namask <- !is.na(gti[[1]])  
 area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
 namask[namask == 0] <- NA
+writeRaster(namask, filename = full_path(p_data, "namask.tif"))
 
 # cropland cover bins
 binv <- seq(0, 100, 5)
