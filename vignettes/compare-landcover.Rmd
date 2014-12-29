@@ -51,7 +51,7 @@ This steps draws on functions I wrote to calculate the actual and absolute diffe
 
 ```{r, eval = FALSE}
 # Aggregate rasters
-fact <- c(5, 10, 20, 50, 100, 200, 300)
+fact <- c(5, 10, 25, 50, 100, 200, 300)
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 
@@ -64,6 +64,16 @@ dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), gti_agg, gti
 
 save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
+
+# Write out the gti cover raster and the actual bias rasters for running impact of bias examples in land
+# surface model (25 km resolution)
+r <- gti_agg$f25$g2011
+projection(r) <- projection(salc)
+writeRaster(r, filename = full_path(p_data, "gti_2011_25km.tif"))
+b <- brick(stack(lapply(c("sa30", "globmu", "modmu", "geow"), function(x) dlist_act[[x]]$f25$g2011)))
+projection(b) <- projection(salc)
+writeRaster(b, filename = full_path(p_data, "lc_bias_25km.tif"))
+
 ```
 [[back to top]][Overview]
 ### Bias as function of cropcover
@@ -73,7 +83,7 @@ save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 namask <- !is.na(gti[[1]])  
 area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
 namask[namask == 0] <- NA
-writeRaster(namask, filename = full_path(p_data, "namask.tif"))
+writeRaster(namask, filename = full_path(p_data, "namask.tif"), overwrite = TRUE)
 
 # cropland cover bins
 binv <- seq(0, 100, 5)
@@ -101,6 +111,7 @@ dlists <- lapply(list(dlist_act, dlist_abs), function(i) {
 })
 names(dlists) <- c("act", "abs")
 rm(dlist_act, dlist_abs)  # remove original to make space
+
 ```
 
 + Then calculate biases across datasets
