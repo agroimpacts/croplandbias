@@ -33,7 +33,7 @@ General approach/rationale:
       \item Food production estimates (e.g. yield gaps) - anything by RamanFoley, Rachel's work, etc.
       \item Carbon stocks (Tier 1 vegetated carbon estimates) - Ruesch and Gibbs
       \item Habitat loss data.
-      \item Attempts to estimate land-atmosphere interactions, hydrological models, etc. 
+      \item Attempts to estimate land-atmosphere interactions, hydrological models, etc. [Here we will run land surface model with GTI cropland fraction providing the cropland surface, and we will then alter this using the bias rasters to see how this propagates into ET and runoff estimation errors, etc] 
     \end{itemize}
   \item It is understood that there are errors inherent in these data, particularly global-scale products, and that there is great discrepancy between these. This is particularly true of developing regions that will experience the largest amount of land surface change this century, such as Africa.  
     \begin{itemize} 
@@ -85,7 +85,7 @@ General approach/rationale:
 %\vspace{0.5 in}
 \begin{figure}[H]
 \includegraphics[width = \linewidth]{../figures/bias_map.pdf}
-\caption{The spatial distribution of biases in cropland cover estimates from four landcover products, calculated by subtracting each of their cropland percentage estimates from that of GeoTerraImage's cropland data layer. The biases were calculated for several different levels of, ranging from the original 1 km resolution up to 300 km (only 1, 20, 50, and 100 km results are shown here). Blue areas are those where the landcover products underestimated croplands, and red areas are where they overestimated. The GlobCover and MODIS results are drawn from biases calculated from the intermediate cropland fraction estimates per pixel.}
+\caption{The spatial distribution of biases in cropland cover estimates from four landcover products, calculated by subtracting each of their cropland percentage estimates from that of GeoTerraImage's cropland data layer. The biases were calculated for several different levels of, ranging from the original 1 km resolution up to 300 km (only 1, 25, 50, and 100 km results are shown here). Blue areas are those where the landcover products underestimated croplands, and red areas are where they overestimated. The GlobCover and MODIS results are drawn from biases calculated from the intermediate cropland fraction estimates per pixel.}
 \end{figure}
 %\vspace{-0.3in}
 
