@@ -35,7 +35,7 @@ Plot maps of biases at different resolutions, for publication output (and displa
 ```{r, eval = FALSE}
 namask <- raster(full_path(p_data, "namask.tif"))
 snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data, excluding Modis and GlobCov extremes
-lev <- c("f1", "f20", "f50", "f100")  # just show four levels
+lev <- c("f1", "f25", "f50", "f100")  # just show four levels
 
 # disggregate selected rasters at selected levels
 disagg <- lapply(snms, function(x) {
@@ -62,8 +62,8 @@ legtext <- "% Difference"
 cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
-lev2 <- c("1 km", "20 km", "50 km", "100 km")
-pdf(full_path(p_fig, "bias_map_.pdf"), height = 6, width = 7)
+lev2 <- c("1 km", "25 km", "50 km", "100 km")
+pdf(full_path(p_fig, "bias_map.pdf"), height = 6, width = 7)
 par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
 for(i in 1:length(snms)) {
   print(snms[i])
