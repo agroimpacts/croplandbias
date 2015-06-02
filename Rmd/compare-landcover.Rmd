@@ -51,16 +51,18 @@ This steps draws on functions I wrote to calculate the actual and absolute diffe
 
 ```{r, eval = FALSE}
 # Aggregate rasters
-fact <- c(5, 10, 25, 50, 100, 200, 300)
+#fact <- c(5, 10, 25, 50, 100, 200, 300)
+fact <- 25
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 
 # Calculate differences
-dlist_act <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "a - b", 
-                            silent = FALSE)  # actual
-dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), gti_agg, lc_agg, "abs(a - b)", 
-                            silent = FALSE)  # absolute
-dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), gti_agg, gti_agg, "a - b", silent = FALSE)
+dlist_act <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)),
+                            gti_agg, lc_agg, "a - b", silent = FALSE)  # actual
+dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)), 
+                            gti_agg, lc_agg, "abs(a - b)", silent = FALSE)  # absolute
+dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), 
+                            gti_agg, gti_agg, "a - b", silent = FALSE)
 
 save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
@@ -70,9 +72,19 @@ save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 r <- gti_agg$f25$g2011
 projection(r) <- projection(salc)
 writeRaster(r, filename = full_path(p_data, "gti_2011_25km.tif"))
-b <- brick(stack(lapply(c("sa30", "globmu", "modmu", "geow"), function(x) dlist_act[[x]]$f25$g2011)))
+b <- brick(stack(lapply(c("sa30", "globmu", "modmu", "geow"), function(x) {
+  dlist_act[[x]]$f25$g2011
+})))
 projection(b) <- projection(salc)
 writeRaster(b, filename = full_path(p_data, "lc_bias_25km.tif"))
+
+# r <- raster(full_path(p_data, "gti_2011_25km.tif"))
+# lcb <- brick(full_path(p_data, "lc_bias_25km.tif"))
+# plot(r - lcb, axes = FALSE, box = FALSE)
+# plot(lcb)
+# plot(round(lc_agg$f25$geow - (r - lcb$lc_bias_25km.4), 7))
+
+
 
 ```
 [[back to top]][Overview]
@@ -133,14 +145,17 @@ dstats_all <- lapply(dlists, function(i) {
             rs[rs == 0] <- NA
             o <- rs * l3[[k]]
             w <- area_wgts[[y]][[1]] * rs
-            oo <- cbind.data.frame("lc" = rep(names(i)[z], length(w)), getValues(o), getValues(w))
+            oo <- cbind.data.frame("lc" = rep(names(i)[z], length(w)), 
+                                   getValues(o), getValues(w))
           }))
           d3f <- d3[!is.na(d3[, 2]), ]
         }))
         if(nrow(d2) > (length(i[[x]][[y]]) * 10)) {
-        qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, weight.opts = list("weights" = d2[, 3])))
+        qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, 
+                                    weight.opts = list("weights" = d2[, 3])))
         } else if((nrow(d2) > 0) & (nrow(d2) < length(i[[x]][[y]]) * 20)) {
-          qs <- c(rep(NA, 6), Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], na.rm = FALSE))
+          qs <- c(rep(NA, 6), Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], 
+                                              na.rm = FALSE))
         } else {
           qs <- rep(NA, 7)
         }
@@ -172,7 +187,8 @@ dstats_gti <- lapply(lev_vec, function(x) {
       oo <- cbind.data.frame(rep(y, length(w)), getValues(o), getValues(w))
       oof <- oo[!is.na(oo[, 2]), ]
       if(nrow(oof) > 10) {
-        qs <- c(nrow(oof), box_stats(oof[, 2], weighted = TRUE, weight.opts = list("weights" = oof[, 3])))
+        qs <- c(nrow(oof), box_stats(oof[, 2], weighted = TRUE, 
+                                     weight.opts = list("weights" = oof[, 3])))
       } else if((nrow(oof) > 0) & (nrow(oof) < 10)) {
         qs <- c(rep(NA, 6), Hmisc::wtd.mean(oof[, 2], weights = oof[, 3], na.rm = FALSE))
       } else {
