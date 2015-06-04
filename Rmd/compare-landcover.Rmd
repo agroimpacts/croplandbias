@@ -30,11 +30,13 @@ p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 ```{r, eval = FALSE}
 salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
 globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
-modsa_list_sum <- lapply(full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
+fnames <- full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)])
+modsa_list_sum <- lapply(fnames, raster)
 glcsa <- raster(full_path(p_data, "glcsa_masked.tif"))
 geow <- raster(full_path(p_data, "geowikisa_masked.tif"))
 lclist <- c(salc, globsa_list_sum, modsa_list_sum, glcsa, geow)  # into list
-names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu", "modmax", "glcsh", "geow")
+names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu",
+                   "modmax", "glcsh", "geow")
 ```
 
   + SA landcover data
@@ -52,7 +54,7 @@ This steps draws on functions I wrote to calculate the actual and absolute diffe
 ```{r, eval = FALSE}
 # Aggregate rasters
 #fact <- c(5, 10, 25, 50, 100, 200, 300)
-fact <- 25
+#fact <- 25
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 
@@ -84,22 +86,24 @@ writeRaster(b, filename = full_path(p_data, "lc_bias_25km.tif"))
 # plot(lcb)
 # plot(round(lc_agg$f25$geow - (r - lcb$lc_bias_25km.4), 7))
 
-
-
 ```
 [[back to top]][Overview]
+
 ### Bias as function of cropcover
 + First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
 ```{r, eval = FALSE}
 # NA mask and weights
-namask <- !is.na(gti[[1]])  
+namask <- !is.na(gti[[1]])
 area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
 namask[namask == 0] <- NA
-writeRaster(namask, filename = full_path(p_data, "namask.tif"), overwrite = TRUE)
+writeRaster(namask, filename = full_path(p_data, "namask.tif"), 
+            overwrite = TRUE)
 
 # cropland cover bins
 binv <- seq(0, 100, 5)
-gti_bins <- lapply(gti_agg, function(x) lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE)))
+gti_bins <- lapply(gti_agg, function(x) {
+  lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE))
+})
 ```
 
 + Calculate biases, pooling MODIS and GlobCover across all version
@@ -171,6 +175,33 @@ save(dstats_all, file = full_path(p_data, "bias_stats.rda"))
 ```
 [[back to top]][Overview]
 
++ Collected absolute differences with weights for regression plots. Test first on 25 km
+```{r, eval=FALSE}
+gti_2011_25 <- raster(full_path(p_data, "gti_2011_25km.tif"))
+snms2 <- c("sa30", "modmu", "globmu", "geow")
+km25 <- stack(lapply(dlist_abs[snms2], function(x) x$f25$g2011))
+s <- stack(list(area_wgts$f25[[1]], gti_2011_25, km25))
+# s <- s[[-10]]
+library(agroEcoTradeoffs)
+DT <- as.data.table.raster(s)
+DT <- DT[!is.na(namask), ]
+setnames(DT, "gti_2011_25km", "A")
+DTL <- do.call(rbind, lapply(3:ncol(DT), function(x) {
+  DTS <- DT[, c(1, 2, x), with = FALSE]
+  setnames(DTS, colnames(DT)[x], new = "D")
+}))
+head(DTL)
+DTL[, plot(A, D, pch = 20, cex = 0.1)]
+dlm <- lm(D ~ poly(A, degree = 2), weights = namask, data = DTL)
+lines(predict.lm(dlm, newdata = data.frame("A" = 1:100)))
+
+DT[, plot(A, geow, pch = 20, cex = 0.1)]
+dlm <- lm(geow ~ poly(A, degree = 2), data = DT)
+lines(predict.lm(dlm, newdata = data.frame("A" = 1:100)))
+
+```
+
+
 + Finally, differences between gti2007 and 2011
 ```{r, eval = FALSE}
 dstats_gti <- lapply(lev_vec, function(x) {
@@ -190,7 +221,8 @@ dstats_gti <- lapply(lev_vec, function(x) {
         qs <- c(nrow(oof), box_stats(oof[, 2], weighted = TRUE, 
                                      weight.opts = list("weights" = oof[, 3])))
       } else if((nrow(oof) > 0) & (nrow(oof) < 10)) {
-        qs <- c(rep(NA, 6), Hmisc::wtd.mean(oof[, 2], weights = oof[, 3], na.rm = FALSE))
+        qs <- c(rep(NA, 6), 
+                Hmisc::wtd.mean(oof[, 2], weights = oof[, 3], na.rm = FALSE))
       } else {
         qs <- rep(NA, 7)
       }
