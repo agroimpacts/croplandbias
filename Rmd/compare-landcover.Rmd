@@ -29,7 +29,8 @@ p_data <- full_path(p_root, "SAcropland/external/ext_data/")
 
 ```{r, eval = FALSE}
 salc <- raster(full_path(p_data, "sa_ag_masked.tif")) * 100
-globsa_list_sum <- lapply(full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)]), raster)
+ds <- full_path(p_data, dir(p_data, "globSA*.*1kmrect_sum.tif")[c(2:3, 1)])
+globsa_list_sum <- lapply(ds, raster)
 fnames <- full_path(p_data, dir(p_data, "mod_1*.*1kmrect_sum.tif")[c(2:3, 1)])
 modsa_list_sum <- lapply(fnames, raster)
 glcsa <- raster(full_path(p_data, "glcsa_masked.tif"))
@@ -119,7 +120,7 @@ dlists <- lapply(list(dlist_act, dlist_abs), function(i) {
   resh <- lapply(nm_rt, function(x) {  # select sensor
     l2 <- lapply(lev_vec, function(y) {  # isolate by scale
       l3 <- lapply(i[grep(x, names(i))], function(z) z[[y]])  # sensor by scale
-      named_out(l3, names(i)[grep(x, names(i))])
+        named_out(l3, names(i)[grep(x, names(i))])
       })
     named_out(l2, lev_vec)
   })
