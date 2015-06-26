@@ -40,22 +40,24 @@ sa_buf <- gBuffer(sa.shp, width = 3000)
 
 # Connection
 drv <- dbDriver("PostgreSQL")
-con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", password = "P0stG1S")
+con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", 
+                 password = "P0stG1S")
 
 # projections, etc
 prjsrid <- 97490  # Albers
-prj_sql <- paste("select proj4text from spatial_ref_sys where srid=", prjsrid, sep = "")
+prj_sql <- paste0("select proj4text from spatial_ref_sys where srid=", prjsrid)
 prjstr <- dbGetQuery(con, prj_sql)$proj4text
 gcsid <- 4326  # GCS
-gcs_sql <- paste("select proj4text from spatial_ref_sys where srid=", gcsid, sep = "")
+gcs_sql <- paste0("select proj4text from spatial_ref_sys where srid=", gcsid)
 gcsstr <- dbGetQuery(con, gcs_sql)$proj4text
 
 # Convert SA to GCS for cropping extent
 sa_buf_gcs <- spTransform(sa_buf, CRSobj = CRS(gcsstr))
 
 # Create 1 km grid from sa1kilo to rectify grids against that 
-if(!file.exists(full_path(p_data, "sagrid.tif"))) {  # Wrap in if statement in case grid already made
-  sql <- paste("SELECT gid, id, ST_AsText(ST_Centroid(geom)) as center FROM sa1kilo")
+if(!file.exists(full_path(p_data, "sagrid.tif"))) {  # already made? 
+  sql <- paste("SELECT gid, id, ST_AsText(ST_Centroid(geom)) as center", 
+               "FROM sa1kilo")
   geom.tab <- dbGetQuery(con, sql)
   coord.mat <- do.call(rbind, lapply(1:nrow(geom.tab), function(y) {
     strip <- gsub("POINT|\\(|\\)", "", geom.tab[y, 3])
@@ -67,7 +69,8 @@ if(!file.exists(full_path(p_data, "sagrid.tif"))) {  # Wrap in if statement in c
   pointsXYZ <- point.tab[, c(3:4, 2)]
   sa_r <- rasterFromXYZ(pointsXYZ)
   projection(sa_r) <- sa.buf@proj4string
-  sa_r <- writeRaster(sa_r, filename = full_path(p_data, "sagrid.tif"), overwrite = TRUE)
+  sa_r <- writeRaster(sa_r, filename = full_path(p_data, "sagrid.tif"), 
+                      overwrite = TRUE)
 } else {
   sa_r <- raster(full_path(p_data, "sagrid.tif"))
 }
@@ -76,21 +79,26 @@ if(!file.exists(full_path(p_data, "sagrid.tif"))) {  # Wrap in if statement in c
 #### Bring in landcover datasets
 Let's start with the improved/fusion datasets, GLC share and geo-wiki's
 ```{r, eval = FALSE}
-if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists, to avoid redoing step
+if(!file.exists(full_path(p_data, "glcsa_masked.tif"))) {  # see if file exists,  
+  # to avoid redoing step
   path <- "/u/lestes/spatial_data/glc_share/"
   url <- "http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&fname=GlcShare_v10_02.zip&acces=private"
   download.file(url, method = "auto", destfile = "glc_share.zip")
   unzip("glc_share.zip", exdir = "glc_share")
   glc <- raster(full_path(path, "glc_shv10_02.Tif"))
   projection(glc) <- gcsstr
-  glcSA <- crop(glc, y=sa_buf_gcs, file = full_path(path, "glcSA.tif"), overwrite = TRUE)  # crop to SA
-  gdalwarp(srcfile = glcSA@file@name, dstfile = full_path(path, "glcSA_alb.tif"), t_srs = prjstr, 
+  glcSA <- crop(glc, y=sa_buf_gcs, file = full_path(path, "glcSA.tif"), 
+                overwrite = TRUE)  # crop to SA
+  gdalwarp(srcfile = glcSA@file@name, 
+           dstfile = full_path(path, "glcSA_alb.tif"), t_srs = prjstr, 
            tr = c(1000, 1000), r = "bilinear")
   glcSA_alb <- raster(full_path(path, "glcSA_alb.tif"))
 
   # Warp to SA grid
-  glcsa <- resample(glcSA_alb, sa_r, method = "bilinear", filename = full_path(path, "glcSA_alb_rect.tif"))
-  glcsa_m <- mask(glcsa, sa_r, file = full_path(p_data, "glcsa_masked.tif"), overwrite = TRUE)
+  glcsa <- resample(glcSA_alb, sa_r, method = "bilinear", 
+                    filename = full_path(path, "glcSA_alb_rect.tif"))
+  glcsa_m <- mask(glcsa, sa_r, file = full_path(p_data, "glcsa_masked.tif"),
+                  overwrite = TRUE)
 } else {
   glcsa_m <- raster(full_path(p_data, "glcsa_masked.tif"))
 }
@@ -101,13 +109,17 @@ if(!file.exists(full_path(p_data, "geowikisa_masked.tif"))) {  # see if file exi
   unzip("cropland_hybrid_14052014v8.zip", exdir= "geowiki") 
   geowiki <- raster(full_path(path, "Hybrid_14052014V8.img"))
   projection(geowiki) <- gcsstr
-  geowikiSA <- crop(geowiki, y=sa_buf_gcs, file = full_path(path, "geowikiSA.tif"))  # crop to extent of SA
-  gdalwarp(srcfile = geowikiSA@file@name, dstfile = full_path(path, "geowikiSA_alb.tif"), t_srs = prjstr, 
+  geowikiSA <- crop(geowiki, y=sa_buf_gcs, 
+                    file = full_path(path, "geowikiSA.tif"))  # crop to SA
+  gdalwarp(srcfile = geowikiSA@file@name, 
+           dstfile = full_path(path, "geowikiSA_alb.tif"), t_srs = prjstr, 
            tr = c(1000, 1000), r = "bilinear")
   geowikisa_alb <- raster(full_path(path, "geowikiSA_alb.tif"))
-  geowikisa <- resample(geowikisa_alb, sa_r, method = "bilinear", 
-                        filename = full_path(path, "geowikisa_alb_rect.tif"))    # Warp to SA grid
-  geowikisa_m <- mask(glcsa, sa_r, file = full_path(p_data, "geowikisa_masked.tif"), overwrite = TRUE)
+  geowikisa <- resample(geowikisa_alb, sa_r, method = "bilinear", # Warp to SA
+                        filename = full_path(path, "geowikisa_alb_rect.tif"))    
+  geowikisa_m <- mask(glcsa, sa_r, 
+                      file = full_path(p_data, "geowikisa_masked.tif"), 
+                      overwrite = TRUE)
 } else {
   geowikisa_m <- raster(full_path(p_data, "geowikisa_masked.tif"))
 }
@@ -122,7 +134,8 @@ if(!file.exists(full_path(path, "globSA_alb.tif"))) {
   unzip("globcover_2009.zip", exdir= "globcover_2009")
   glob <- raster(full_path(path, "GLOBCOVER_L4_200901_200912_V2.3.tif"))
   globSA <- crop(glob, y=sa_buf_gcs)  # crop to extent of SA
-  gdalwarp(srcfile = globSA@file@name, dstfile = full_path(path, "globSA_alb.tif"), t_srs = prjstr, 
+  gdalwarp(srcfile = globSA@file@name, 
+           dstfile = full_path(path, "globSA_alb.tif"), t_srs = prjstr, 
            tr = c(300, 300))
   globSA_alb <- raster(full_path(path, "globSA_alb.tif"))
 } else {
@@ -140,11 +153,12 @@ if(!file.exists(full_path(moddir, "modis_type_1_alb.tif"))) {
   tile.names2 <- unique(substr(tile.names1, 20, 64))
   modnames <- tile.names2[sapply(tiles, function(x) grep(x, tile.names2))]
   lapply(modnames, function(x) {
-    url <- paste("http://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.051/2011.01.01/", x, sep = "")
+    url <- paste0("http://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.051/2011.01.01/", x)
     download.file(url, method="auto", destfile = x)
   })
   dir.create("MCD12Q1")
-  file.copy(from = dir(pattern = "hdf"), to = paste(getwd(), "MCD12Q1", dir(pattern = "hdf"), sep = "/"))
+  file.copy(from = dir(pattern = "hdf"), 
+            to = paste(getwd(), "MCD12Q1", dir(pattern = "hdf"), sep = "/"))
   file.remove(dir(pattern = "hdf"))
   
   modis <- dir(moddir)
@@ -152,14 +166,17 @@ if(!file.exists(full_path(moddir, "modis_type_1_alb.tif"))) {
   # Translate to geotiff
   lapply(1:5, function(x) {
     batch_gdal_translate(infiles = modis, outdir = moddir, 
-                         outsuffix = paste("_LC_", x, ".tif", sep = ""), sd_index = x)  
+                         outsuffix = paste("_LC_", x, ".tif", sep = ""), 
+                         sd_index = x)  
   })
-  sdnames <- lapply(1:5, function(x) dir(moddir, pattern  = paste("LC_", x, ".tif", sep = "")))
+  sdnames <- lapply(1:5, function(x) dir(moddir, 
+                                         pattern = paste0("LC_", x, ".tif")))
   
   # warp to albers, mosaic, and clip to SA extent
   lapply(1:5, function(x) {
     print(paste("processing type", x))
-    gdalwarp(srcfile = sdnames[[x]], dstfile = paste("modis_type_", x, "_alb.tif", sep = ""), 
+    gdalwarp(srcfile = sdnames[[x]], 
+             dstfile = paste0("modis_type_", x, "_alb.tif"), 
              t_srs = prjstr, tr = res(r), te = bbox(sa.buf)[1:4])
   })  
   mod_1 <- raster("modis_type1_alb.tif")
@@ -180,23 +197,29 @@ if(length(dir(p_data, pattern = "sa_.*._masked.tif")) != 2) {
   unzip("landcover_2009.zip", exdir = "sa_lc_2009")
   
   setwd(path)
-  gdal_translate(src_dataset = "landcover", dst_dataset = "sa_lc_2009.tif", of = "GTiff", ot = "BYTE")
+  gdal_translate(src_dataset = "landcover", dst_dataset = "sa_lc_2009.tif", 
+                 of = "GTiff", ot = "BYTE")
   #system(paste("rm -r", full_path(path, "landcover")))
   #file.remove("../landcover_2009.zip")
     
-  # process masks--extract extract landcover class 2, cultivation, and class 6, plantations, resample, mask 
-  # with gdal tools
+  # process masks--extract extract landcover class 2, cultivation, and class 6,
+  # plantations, resample, mask with gdal tools
   av <- c(2, 6)
   a <- "sa_lc_2009.tif"
   dang <- Sys.time() 
   salc_l <- lapply(1:2, function(j) {
     print(paste("extracting cover for", lcnm[j]))
-    gdal_calc(cstr = paste("A==", av[j], sep = ""), x = list("A" = a), type = "Byte", filename = lcnm[j])
-    nm <- full_path(p_data, paste(gsub("\\.tif", "", lcnm[j]), "_masked.tif", sep = ""))
-    ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) slot(extent(sa_r), x))
+    gdal_calc(cstr = paste("A==", av[j], sep = ""), x = list("A" = a), 
+              type = "Byte", filename = lcnm[j])
+    nm <- full_path(p_data, 
+                    paste(gsub("\\.tif", "", lcnm[j]), "_masked.tif", sep = ""))
+    ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) {
+      slot(extent(sa_r), x)
+    })
     print(paste("warping and masking", gsub(p_data, "", nm)))
-    gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, r = "average", ot = "Float32", 
-             te = ext, srcnodata = 255, dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
+    gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, 
+             r = "average", ot = "Float32", te = ext, srcnodata = 255, 
+             dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
              overwrite = TRUE)
     file.remove(lcnm[j])
     r <- raster(nm)
@@ -215,13 +238,15 @@ Create mask to remove sugarcane growing regions
 if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
   path <- "/u/lestes/spatial_data/kzn_landcover/"
   setwd(kznpath)
-  gdal_translate(src_dataset = "kznlc11v1w31", dst_dataset= "kznlandcover.tif", of = "GTiff")
+  gdal_translate(src_dataset = "kznlc11v1w31", dst_dataset= "kznlandcover.tif",
+                 of = "GTiff")
   system(paste("rm -r", full_path(path, "kznlc11v1w31")))
   kznlc <- raster(full_path(npath, "kznlandcover.tif"))
 
   # system call to gdal_calc.py to extract landcover class 2, cultivation
   kznlconm <- "kzn_cane.tif"  # file.remove(kznlconm)
-  kzninnm <- strsplit(kznlc@file@name, "/")[[1]][length(strsplit(kznlc@file@name, "/")[[1]])]
+  ss <- strsplit(kznlc@file@name, "/")
+  kzninnm <- ss[[1]][length(ss[[1]])]
   # kzninnm <- strsplit(kznlc.ss@file@name, "/")[[1]][length(strsplit(kznlc.ss@file@name, "/")[[1]])]
   pcalc <- paste("gdal_calc.py -A ", kzninnm, " --outfile=", kznlconm, 
                  " --overwrite --calc='(A==9)|(A==10)'", sep = "")
@@ -242,12 +267,14 @@ if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
   
   # Warp and resample to SA grid
   setwd(p_data)
-  gdalwarp(srcfile = kzn_cane@file@name, t_srs = projection(sa_r), dstfile = "kzn_cane_1km.tif", 
-           r = "average", ot = "Float32", srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
+  gdalwarp(srcfile = kzn_cane@file@name, t_srs = projection(sa_r), 
+           dstfile = "kzn_cane_1km.tif", r = "average", ot = "Float32", 
+           srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
            verbose = TRUE, overwrite = TRUE)
   kzn_1km <- raster(full_path(p_data, "kzn_cane_1km.tif"))
   kzn_1km_r <- resample(kzn_1km, sa_r, method = "bilinear")
-  kzn_1km_m <- mask(kzn_1km_r, sa_r, filename = full_path(p_data, "kzn_cane_masked.tif"), 
+  kzn_1km_m <- mask(kzn_1km_r, sa_r, 
+                    filename = full_path(p_data, "kzn_cane_masked.tif"), 
                     overwrite = TRUE)
 } else {
   kzn_1km_m <- raster(full_path(p_data, "kzn_cane_masked.tif"))
@@ -257,19 +284,24 @@ if(!file.exists(full_path(p_data, "kzn_cane_masked.tif"))) {
 
 Create low, medium, high cover fraction variants from MODIS classes 12 and 14 (from the IGBP-DIS scheme). Class 14 is a cropland mosaic class, with minimum of 10% and a max of 60%, so create variants of 10%, 35% (mean) and 60%. 
 ```{r, eval = FALSE}
-if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum.tif"))))) {
+if(any(!file.exists(full_path(p_data, 
+                              dir(p_data, 
+                                  pattern = "mod_1*.*1kmrect_sum.tif"))))) {
   # MODIS, using main classification scheme (IGBP-DIS)
   mod_1_crop <- stack(mod_1 == 12, mod_1 == 14)
   mod_1_cropb <- brick(mod_1_crop)
   names(mod_1_crop) <- c("cropland", "mosaic")
   
   # assign percentages
-  minset <- c(100, 10)  # assume 10% is minimum crop cover for MODIS IGBP mosaic class
+  minset <- c(100, 10)  # assume 10% is min crop cover for MODIS mosaic class
   meanset <- c(100, 35)  # assume 35% is mean crop cover
   maxset <- c(100, 60)  # assume 60% is mean crop cover  
-  modsa_min <- assignLCPct(mod_1_cropb, minset, fname = full_path(p_data, "mod_1_min.tif"))
-  modsa_mu <- assignLCPct(mod_1_cropb, meanset, fname = full_path(p_data, "mod_1_mu.tif"))
-  modsa_max <- assignLCPct(mod_1_cropb, maxset, fname = full_path(p_data, "mod_1_max.tif"))
+  modsa_min <- assignLCPct(mod_1_cropb, minset, 
+                           fname = full_path(p_data, "mod_1_min.tif"))
+  modsa_mu <- assignLCPct(mod_1_cropb, meanset, 
+                          fname = full_path(p_data, "mod_1_mu.tif"))
+  modsa_max <- assignLCPct(mod_1_cropb, maxset, 
+                           fname = full_path(p_data, "mod_1_max.tif"))
   
   # aggregate, resample, mask to SA grid
   modsa_list <- lapply(list(modsa_min, modsa_mu, modsa_max), function(x) {
@@ -280,7 +312,8 @@ if(any(!file.exists(full_path(p_data, dir(p_data, pattern = "mod_1*.*1kmrect_sum
     print("...resampling")
     crop1km <- resample(agg, sa_r, method = "bilinear")
     print("...masking")
-    crop1km <- mask(crop1km, mask = sa_r, filename = paste(nm, "_1kmrect.tif", sep = ""), overwrite = TRUE)
+    crop1km <- mask(crop1km, mask = sa_r, filename = paste0(nm, "_1kmrect.tif"),
+                    overwrite = TRUE)
     return(crop1km)
   })
   

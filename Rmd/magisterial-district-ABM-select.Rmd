@@ -1,0 +1,128 @@
+---
+title: "Districts for ABM"
+author: "Lyndon Estes"
+date: "June 26, 2015"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+---
+
+## Overview 
+
+Selection of magisterial districts and associated landcover sets for use in ABM example.
+
+## Data
+```{r, eval=FALSE}
+library(raster)
+library(rgdal)
+library(lmisc)
+
+# Paths
+p_root <- proj_root("SAcropland")
+p_fig <- full_path(p_root, "SAcropland/paper/figures/")
+p_data <- full_path(p_root, "SAcropland/external/ext_data/")
+p_data2 <- full_path(p_root, "SAcropland/data/")
+
+# landcover data
+load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*07sum_mask*")))
+gti <- raster(paths)  # gti 2007 rather than 2011, to match census data
+
+# Reconstruct original landcover estimates
+snms <- c("sa30", "globmu", "modmu", "geow")
+dlist_1km <- stack(lapply(dlist_act[snms], function(x) x$f1$g2007))
+lc_list <- gti - dlist_1km 
+
+# magisterial district data cropland statistics (2011, but only to look at for 
+# selection 
+load("external/ext_data/gti_md.rda")
+mu <- data.frame(t(sapply(gti_md, function(x) {
+  c(length(x), length(which(is.na(x))), round(mean(x, na.rm = TRUE), 1))
+})))
+colnames(mu) <- c("N", "na", "f")
+
+# district shapes, filtered by N missing data, minimum fraction, and area
+md <- readOGR("external/ext_data/mag_dists.sqlite", layer = "mag_dists")
+mdfilt <- mu[mu$na < 20 & mu$f > 5 & mu$N < 1500, ]  
+md@data[mdsel, 7:8]
+mdsel <- as.numeric(row.names(mdfilt))
+
+# Examine, including in QGIS
+plot(md)
+plot(md[mdsel[mdsel < 314], ], col = "red", add = TRUE)  # filter out Cape ones
+writeOGR(md[mdsel[mdsel < 314], ], dsn = "external/ext_data/md_abms.sqlite",
+         layer = "md_abms", driver = "SQLite")
+
+```
+
+### Selection
+
+Looking at the data in QGIS, including some rainfall maps from earlier papers and the inter-tubes, it looks like the following districts are a good match: 
+
+   + Clocolan (269)
+   + Ficksburg (274)
+   + Fouriesburg (275)
+   + Marquard (288)
+   
+```{r, eval=FALSE}
+abm_md <- md[mdsel[mdsel %in% c(269, 274:275, 288)], ]
+writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4", 
+         driver = "SQLite")
+
+# Let's compare the fractions between the GTI 2007 and GTI 2011 datasets for 
+# interest's sake
+gti_abm <- extract(gti, abm_md)
+abm_mu <- data.frame(t(sapply(gti_abm, function(x) {
+  c(length(x), length(which(is.na(x))), round(mean(x, na.rm = TRUE), 1))
+})))
+colnames(abm_mu) <- c("N", "na", "f")
+abm_mu$f - mu[mdsel[mdsel %in% c(269, 274:275, 288)], "f"]
+ # -1.0  0.0 -0.4 -0.2  # tinf differences!
+```
+
+### Extraction
+```{r, eval=FALSE}
+gti4 <- crop(gti, extent(abm_md))
+lc4 <- crop(lc_list, extent(abm_md))
+cb <- brick(stack(gti4, lc4), filename = "external/ext_data/cropland-md4.tif")
+```
+
+### Visuals
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(raster)
+library(rgdal)
+library(lmisc)
+
+setwd(full_path(proj_root("SAcropland"), "SAcropland"))
+md <- readOGR("external/ext_data/mag_dists.sqlite", layer = "mag_dists")
+abm_md <- readOGR("external/ext_data/md4.sqlite", layer = "md4")
+cb <- brick("external/ext_data/cropland-md4.tif")
+```
+
+```{r}
+par(mar = c(0, 0, 0, 0))
+plot(md, col = "grey", border = "transparent")
+plot(abm_md, col = "red", border = "grey30", add = TRUE)
+```
+
+The four selected districts. 
+
+```{r}
+par(mar = c(0, 0, 0, 0))
+plot(cb[[1]], axes = FALSE, box = FALSE)
+plot(abm_md, add = TRUE)
+```
+
+2007 cropland fraction in the four districts.
+
+```{r}
+par(mar = c(0, 0, 0, 0), mfrow = c(2, 2))
+for(i in 2:5) {
+  plot(cb[[i]], axes = FALSE, box = FALSE, zlim = c(0, 101))
+  plot(abm_md, add = TRUE)
+}
+```
+
+Cropland fractions estimated by South Africa's landcover product, GLobCover, MODIS, and Geo-Wiki for the same 4 districts. Note the substantial variability. 
