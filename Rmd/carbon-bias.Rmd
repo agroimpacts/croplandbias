@@ -1,0 +1,392 @@
+---
+title: "Carbon bias"
+author: "Lyndon Estes"
+date: "June 24, 2015"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+---
+
+## Bias in carbon stock estimates
+
+Based on the Ruesch & Gibbs (2008) approach for estimating carbon density. 
+
+## Data
+
+Paths
+```{r, eval=FALSE}
+library(raster)
+library(rgdal)
+library(lmisc)
+library(data.table)
+library(SAcropland)
+
+# Paths
+p_root <- proj_root("SAcropland")
+p_fig <- full_path(p_root, "SAcropland/paper/figures/")
+p_data <- full_path(p_root, "SAcropland/external/ext_data/")
+p_data2 <- full_path(p_root, "SAcropland/data/")
+p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
+```
+
+Starting with the carbon look-up tables used for Africa by Ruesch & Gibbs (2008), inputs downloaded from [here](http://cdiac.ornl.gov/epubs/ndp/global_carbon/carbon_documentation.html#methods).
+```{r, eval=FALSE}
+cfiles <- dir(p_carb, pattern = "m6", full.names = TRUE)
+nms <- gsub("*.*m6|\\.txt", "", cfiles)
+cval_list <- lapply(1:length(cfiles), function(x) {
+  tab <- read.table(cfiles[x])
+  tab <- tab[ c(1, 3)]
+  colnames(tab) <- c("CL", nms[x])
+  tab
+})
+
+# merge into single carbon table
+mergefun <- function(x, y) merge(x, y, by = "CL", all.x = TRUE, all.y = TRUE)
+ctab <- Reduce(mergefun, cval_list)
+
+# Read in lookup table key
+key <- readLines(dir(p_carb, pattern = "key", full.names = TRUE))[25:44]
+key2 <- readLines(dir(p_carb, pattern = "key", full.names = TRUE))[47:57]
+mtch <- sapply(gregexpr("[0-9]", key2), max)
+lcs <- sapply(1:length(key2), function(x) substr(key2[x], 1, mtch[x]))
+lcs <- gsub(" & ", ",", gsub("-", ":", lcs))
+
+# Reshape and reduce according to carbon classes
+ctab2 <- t(data.frame(sapply(lcs, function(x) {
+  ind <- eval(parse(text = paste0("c(", x, ")")))
+  as.numeric(as.vector(
+    round(colMeans(ctab[ctab$CL %in% ind, -1], na.rm = TRUE))))
+})))
+rownames(ctab2) <- 1:nrow(ctab2)
+colnames(ctab2) <- nms
+ctab2 <- ctab2 * 0.01  # convert to tons/ha from 1000 kg/ha
+ctab2 <- cbind(transform(lcs), ctab2)
+colnames(ctab2)[1] <- "class"
+```
+
+Further compress classes that have the same carbon value.
+    + 1:3, 6:8 => 1 (broadleaf and mixed forests)
+    + 4:5 => Drop
+    + 9, 10; 17 => 2 (Secondary forests, forest/cropland mosaic)
+    + 11, 12, 15 => 3 (shrublands)
+    + 20:23 => drop (water, snow, artificial surfaces)
+    + 19 => drop (bare areas)
+
+```{r, eval=FALSE}
+ctabf <- round(rbind(colMeans(ctab2[c(1, 3), 2:ncol(ctab2)], na.rm = TRUE), 
+                     colMeans(ctab2[10:11, 2:ncol(ctab2)], na.rm = TRUE), 
+                     ctab2[4:6, 2:ncol(ctab2)]))
+
+# Read in ecofloristic regions and calculate their areas for Africa
+ecoflora <- readOGR("external/ext_data/africa_ecofloristic_zones.sqlite", 
+                    layer = "africa_ecofloristic_zones")
+ecoflora@proj4string <- CRS("+proj=longlat +datum=WGS84 +no_defs")
+afalb <- paste0("+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0 +lon_0=25 +x_0=0 ", 
+                "+y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+ecoflora_alb <- spTransform(ecoflora, CRS = CRS(afalb))
+ecoflora_num <- cbind.data.frame(unique(ecoflora_alb@data),  
+                                 "ID" = c("06", "08", "09", "15", "NA", "18",
+                                          "20", "16", "17", "WA", "19", "07"),
+                                 stringsAsFactors = FALSE)
+ecoflora_alb$ID <- rep("NA", nrow(ecoflora_alb))
+head(ecoflora_alb)
+ecoflora_alb$ID <- ecoflora_num[match(ecoflora_alb$gez_term, 
+                                      ecoflora_num$gez_term), "ID"]
+# ecoflora_alb@data <- sp::merge(ecoflora_alb@data, ecoflora_num, 
+#                                by = "gez_term", sort = FALSE, keep = TRUE)
+ecoflora_alb@data[sample(1:nrow(ecoflora_alb@data), 2), ]
+ecoflora_alb$area <- round(rgeos::gArea(ecoflora_alb, byid = TRUE) / 1000000, 1)
+ecoareas <- sapply(ecoflora_num$ID, function(x) {
+  sum(ecoflora_alb@data[ecoflora_alb$ID == x, "area"])
+})
+ecoareas <- ecoareas[!names(ecoareas) %in% c("WA", "NA")]
+ecowgts <- ecoareas / sum(ecoareas)
+ecowgts <- ecowgts[sort(names(ecowgts))]
+
+# par(mar = rep(0, 4))
+# plot(ecoflora_alb)
+# plot(ecoflora_alb[ecoflora_alb$ID == "17", ], col = "red", add = TRUE)
+
+i <- 1:ncol(ctabf)
+ctabf$mu <- round(sapply(1:nrow(ctabf), function(x) {
+  sum(ctabf[x, ] * ecowgts, na.rm = TRUE)
+}), 1)
+ctabf <- cbind(ctabf, t(apply(ctabf[, i], 1, function(x) range(x, na.rm=TRUE))))
+colnames(ctabf)[(ncol(ctabf) - 1):ncol(ctabf)] <- c("min", "max")
+rownames(ctabf) <- 1:nrow(ctabf)
+LC <- c("forest", "second", "shrub", "grass", "sparse")
+ctabo <- data.frame(t(ctabf[, c("mu", "min", "max")]))  # reclass table
+colnames(ctabo) <- LC
+
+```
+
+### Analysis
+1. Prepare raster data
+```{r, eval=FALSE}
+load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
+gti <- raster(paths) / 100  # gti 2011
+
+# Reconstruct original landcover estimates
+snms <- c("sa30", "globmu", "modmu", "geow")
+dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
+lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
+plot(lc_list[[1]])
+plot(gti)
+# tst <- raster("external/ext_data/geowikisa_masked.tif")  # check
+# plot(round(tst / 100 - lc_list[[4]], 4)) # okay
+
+fact <- c(5, 25, 50, 100)
+lc_agg <- aggregate_rast_list(fact, lc_list)   # landcover rasters 
+gti_agg <- aggregate_rast_list(fact, list("gti" = gti))  # GTI rasters
+```
+
+2. Create cropland carbon estimates
+```{r, eval=FALSE}
+
+# Apply carbon estimates
+cc <- ctab2[ctab2$class == 16, 2]
+carbon <- function(fcrop, cropC, noncropC) {
+  carb <- fcrop * cropC + noncropC * (1 - fcrop)
+  return(round(carb, 2))
+}
+
+cc <- ctab2[ctab2$class == 16, 2]
+gti_c <- lapply(gti_agg, function(x) {
+  r <- x$gti
+  s <- stack(lapply(1:ncol(ctabo), function(y) {
+    carbon(r, cc, ctabo[1, y])
+  }))
+  names(s) <- colnames(ctabo)
+  s
+})
+
+lc_c <- lapply(lc_agg, function(x) {
+  lc <- lapply(x, function(j) {
+    s <- stack(lapply(1:ncol(ctabo), function(y) {
+      carbon(j, cc, ctabo[1, y])
+    }))
+    names(s) <- colnames(ctabo)
+    s
+  })
+  names(lc) <- names(x)
+  lc
+})
+
+# checks 
+tst <- cbind(sample(1:5, 10, replace = TRUE), 
+             sample(1:4, 10, replace = TRUE),
+             sample(1:5, 10, replace = TRUE))
+sapply(1:nrow(tst), function(i) {
+  cellStats(lc_c[[tst[i, 1]]][[tst[i, 2]]][[tst[i, 3]]] - 
+              carbon(lc_agg[[tst[i, 1]]][[tst[i, 2]]], cc, ctabo[1, tst[i, 3]]),
+              sum)
+})
+# all zeroes
+
+```
+
+3. Difference the carbon datasets
+```{r, eval=FALSE}
+# percent difference
+pct_diff <- function(x, y) (x - y) / x * 100
+c_pct_diff <- lapply(1:length(gti_c), function(x) {
+  dif <- lapply(1:length(lc_c[[x]]), function(y) {
+    s <- stack(lapply(1:nlayers(lc_c[[x]][[y]]), function(z) {
+      p <- pct_diff(gti_c[[x]][[z]], lc_c[[x]][[y]][[z]])
+    }))
+    names(s) <- colnames(ctabo)
+    s
+  })
+  names(dif) <- names(lc_c[[x]])
+  dif
+})
+names(c_pct_diff) <- names(lc_c)
+
+# checks 
+tst <- cbind(sample(1:5, 10, replace = TRUE), 
+             sample(1:4, 10, replace = TRUE),
+             sample(1:5, 10, replace = TRUE))
+sapply(1:nrow(tst), function(i) {
+  x <- gti_c[[tst[i, 1]]][[tst[i, 3]]]
+  y <- lc_c[[tst[i, 1]]][[tst[i, 2]]][[tst[i, 3]]]
+  z <- c_pct_diff[[tst[i, 1]]][[tst[i, 2]]][[tst[i, 3]]]
+  cellStats(z - ((x - y) / x * 100), sum)
+})
+# zeroes
+
+# Then for a map plot figure, calculate the mean pixel-wise percent difference
+c_pct_diff_mu <- lapply(c_pct_diff, function(x) {
+  lapply(x, function(y) calc(y, mean))
+})
+
+# # disggregate selected rasters at selected levels for plotting
+namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
+lev <- names(c_pct_diff_mu) 
+disagg <- lapply(snms, function(x) {
+  l1 <- lapply(lev, function(y) {
+    if(y == "f1") {
+      r <- c_pct_diff_mu[[y]][[x]]
+    } else {
+      r <- raster::disaggregate(c_pct_diff_mu[[y]][[x]], 
+                                fact = as.numeric(gsub("f", "", y)))
+      r <- raster::mask(crop(r, namask), namask)
+    }
+  })
+  named_out(l1, lev)
+})
+names(disagg) <- snms
+c_pct_diff_mu$f1
+
+stats <- lapply(disagg, function(x) {
+  sapply(x, function(y) {
+    c(cellStats(y, mean), quantile(y))
+  })
+})
+
+plot(c_pct_diff_mu$f1$geow - c_pct_diff_mu$f1$sa30)
+
+# Plotting colors
+cols <- colorRampPalette(c("red", "grey80", "blue4"))
+brks <- c(-100.1, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100.1)
+n_cols <- length(brks) - 1
+legtext <- "% Difference"
+cx <- 1.4
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+lev2 <- c("1 km", "25 km", "50 km", "100 km")
+pdf(full_path(p_fig, "bias_map.pdf"), height = 6, width = 7)
+par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+for(i in 1:length(snms)) {
+  print(snms[i])
+  for(j in 1:length(lev)) {
+    print(lev[j])
+    plot(sa.shp, lty = 0)
+    plot(disagg[[snms[i]]][[lev[j]]], add = TRUE, col = cols(n_cols), 
+         breaks = brks, legend = FALSE)
+  if(j == 1) mtext(mcap[i], side = 2, line = 1, cex = cx)
+  if(i == 1) mtext(lev2[j], side = 3, line = 0, cex = cx)
+  }
+}
+flex_legend(ncuts = length(brks) - 1, legend.text = legtext, 
+            legend.vals = round(brks), 
+            longdims = c(0.2, 0.8), shortdims = c(0.06, 0.01), 
+            colvec = cols(length(brks) - 1), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 5), leg.adj = list(c(0.25, 0), c(0.5, -0.5)), 
+            cex.val = cx, textcol = lcol, bordercol = lcol)
+dev.off()
+
+```
+
+
+
+2. Convert them to data.tables and remove NA data
+
+```{r, eval=FALSE}
+# GTI
+# gti0 <- 1 - gti / 100  # non cropland fractions for GTI data
+# gti_c <- gti / 100 * ctabo$crops[1]  # GTI cropland carbon
+gti_dt <- agroEcoTradeoffs::as.data.table.raster(gti / 100, xy = TRUE)
+gti_dt[, id:= 1:.N]
+setkeyv(gti_dt, c("x", "y"))
+setnames(gti_dt, "cover2011sum_mask", "fA")
+
+lc_dt <- lapply(1:nlayers(lc_list), function(x) {
+  DT <- agroEcoTradeoffs::as.data.table.raster(lc_list[[x]] / 100, xy = TRUE)
+  DT[, id := 1:.N]
+  setkeyv(DT, c("x", "y"))
+  setnames(DT, names(lc_list[[x]]), "fA")
+  #DT <- DT[!is.na(fA), ]
+})
+
+# find NAs common to all datasets
+na1 <- gti_dt[is.na(fA)]
+na2 <- rbind(na1, do.call(rbind, lapply(lc_dt, function(x) x[is.na(fA)])))
+setkey(na2)
+na2 <- na2[!duplicated(na2)]
+nrow(na2[unique(id)]) == nrow(na2)
+
+# Remove all common NA values, to tidy up size
+gti_dt <- gti_dt[!na2]
+gti_dt[, id := NULL]
+lc_dt <- lapply(lc_dt, function(x) {
+  DT <- x[!na2]
+  DT[, id := NULL]
+})
+
+# plot(agroEcoTradeoffs::dt_to_raster(gti_dt, gti@crs)[[1]])
+```
+
+
+
+```{r}
+for(i in 1:(ncol(ctabo))) {
+  nm <- colnames(ctabo)[i]
+  for(j in 1) { #:3) {
+    nmv <- paste0(nm, "_", rownames(ctabo)[j])
+    gti_dt[, c(nmv) := carbon(fA, noncropC = ctabo[j, nm]), with = FALSE] 
+  }
+}
+
+# To GTI
+for(i in 1:(ncol(ctabo))) {
+  nm <- colnames(ctabo)[i]
+  for(j in 1) { #:3) {
+    nmv <- paste0(nm, "_", rownames(ctabo)[j])
+    gti_dt[, c(nmv) := carbon(fA, noncropC = ctabo[j, nm]), with = FALSE] 
+  }
+}
+
+# To landcover sets
+for(k in 1:length(lc_dt)) {
+  for(i in 1:(ncol(ctabo))) {
+    nm <- colnames(ctabo)[i]
+    for(j in 1) {#:3) {
+      nmv <- paste0(nm, "_", rownames(ctabo)[j])
+      lc_dt[[k]][, c(nmv) := carbon(fA, noncropC = ctabo[j, nm]), with = FALSE] 
+    }
+  }
+}
+
+
+```
+
+```{r, eval=FALSE}
+# Actual difference
+cdiff_dt <- lapply(1:length(lc_dt), function(x) {
+  ind <- colnames(gti_dt)[4:ncol(gti_dt)]
+  DT <- copy(gti_dt)  # so gti_dt is not modified
+  DT2 <- copy(lc_dt[[x]])
+  DT[, fA := NULL]
+  DT[, `:=`(ind, Map('-', DT[, ind, with = FALSE], 
+                     DT2[, ind, with = FALSE])), with = FALSE]
+})
+
+cdiff_dts <- lapply(cdiff_dt, function(x) {
+  ind <- colnames(x)[3:ncol(x)]
+  DT <- copy(x)  # so gti_dt is not modified
+  DTo <- DT[, 1:2, with = FALSE]
+  DTo[, mx := rowMaxs(as.matrix(DT[, ind, with = FALSE]))]
+  DTo[, mu := rowMeans(DT[, ind, with = FALSE])]
+  DTo[, mn := rowMins(as.matrix(DT[, ind, with = FALSE]))]
+})
+
+perc_diff <- function(x, y) round((x - y) / x * 100, 1)
+
+# Difference as a percent
+cdiffpct_dt <- lapply(1:length(lc_dt), function(x) {
+  ind <- colnames(gti_dt)[4:ncol(gti_dt)]
+  DT <- copy(gti_dt)  # so gti_dt is not modified
+  DT2 <- copy(lc_dt[[x]])
+  DT[, fA := NULL]
+  DT[, `:=` (ind, Map(perc_diff, x = DT[, ind, with = FALSE], 
+                      y = DT2[, ind, with = FALSE])), with = FALSE]
+})
+
+
+```
+
+
