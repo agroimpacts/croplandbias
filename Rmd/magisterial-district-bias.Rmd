@@ -444,12 +444,6 @@ polyfunc <- function(pdat) {
                             "y" = c(rev(pdat$lo), pdat$up))
 }
 
-makeTransparent<-function(someColor, alpha = 100) {
-  newColor <- col2rgb(someColor)
-  apply(newColor, 2, function(x) {
-    rgb(red = x[1], green = x[2], blue = x[3],alpha = alpha, maxColorValue=255)
-  })
-}
 ```
 
 2. GAM fits
