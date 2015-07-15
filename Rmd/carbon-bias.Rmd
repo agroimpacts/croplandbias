@@ -372,7 +372,7 @@ cb_stats <- lapply(lev_vec, function(x) {  # level
     # stack raster bins, cropland bins, and landcover set
     s <- stack(list("bin" = gti_bins[[x]], "wgt" = area_wgts[[x]][[1]], 
                     "mask" = lc_union[[x]][[y]], c_pct_diff[[x]][[y]]))
-    DT <- na.omit(agroEcoTradeoff::as.data.table.raster(s))
+    DT <- na.omit(as.data.table.raster(s))
     setkey(DT, "bin")
     # indexing columns
     #front1 <- data.table("bin" = rep("all", 6), "N" = rep(nrow(DT), 6))
@@ -390,7 +390,6 @@ cb_stats <- lapply(lev_vec, function(x) {  # level
     #             binl[bin][, bin := paste0("a", bin)], 
     #             binl[binabs][, bin := paste0("b", bin)])[, wgt := NULL]
 
-    
     fr1 <- data.table("bvals" = c("m", "m0", "ma", "ma0"))
     fr2 <- data.table("bin" = "all", "N" = nrow(DT))
     binl <- DT[, .N, by = bin]  # n obs per bin
@@ -525,33 +524,12 @@ legend(x = x, y = y, legend = mcap, lty = 1, col = cols, lwd = 2, bty = "n",
        cex = 1.2)
 dev.off()
 
-# Statistics from non-croplands areas included in means, for supplementals
-nmrepl <- cbind(snms, lcnms)
-mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu0[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mu0a[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mu0s <- rbind(cbind(stat = "actual", mu0), cbind(stat = "absolute", mu0a))
-mu0s_xtab <- xtable::xtable(mu0s)
-print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex")
-
-# Statistics from non-croplands areas included in means, for supplementals
-nmrepl <- cbind(snms, lcnms)
-mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mua[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mus <- rbind(cbind(stat = "actual", mu), cbind(stat = "absolute", mua))
-mus_xtab <- xtable::xtable(mus)
-print(mu0s_xtab, type = "latex", 
-      file = "paper/figures/C-bias-mean-cropland-SA.tex")
-
 ```
 <a href="#top">Back to top</a>
 
 #### Main text version of mean carbon bias against scale
 ```{r, eval=FALSE}
-alph <- c(225, 75)
+alph <- c(225, 40)
 #Ccols <- brewer.pal(n = 7, name = "Greys")
 LC2 <- c(LC[-grep("second|grass", LC)], "all")
 # xax <- seq(0, 7, 6 / (length(yax) - 2)); length(xax)
@@ -610,6 +588,32 @@ dev.off()
 
 ```
 <a href="#top">Back to top</a>
+
+#### Supplementary mean bias tables
+```{r, eval=FALSE}
+# Statistics from non-croplands areas included in means, for supplementals
+nmrepl <- cbind(snms, lcnms)
+mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mu0[, V1 := nmrepl[match(V1, nmrepl), 2]]
+mu0a[, V1 := nmrepl[match(V1, nmrepl), 2]]
+mu0s <- rbind(cbind(stat = "actual", mu0), cbind(stat = "absolute", mu0a))
+mu0s_xtab <- xtable::xtable(mu0s)
+print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex")
+
+# Statistics from non-croplands areas included in means, for supplementals
+nmrepl <- cbind(snms, lcnms)
+mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mu[, V1 := nmrepl[match(V1, nmrepl), 2]]
+mua[, V1 := nmrepl[match(V1, nmrepl), 2]]
+mus <- rbind(cbind(stat = "actual", mu), cbind(stat = "absolute", mua))
+mus_xtab <- xtable::xtable(mus)
+print(mu0s_xtab, type = "latex", 
+      file = "paper/figures/C-bias-mean-cropland-SA.tex")
+```
+
+
 
 ```{r, eval=FALSE, echo=FALSE}
 # Plot means against cropland density (to possibly be run - for now, 
@@ -845,10 +849,6 @@ cellStats(all_gt0 * c_pct_diff$f1$sa30$sparse, mean)
 cellStats(all_gt0 * c_pct_diff$f1$sa30$forest, median)
 cellStats(c_pct_diff$f1$sa30$forest, mean)
 cellStats(all_gt0 * c_pct_diff$f1$sa30$forest, mean)
-
-gti_
-
-
 
 ```
 

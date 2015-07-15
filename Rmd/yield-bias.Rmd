@@ -1,0 +1,800 @@
+---
+title: "Yield bias"
+author: "Lyndon Estes"
+date: "July 6, 2015"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+    number_sections: true
+---
+
+# Methods to examine
+
+Ramankutty et al's (2008) procedure for calculating cropland area.  
+
+1. Divide provincial cropland area estimates by total area in each province. 
+2. Linear model calculates cropland proportions from model of all satellite landcover classes, creating a 5 minute gridded estimate of cropland in each pixel.
+3. These grids are aggregated to administrative level (provinces in our case), and then compared with the provincial statistics. A correction factor is then applied, and _pycnophylactically_ interpolated, which is then used to adjust the gridded estimates.
+
+$$ fcropland_{x,y} = ucf_{x,y} * cf_{x,y}$$
+
+Where ucf is the correction factor and cf is the step 1 modeled cropland fraction estimate for a given pixel (x, y).  
+
+Monfreda et al (2008) then use $fcropland_{x,y}$ in a three step process to calculate the area in administrative units for each crop type, in the following steps: 
+
+1. They divide $fcropland_{x,y}$ by the area of the administrative unit to calculate the fraction of each unit taken up by a particular crop. 
+
+2. They then disaggregate this fraction back onto the gridded data as follows:
+
+$$ fcrop_{x,y} = fcropland_{x,y}\frac{croparea_{pu}}{cropland_{pu}}$$
+
+They assign yields for each crop--obtained from the finest administrative unit available, uniformly across pixels having a non-zero proportion of that crop within the administrative unit. 
+
+They rescaled both area and yield within sub-administrative units to match country totals derived from FAOStat from 1997-2003.  
+
+## Key Questions
+
+1. How does these processes create bias if they are not aggregated by the administrative units to which they are scaled? i.e. If you aggregate by grid cells rather than by administrative units, how does this affect estimates of total production (and therefore things such as calories to be gained by closing yield gaps)  
+
+2. Do any studies use it in this particular way? 
+
+    + Foley et al (2011) estimate amount of calories that could be gained by closing yield gaps.  
+    + Find one or two others - maybe Roy with yield trends, or Mueller et al 2012.
+
+# Data
+
+1. Use SA provinces with GTI to create the amount of agricultural land estimates per province, akin to provincial statistics used by Ramankutty et al (2008). Note: they mentioned SA has 11 administrative units they used, but the publications they cited ([here](http://www.statssa.gov.za/publications/DiscussLandAccounts/DiscussLandAccounts.pdf)) has just 9 provinces, so maybe they mistakenly counted Lesotho and Swaziland? 
+
+```{r, eval=FALSE}
+library(SAcropland)
+p_root <- full_path(proj_root("SAcropland"), "SAcropland")
+p_fig <- full_path(p_root, "paper/figures/")
+p_data <- full_path(p_root, "external/ext_data/")
+p_data2 <- full_path(p_root, "data/")
+#p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
+
+# SA provinces
+prov <- readOGR("external/ext_data/provinces.sqlite", layer = "provinces")
+prov <- prov[prov$id_1 != 9, ]  # remove Princeton Edward Islands
+prov[prov$id_1 == 10, "id_1"] <- 9 # reset WC to id 10
+load("external/ext_data/MZshapes.Rdata")
+
+# cropland data
+load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
+gti <- raster(paths) / 100  # gti 2011
+
+# Reconstruct original landcover estimates
+snms <- c("sa30", "globmu", "modmu", "geow")
+dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
+lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
+
+# plot(lc_list[[1]])
+# plot(gti)
+# tst <- raster("external/ext_data/geowikisa_masked.tif")  # check
+# plot(round(tst / 100 - lc_list[[4]], 4)) # okay
+
+# Create namask and area_wgts, removing all NA areas across datasets
+sumna <- function(x) sum(x, na.rm = FALSE)
+namask <- calc(stack(gti, stack(lc_list)), sumna)
+namask[namask > 0] <- 1
+namask2 <- !is.na(namask)  # set NAs to zero
+# cellStats(is.na(gti), sum); cellStats(namask2, sum)
+fact <- c(5, 10, 25, 50, 100)
+# area_wgts <- aggregate_rast_list(fact, list(namask2), fun = sum)
+# area_wgts <- lapply(area_wgts, function(x) x[[1]])  # unlist on inner loop
+# plot(area_wgts$f25)
+
+```
+
+# Analyses
+## Cropland fractions
+
+### Get provincial $cf$ factors from 1 km GTI dataset
+```{r, eval=FALSE}
+# rasterize provinces and stack with gti raster, convert to data.table
+provr <- rasterize(prov, y = gti, field = "id_1", 
+                   filename = "external/ext_data/provinces.tif")
+# provr <- raster("external/ext_data/provinces.tif")
+provr <- mask(provr, namask)
+gtis <- stack(list("prov" = provr, "f" = gti))
+
+# calculate fractions using raster::extract with provinces, to compare speed
+prov_est <- extract(gti, prov, progress = "text")
+prov_estNA <- lapply(prov_est, function(x) x[!is.na(x)])
+cftest <- cbind("carea" = sapply(prov_estNA, sum), 
+                "parea" = sapply(prov_estNA, length), 
+                "cf" = sapply(prov_estNA, sum) / sapply(prov_estNA, length))
+
+# data.table calculations
+gti_dt <- na.omit(as.data.table.raster(gtis, xy = TRUE))
+setkey(gti_dt, prov)
+cf <- gti_dt[, list("carea" = sum(f), "parea" = length(f), 
+                    "cf" = sum(f) / length(f)), by = prov]
+# cftest - cf[, 2:4, with = FALSE]  # close, but diff caused by few NAs in provr 
+
+# data.table approach is much more efficient
+
+```
+<a href="#top">Back to top</a>
+
+### Calculate cropland fractions from 1 km landcover sets 
+
+Derived at 1 km resolution rather 10 km (as in Ramankutty et al, 2008), using data.tables to calculate provincial-level correction factors for each
+```{r, eval=FALSE}
+lcs <- stack(list("prov" = provr, stack(lc_list)))
+lcs_dt <- na.omit(as.data.table.raster(lcs, xy = TRUE))
+setkey(lcs_dt, prov)
+fc <- function(x) sum(x) / length(x)  # fraction functions
+lc_cf <- lapply(list(sum, length, fc), function(x) {
+  lcs_dt[, lapply(.SD, x), by = prov, .SDcols = snms]
+})
+names(lc_cf) <- colnames(cf)[-1]
+# lcs_dt[, .N, by = prov] == gti_dt[, .N, by = prov]
+
+# correction factors
+pcf <- cbind("prov" = prov$id_1, 
+             sapply(snms, function(x) cf$cf / lc_cf$cf[, get(x)]))
+pcf <- data.table(pcf)
+
+# tst1 <- disaggregate(tst, fact = 10)
+# namask <- raster("external/ext_data/namask.tif")
+# tst1m <- mask(crop(tst1, namask), mask = namask)
+# plot(tst1m - gti$cover2011sum_mask)
+
+```
+<a href="#top">Back to top</a>
+
+### Re-scale landcover cropland fraction using $cf$ factors
+```{r, eval=FALSE}
+# multiply each lc fraction value by correction factor for the particular 
+# province
+lcs_dta <- copy(lcs_dt)
+for(j in snms) {
+  for(g in pcf$prov) {
+    lcs_dta[prov == g, j := (get(j) * pcf[prov == g, get(j)]), with = FALSE] 
+  }
+}
+
+# check to see if DT syntax correct
+for(i in 1:9) {
+  for(j in snms) {
+    print(all(lcs_dta[prov == i, get(j)][1:10] == 
+                (lcs_dt[prov == i, get(j)] * pcf[i, get(j)])[1:10]))
+  }
+}
+
+# check to see if the factors resulted in same total area per province
+fchk <- lcs_dta[, lapply(.SD, sum), by = prov, .SDcols = snms]
+par(mfrow = c(2, 2), mar = rep(1, 4))
+for(i in snms) plot(cf[, carea], fchk[, get(i)])  # yup
+
+# how many pixels have fraction > 1 
+for(i in 1:9) {
+  for(j in snms) {
+    print(paste(j, ":", i, ":", 
+                  lcs_dta[prov == i, length(which(get(j) > 1))] / 
+                            lcs_dta[prov == i, .N]))
+  }
+}  # several in globcover, modis, and geow
+
+# Adjust these to equal 1 
+lcs_dta2 <- copy(lcs_dta)
+
+# function to adjust fractions to fall within 1 while maintaining statistics
+force1 <- function(x) {
+  a <- x
+  while(any(a > 1)) {
+    reall <- sum(a[a > 1] - 1)  # total of parts of x > 1, to reallocate
+    ind <- which(a < 1)  # parts of x less than 1
+    a[a > 1] <- 1
+    af <- (reall + sum(a[a < 1])) / sum(a[a < 1])
+    a[a < 1] <- a[a < 1] * af
+  }
+  return(a)
+}
+# check if works on modis set
+hist(lcs_dta[prov == 8, modmu])
+hist(force1(lcs_dta[prov == 8, modmu]))
+round(sum(force1(lcs_dta[prov == 8, modmu])), 2) == 
+  round(sum(lcs_dta[prov == 8, modmu]), 2)
+
+for(j in snms) {
+  for(g in pcf$prov) {
+    lcs_dta2[prov == g, j := force1(get(j)), with = FALSE] 
+  }
+}
+
+# Check to see if all fractions <= 1 and that provincial sums are equal
+for(i in 1:9) {
+  for(j in snms) {
+    print(paste(j, ":", i, ":", 
+                  lcs_dta2[prov == i, length(which(get(j) > 1))] / 
+                            lcs_dta[prov == i, .N], ":", 
+                round(lcs_dta2[prov == i, sum(get(j))], 4) == 
+                  round(lcs_dta[prov == i, sum(get(j))], 4)))
+  }
+}  # check
+
+# convert back to rasters
+lc_adj <- dt_to_raster(lcs_dta2, CRSobj = sa.shp@proj4string)
+lc_adj <- dropLayer(lc_adj, i = 1)
+```
+
+### Aggregate adjusted rasters, compare cropland fractions
+```{r, eval=FALSE}
+tl <- lapply(1:4, function(x) lc_adj[[x]])
+names(tl) <- snms
+lc_agg <- aggregate_rast_list(fact, tl) # landcover rasters 
+rm(tl)
+gtic <- crop(gti, lc_adj$sa30)
+gti_agg <- aggregate_rast_list(fact, list("gti" = gtic))  # GTI rasters
+
+# compare extents to make sure no offsets - look at in QGIS
+# writeRaster(gti_agg$f1$gti, filename = "external/ext_data/test/gti_crop.tif")
+# writeRaster(lc_agg$f1$sa30, filename = "external/ext_data/test/sa30_crop.tif")
+# looks fine
+
+# tst <- gti_agg$f5$gti - lc_agg$f5$sa30
+# plot(tst * 100)
+
+#pct_diff <- function(x, y) (x - y) / x * 100
+cf_pct_diff <- lapply(1:length(gti_agg), function(x) {
+  dif <- lapply(1:length(lc_agg[[x]]), function(y) {
+    d <- gti_agg[[x]][[1]] - lc_agg[[x]][[y]]
+  })
+  named_out(dif, snms)
+})
+names(cf_pct_diff) <- names(lc_agg)
+
+cf_pct_diff <- lapply(snms, function(x) {
+  dif <- lapply(names(lc_agg), function(y) {
+    d <- gti_agg[[y]][[1]] - lc_agg[[y]][[x]]
+  })
+  named_out(dif, names(lc_agg))
+})
+names(cf_pct_diff) <- snms
+
+# disaggregate for plotting
+namaskc <- crop(namask, gtic)
+lev <- names(cf_pct_diff[[1]])
+disagg <- disaggregate_rast_list(snms, lev, cf_pct_diff, crop(namask, gtic))
+
+stats <- lapply(disagg, function(x) {
+  sapply(x, function(y) {
+    c(cellStats(y * 100, mean), quantile(y * 100, seq(0, 1, 0.05)))
+  })
+})
+```
+<a href="#top">Back to top</a>
+
+Plot for supplementary data
+```{r, eval=FALSE}
+lims <- c(ceiling(min(sapply(stats, function(x) x[3, ]))), 
+          floor(max(sapply(stats, function(x) x[21, ]))))
+rng <- range(sapply(stats, range))
+brks <- c(rng[1], -50, -30, -20, -10, -5, -1, 1, 5, 10, 20, 30, 50, rng[2])
+cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
+
+legtext <- "% Difference"
+cx <- 1.4
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+lev <- names(disagg[[1]])[-c(2:3)]
+lev2 <- c("1 km", "25 km", "50 km", "100 km")
+pdf(full_path(p_fig, "cropland_adj_bias_map.pdf"), height = 6, width = 7)
+par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+for(i in 1:length(snms)) {
+  print(snms[i])
+  for(j in 1:length(lev)) {
+    print(lev[j])
+    plot(sa.shp, lty = 0)
+    plot(disagg[[snms[i]]][[lev[j]]] * 100, add = TRUE, col = cols, 
+         breaks = brks, legend = FALSE)
+  if(j == 1) mtext(mcap[i], side = 2, line = 1, cex = cx)
+  if(i == 1) mtext(lev2[j], side = 3, line = 0, cex = cx)
+  }
+}
+flex_legend(ncuts = length(brks) - 1, legend.text = legtext, 
+            legend.vals = round(brks), 
+            longdims = c(0.2, 0.8), shortdims = c(0.06, 0.01), 
+            colvec = cols, #(length(brks) - 1), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 5), leg.adj = list(c(0.25, 0), c(0, -0.5)), 
+            cex.val = cx, textcol = lcol, bordercol = lcol)
+dev.off()
+```
+<a href="#top">Back to top</a>
+
+## Yield disaggregation
+
+Following Monfreda et al's (2008) methods. They appear to have used the 2002 district census, so we will use the more recent 2007 census.  
+
+### Process magisterial districts and census data
+```{r, eval=FALSE}
+# Load in yield dataset and magisterial district polygons
+load(full_path(p_data2, "ZAF_adm2.Rdata"))  # magisterial districts
+yld <- fread(full_path(p_data, "maize_wheat_2007.csv"))
+
+# Transform magisterial districts, remove Prince Edward Islands
+md <- spTransform(gadm, CRSobj = sa.shp@proj4string)
+md <- md[md$ID_2 != 313, ]
+# round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))
+md@data <- md@data[, c("PID", "ID_2", "NAME_1", "NAME_2")]  # trim down columns
+# fix a few names that occur more than once to make unique for merging properly
+md@data[md$ID_2 == 43, "NAME_2"] <- "MiddelburgEC"
+md@data[md$ID_2 == 143, "NAME_2"] <- "RichmondKZ"
+md@data[md$ID_2 == 86, "NAME_2"] <- "HeidelbergG"
+
+# check names in two datasets
+# match(md@data$NAME_2, yld$district)
+# match(yld$district, md@data$NAME_2)
+# yld$district[which(!yld$district %in% md@data$NAME_2)]
+# sort(md@data$NAME_2[which(!md@data$NAME_2 %in% yld$district)])
+
+# some offline fixing of names ensues
+# write.csv(md@data, file = "external/ext_data/mdrect.csv")
+# writeOGR(md, dsn = "external/ext_data/mdcheck.sqlite", layer = "mdcheck", 
+#          driver = "SQLite")
+
+# reread fixed data, merge a few districts' data where there are synonyms or 1
+# district subsumed by another--sum yields, because these districts were 
+# probably broken into smaller pieces
+# fix same names for merging properly
+yld[district == "Middelburg" & province == "Eastern Cape", 
+    district := "MiddelburgEC"]
+yld[district == "Richmond" & province == "KwaZulu-Natal", 
+    district := "RichmondKZ"]
+yld[district == "Heidelberg" & province == "Gauteng", 
+    district := "HeidelbergG"]
+
+# sumna <- function(x) sum(x, na.rm = TRUE)
+mrg <- rbindlist(lapply(unique(yld$merge)[-1], function(x) {
+  yld[merge == x, lapply(.SD, sumna), .SDcols = grep("mz|wh", names(yld))]
+}))
+nms <- sapply(unique(yld$merge)[-1], function(x) {
+  nm <- yld[merge == x, district]
+})
+mnms <- unname(sapply(nms, function(x) x[x %in% md$NAME_2][1]))
+
+keep <- names(yld)[-c(2:5)]
+yld2 <- rbind(yld[!district %in% unname(unlist(nms)), keep, with = FALSE], 
+              cbind("district" = mnms, mrg))  # adjusted yield dataset
+
+# merge with magisterial district data
+mdyld <- sp::merge(md@data, yld2, by.x = "NAME_2", by.y = "district", 
+                   all.x = TRUE)  # merge
+mdyld <- mdyld[match(mdyld$NAME_2, md@data$NAME_2), ]  # reorder rows correctly
+nrow(mdyld) == nrow(md@data)  # check
+
+# calculate yields and total planted ha
+mdyld$mzha <- rowSums(mdyld[, grep("mz_ha", colnames(mdyld))])
+mdyld$mzyld <- round(rowSums(mdyld[, grep("mz_pr", colnames(mdyld))]) /
+                       mdyld$mzha, 1)
+mdyld$whha <- rowSums(mdyld[, grep("wh_ha", colnames(mdyld))])
+mdyld$whyld <- round(rowSums(mdyld[, grep("wh_pr", colnames(mdyld))]) / 
+                       mdyld$whha, 1)
+
+# join to md data
+m <- mdyld[match(md$ID_2, mdyld$ID_2), 
+           c("ID_2", "NAME_2", "mzha", "mzyld", "whha", "whyld")]
+colnames(m)[1:2] <- c("id", "name")
+md@data <- cbind(md@data, m)  
+all(md$NAME_2 == md$name); all(md$ID_2 == md$id)
+md@data <- md@data[, -c(2:4)]
+
+# plot to make sure districts didn't get reordered at all
+par(mar = rep(0, 4))
+plot(sa.shp)
+plot(md, add = TRUE)
+plot(md[md$id == 214, ], col = "red", add = TRUE)
+plot(md[md$id == 327, ], col = "red", add = TRUE)
+plot(md[md$id == 263, ], col = "red", add = TRUE)
+plot(md[md$name == "Barberton", ], col = "red", add = TRUE)
+```
+<a href="#top">Back to top</a>
+
+### Calculate individual crop fractions
+
+Rasterize MDs and calculate individual crop fractions (for maize), for both GTI and adjusted LC cropland fractions
+```{r, eval = FALSE}
+mdr <- rasterize(md, provr, field = "id",  
+                 filename = "external/ext_data/mag_dist.tif", overwrite = TRUE)
+# mdr <- raster("external/ext_data/mag_dist.tif")
+mds <- stack(list("md" = crop(mdr, gti_agg$f1$gti), "gti" = gti_agg$f1$gti,
+                  lc_adj))  # use gti and lc_adj  
+# v <- values((lc_agg$f1$modmu > 1) * 1); sum(v[!is.na(v)])
+
+# data.table calculations
+md_dt <- as.data.table.raster(mds, xy = TRUE)
+setkey(md_dt, md)
+mdarea <- md_dt[, .N, by = md]  # how many km2 in each MD
+setnames(mdarea, "N", "mdkm2") 
+mdarea <- mdarea[!is.na(md)]  # remove NAs  
+setkey(mdarea, md)  
+md_dt <- na.omit(md_dt)  # remove NAs from fraction data.tables
+varea <- md_dt[, .N, by = md]  # area of non-NA data in MDs
+setnames(varea, "N", "vkm2")
+setkey(varea, md)
+# mdcf <- md_dt[, list("carea" = round(sum(f), 2), "parea" = length(f), 
+#                         "cf" = round(sum(f) / length(f), 4)), by = md]
+mdva <- mdarea[varea][, fmd:= round(vkm2 / mdkm2, 2)]  # md valid area
+# mdcf[, fmd := mdarea[varea][, round(vkm2 / mdkm2, 2)]]  # fraction non-NA in md
+
+# yield data for MDs
+ydt <- data.table(md@data[, c("id", "mzha", "mzyld", "whha", "whyld")])
+setnames(ydt, "id", "md")
+setkey(ydt, "md")
+mdvay <- mdva[ydt][is.na(mzha), c("mzha", "mzyld") := 0]
+mdvay[is.na(whha), c("whha", "whyld") := 0]
+mdvay[, c("mdkm2", "vkm2") := NULL]
+# mdcfy[, mfrac := round(((mzha * fmd) / 100) / carea, 4)]  # maize fraction
+
+# calculate crop fractions for each dataset
+md_dta <- copy(md_dt)
+# md_dt[, lapply(.SD, mean), by = md, .SDcols = c("gti", snms)]
+md_lcl <- lapply(c("gti", snms), function(j) {
+    DT <- md_dta[, list("carea" = round(sum(get(j)), 2),  # crop area
+                        "parea" = length(get(j)),  # non-NA area in MD
+                        "cf" = round(sum(get(j)) / length(get(j)), 4)),
+                   by = md]
+    # calculate crop fraction, adjusting ha first by how much non-NA area there
+    # is in MD
+    DTy <- DT[mdvay][, mfrac := round(((mzha * fmd) / 100) / carea, 4)]
+    DTy[is.na(mfrac), mfrac := 0]  # set mfrac to 0 in 0 cropland areas
+    # print(length(which(DTy$mfrac > 1)))  # 5, 4, 15, 9, 4
+    DTy[mfrac > 1, mfrac := 1]  # set to 1 - mostly missing data causing > 1
+    DTy
+})
+names(md_lcl) <- c("gti", snms)
+# lapply(md_lcl, function(x) x[, sum(mzha)])
+#length(which(is.na(md_lcl$modmu$mfrac)))
+#length(which(md_lcl$sa30$mfrac > 1))
+
+par(mfrow = c(2, 3))
+for(i in 1:5) hist(md_lcl[[i]]$mfrac)
+for(i in 1:5) hist(md_lcl[[i]]$carea)
+plot(md_lcl[[1]]$carea, md_lcl[[3]]$carea)
+```
+<a href="#top">Back to top</a>
+
+### Assign back crop fraction and yield to grid 
+```{r, eval=FALSE}
+# first in data.tables
+crop_ay <- lapply(c("gti", snms), function(j) {
+  #j <- snms[3]
+  DTya <- copy(md_dt)[, list(x, y, md, "f" = get(j))]
+  DTya <- DTya[md_lcl[[j]][, list(md, fmd, mfrac, mzyld)]]
+  DTya[, fa := f * mfrac]  # this is Monfreda et al equation (pg. 10)
+  #print(DTya[which(round(DTya$fa, 4) > 1)[1:4], ])  # check line
+  DTya[, mzya := mzyld]  # adjusted yield variable
+  DTya[fa == 0, mzya := 0] # set to 0 in pixels having no crop
+  DTya
+})
+sapply(crop_ay, function(x) x[, sum(mfrac), by = md][, V1])
+
+# then back to rasters for aggregation
+crop_ayr <- lapply(crop_ay, function(x) {
+  dt_to_raster(x[, list(x, y, fa, mzya)], CRSobj = sa.shp@proj4string)
+})
+
+# redo NA mask because of some slighting shifts
+namask <- calc(stack(lapply(crop_ayr, function(x) x$fa)), sumna)
+namask[namask > 0] <- 1
+namask2 <- !is.na(namask)  # set NAs to zero
+# cellStats(is.na(gti), sum); cellStats(namask2, sum)
+area_wgts <- aggregate_rast_list(fact, list(namask2), fun = sum)
+area_wgts <- lapply(area_wgts, function(x) x[[1]])  # unlist on inner loop
+
+# Aggregate yields and crop area to coarser resolutions
+carea <- lapply(1:5, function(x) crop_ayr[[x]]$fa)
+names(carea) <- c("gti", snms)
+cyld <- lapply(1:5, function(x) crop_ayr[[x]]$mzya)
+names(cyld) <- c("gti", snms)
+
+# check Monfreda's yield data to see how it deals with null areas
+monf <- full_path("external/ext_data/monfreda_data/maize_HarvAreaYield_NetCDF",
+                  "maize_AreaYieldProduction.nc")
+monfmz <- brick(monf, level = 2)
+plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)), col = bpy.colors(20))
+plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)) > 0)  # almost all SA > 0 
+
+# aggregate
+# first define a function that removes zero yield areas when calculating mean 
+# yield--this will allow for aggregation of yields only in those areas having 
+# maize, according to Monfreda et al methods
+nzmean <- function(x, na.rm) {
+  # x <- c(0, 1:5, NA, 10, NA)
+  x <- x[(x > 0) & !is.na(x)]
+  if(length(x) == 0) {
+    m <- 0
+  } else if(length(x) > 0) {
+    m <- mean(x, na.rm = na.rm)
+  }
+  return(m)
+}
+# sumha <- function(x, na.rm) sum(x, na.rm)
+carea_agg <- aggregate_rast_list(fact, carea) # crop area, mean aggregation
+#carea_agg2 <- aggregate_rast_list(fact, carea, sum) # crop area, sum agg
+cyld_agg <- aggregate_rast_list(fact, cyld, mean) # yld raster normal agg
+cyld_agg2 <- aggregate_rast_list(fact, cyld, nzmean) # correct yld agg: drop 0s
+
+#plot((carea_agg$f50$gti * tareas$f50) - (carea_agg2$f50$gti * 100))  # equiv
+# ta <- rep(1, 50 * 50)
+# a <- runif(50 * 50, 0, 1)
+# (sum(a) * 100) / (sum(ta) * 100)
+# mean(a) * (sum(ta) * 100)
+
+# area of each pixel at each aggregation scale
+agg_res <- sapply(carea_agg, function(x) res(x$gti)[1]^2 / 10000)  
+tareas <- lapply(area_wgts, function(x) x[[1]] * 100)
+
+# crop production estimates per dataset per aggregation scale
+# with straight mean (incorrect) yield aggregation
+cpagg1 <- lapply(1:length(cyld_agg), function(x) {
+  p <- lapply(1:length(cyld_agg[[x]]), function(y) {
+    tareas[[x]] * cyld_agg[[x]][[y]]
+  })
+  named_out(p, c("gti", snms))
+})
+names(cpagg1) <- names(agg_res)
+
+# with correct (0 removed) yield aggregation
+cpagg2 <- lapply(1:length(cyld_agg2), function(x) {
+  p <- lapply(1:length(cyld_agg2[[x]]), function(y) {
+    tareas[[x]] * cyld_agg2[[x]][[y]]
+  })
+  named_out(p, c("gti", snms))
+})
+names(cpagg2) <- names(agg_res)
+
+# Type 2 aggregation: crop production differences when aggregated from 1 km
+# calculate production at 1 km
+cprod2 <- lapply(1:length(cyld), function(x) {
+  cyld[[x]] * (carea[[x]] * 100)
+})
+names(cprod2) <- c("gti", snms)
+# aggregate production estimates
+cpagg3 <- aggregate_rast_list(fact, cprod2, "sum") # crop area rasters
+sapply(cprod2, function(x) cellStats(x, sum))
+sapply(carea, function(x) cellStats(x, sum))
+
+# calculate differences between them
+# pdiff <- function(x, y) (x - y) / x * 100
+# Production differences
+ilist <- list(names(cpagg1[[1]])[-1], names(cpagg1), "gti")
+list1 <- lapply(cpagg1, function(x) x[1])
+list2 <- lapply(cpagg1, function(x) x[-1])
+p_diff1 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 1a agg
+list1 <- lapply(cpagg2, function(x) x[1])
+list2 <- lapply(cpagg2, function(x) x[-1])
+p_diff2 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 1b agg
+list1 <- lapply(cpagg3, function(x) x[1])
+list2 <- lapply(cpagg3, function(x) x[-1])
+p_diff3 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 2 agg
+
+# yield differences
+# type 1 (incorrect)
+list1 <- lapply(cyld_agg, function(x) x[1])
+list2 <- lapply(cyld_agg, function(x) x[-1])
+y_diff1 <- rast_list_math(ilist, list1, list2, expr = "a - b")
+# type 2 (correct)
+list1 <- lapply(cyld_agg2, function(x) x[1])
+list2 <- lapply(cyld_agg2, function(x) x[-1])
+y_diff2 <- rast_list_math(ilist, list1, list2, expr = "a - b")
+plot(y_diff2$sa30$f25$gti)
+
+# disaggregate for plotting
+lev <- names(y_diff2[[1]])
+p_diff1d <- disaggregate_rast_list(snms, lev, p_diff1, namask)
+p_diff2d <- disaggregate_rast_list(snms, lev, p_diff2, namask)
+p_diff3d <- disaggregate_rast_list(snms, lev, p_diff3, namask)
+y_diff1d <- disaggregate_rast_list(snms, lev, y_diff1, namask)
+y_diff2d <- disaggregate_rast_list(snms, lev, y_diff2, namask)
+
+# stats for plotting
+dstats <- function(dlist) {
+  statsd <- lapply(dlist, function(x) {
+    sapply(x, function(y) {
+      c(cellStats(y, mean), quantile(y, seq(0, 1, 0.05)))
+    })
+  })
+}
+stats_pd1 <- dstats(p_diff1d)
+stats_pd2 <- dstats(p_diff2d)
+stats_pd3 <- dstats(p_diff3d)
+stats_yd1 <- dstats(y_diff1d)
+stats_yd2 <- dstats(y_diff2d)
+
+```
+<a href="#top">Back to top</a>
+
+### Plot difference maps
+```{r, eval=FALSE}
+dnms <- ls()[grep("[y_|p_]diff*.*d", ls())]
+stnms <- ls()[grep("stats_", ls())]
+disaggl <- lapply(dnms, function(x) get(x))
+statsl <- lapply(stnms, function(x) get(x))
+rng <- lapply(statsl, function(x) {
+  ilims <- c(ceiling(min(sapply(x, function(y) y[3, ]))), 
+             floor(max(sapply(x, function(y) y[21, ]))))
+  olims <- range(sapply(x, function(y) range(y)))
+  c(olims[1], ilims, olims[2])
+})
+
+fnms <- c(paste0("prod_bias_map_", 1:3, ".pdf"), 
+          paste0("yld_bias_map_", 1:2, ".pdf"))  # output names
+legtext <- c(rep("tons", 3), rep("tons/ha", 2))
+cx <- 1.4
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+lev <- names(p_diff1d[[1]])[-c(2:3)]
+lev2 <- c("1 km", "25 km", "50 km", "100 km")
+
+rnder <- function(x) {
+  dig <- nchar(max(round(x)))
+  rmat <- cbind(1:8, c(1, 5, 10, 20, 50, 100, 100, 1000))
+  rnd <- rmat[dig, 2]
+  round(c(floor(x[1] / rnd), ceiling(x[2] / rnd))) * rnd 
+}
+div_breaks <- function(olim, ilim, ibrk) {
+  il <- rnder(ilim) 
+  ol <- c(floor(olim[1]), ceiling(olim[2]))
+  brks <- c(ol[1], seq(il[1], -ibrk, abs(floor(il[1]) - -ibrk) / 4), 
+            seq(ibrk, il[2], abs(ceiling(il[2]) - ibrk) / 4), ol[2])
+  brks
+}
+
+for(i in 1:length(statsl)) {
+  # i <- 1
+  lim <- rng[[i]]
+  brks <- div_breaks(olim = lim[c(1, 4)], ilim = lim[2:3], 
+                     ibrk = 0.1 * min(abs(lim[2:3])))
+  if(i < 4) brks <- round(brks)
+  if(i >= 4) brks <- round(brks, 1)
+  cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
+  pdf(full_path(p_fig, fnms[i]), height = 6, width = 7)
+  par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+  for(j in 1:length(snms)) {
+    print(snms[j])
+    for(k in 1:length(lev)) {
+      rl <- disaggl[[i]]
+      print(lev[k])
+      plot(sa.shp, lty = 0)
+      plot(rl[[snms[j]]][[lev[k]]], add = TRUE, col = cols, 
+           breaks = brks, legend = FALSE)
+      if(k == 1) mtext(mcap[j], side = 2, line = 1, cex = cx)
+      if(j == 1) mtext(lev2[k], side = 3, line = 0, cex = cx)
+    }
+  }
+  flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i], 
+              legend.vals = brks, longdims = c(0.2, 0.8), 
+              shortdims = c(0.1, 0.01), 
+              colvec = cols, #(length(brks) - 1), 
+              srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+              legend.pos = c(4, 5), leg.adj = list(c(0.1, 0.3), c(0, -0.5)), 
+              cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
+  dev.off()
+}  
+
+```
+<a href="#top">Back to top</a>
+
+From the above it is clear that the nature in which aggregation of yields are done has an impact on both yield and production estimates. There are two types of yield aggregation that can be done: 
+
+  1. __Type 1__: or straight averaging, which lowers yields by averaging in 0 yield areas.
+  
+  2. __Type 2__: or zero-removed averaging, where only areas having fraction of that crop contribute to the aggregated average. This is the correct way to do it. 
+    
+There is all two ways of aggregating production estimates: 
+
+  1.  __Type 1__: Aggregating yield and crop area separately, then multiplying.
+  
+  2.  __Type 2__: Calculating production at the base resolution, then aggregating by sum. 
+    
+Why would someone do a yield aggregation, when you have the gridded estimates?  To calculate values and compare them to a coarser resolution product, for instance, or to get a country-level average. 
+
+Causes for bias concern to examine: 
+
+  + Bias in yield gap estimates, and how much closing that could affect contribution of closing gaps to boosting production.
+  
+  + Country-level statistics might cancel out bias, but if bias of one type of sign is spatially correlated with the driver of values in yield gaps, then that would bias larger-scale estimates of gap closure potential.
+  
+      + ___Note: investigate this by look at correlation between rainfall and yield bias patterns.___ 
+  
+### Bias statistics
+
+Following methods developed in [carbon-bias](carbon-bias.html)
+```{r, eval=FALSE}
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+
+# create mask for non-cropland areas, unioning GTI and LC areas with maize
+# estimates -- probably not needed if doing production estimates.  
+lev <- names(y_diff1[[1]])
+
+# first check aggregation to make yield aggregation variants have common area,
+# so that just one lc_union is needed
+for(i in lev) {
+  for(j in snms) {
+    print(cellStats(cyld_agg[[i]][[j]] > 0 & cyld_agg2[[i]][[j]] == 0, sum))
+    #print(cellStats(carea_agg[[i]][[j]] > 0 & cyld_agg[[i]][[j]] == 0, sum))
+  }
+}  # all zeros
+
+lc_union <- lapply(lev, function(x) {
+  lcb <- lapply(snms, function(y) {
+    gti_gt0 <- Which(carea_agg[[x]][[1]] > 0)
+    lc_gt0 <- Which(carea_agg[[x]][[y]] > 0)
+    all_gt0 <- gti_gt0 + lc_gt0
+    all_gt0[all_gt0 > 0] <- 1
+    all_gt0
+  })
+  named_out(lcb, snms)
+})
+names(lc_union) <- lev
+# plot(lc_union$f50$modmu)
+# plot(gti_agg$f50$gti)
+
+# selection variables
+nms1 <- c(colnames(ctabo), "wgt")
+nms2 <- colnames(ctabo)
+bvals <- "mu"
+
+```
+
+
+
+
+
+```{r, eval=FALSE, echo=FALSE}
+# looking into pycnophylactic interpolation of correction factors
+# install.packages("pycno")
+require(pycno)
+
+# pycno package example
+nc_sids <- readOGR(system.file("shapes/sids.shp", package="maptools")[1], 
+                   layer = "sids")
+nc_sids@proj4string <- CRS("+proj=longlat +ellps=clrk66")
+births74 <- pycno(nc_sids, nc_sids$BIR74, 0.05, converge = 1)
+plot(raster(as(births74, "SpatialPixelsDataFrame")))
+plot(nc_sids,add=TRUE)
+
+# on out data
+provr <- rasterize(prov, y = gti_agg$f10$gti, field = "id_1")
+prov2 <- rasterToPolygons(provr, dissolve = TRUE)
+colnames(prov2@data) <- "provid"
+prov2@data <- cbind(prov2@data, do.call(cbind, pcf))
+
+snms <- colnames(prov2@data)[2:5]
+cfrs <- lapply(snms, function(x) {
+  #x <- snms[1]
+  cfr <- pycno(prov2, prov2@data[, x], 10000, converge = 1)
+  cfr_spp <- as(cfr, "SpatialPixelsDataFrame")
+  cfrr <- raster(cfr_spp)
+  cfrrs <- resample(x = cfrr, provr, method = "ngb")
+})
+names(cfrs) <- snms
+plot(cfrs$sa30)
+
+reclmat <- cbind(1:9, pcf$sa30)  # reclass matrix
+cfr <- reclassify(provr, reclmat)  # assign cf values to rasterized
+tst <- (lc_agg$f10$sa30 * cfr)
+
+# this interpolation does not make sense in terms of leading to a correction 
+# that ends up with cropland fractions matching the provincial estimates of 
+# cropland area, at least not given the equations provided by Ramankutty et al
+# (2008). The provincial level correction factor should not be disaggregated so # that the summed correction factors add back up to the original correction
+# factor.
+
+cft <- 18 / sum(rep(2, 10))
+sum(rep(2, 10) * cft)
+
+
+
+```
+
+
+

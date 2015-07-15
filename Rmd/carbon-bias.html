@@ -597,33 +597,12 @@ x &lt;-<span class="st"> </span><span class="kw">grconvertX</span>(<span class="
 y &lt;-<span class="st"> </span><span class="kw">grconvertY</span>(<span class="fl">0.11</span>, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>, <span class="dt">to =</span> <span class="st">&quot;user&quot;</span>)
 <span class="kw">legend</span>(<span class="dt">x =</span> x, <span class="dt">y =</span> y, <span class="dt">legend =</span> mcap, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">col =</span> cols, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,
        <span class="dt">cex =</span> <span class="fl">1.2</span>)
-<span class="kw">dev.off</span>()
-
-<span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
-nmrepl &lt;-<span class="st"> </span><span class="kw">cbind</span>(snms, lcnms)
-mu0[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
-mu0a[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
-mu0[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
-mu0a[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
-mu0s &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;actual&quot;</span>, mu0), <span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;absolute&quot;</span>, mu0a))
-mu0s_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mu0s)
-<span class="kw">print</span>(mu0s_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-all-SA.tex&quot;</span>)
-
-<span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
-nmrepl &lt;-<span class="st"> </span><span class="kw">cbind</span>(snms, lcnms)
-mu[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
-mua[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
-mu[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
-mua[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
-mus &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;actual&quot;</span>, mu), <span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;absolute&quot;</span>, mua))
-mus_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mus)
-<span class="kw">print</span>(mu0s_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
-      <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-cropland-SA.tex&quot;</span>)</code></pre>
+<span class="kw">dev.off</span>()</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
 <div id="main-text-version-of-mean-carbon-bias-against-scale" class="section level4">
 <h4><span class="header-section-number">0.4.2.3</span> Main text version of mean carbon bias against scale</h4>
-<pre class="sourceCode r"><code class="sourceCode r">alph &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">225</span>, <span class="dv">75</span>)
+<pre class="sourceCode r"><code class="sourceCode r">alph &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">225</span>, <span class="dv">40</span>)
 <span class="co">#Ccols &lt;- brewer.pal(n = 7, name = &quot;Greys&quot;)</span>
 LC2 &lt;-<span class="st"> </span><span class="kw">c</span>(LC[-<span class="kw">grep</span>(<span class="st">&quot;second|grass&quot;</span>, LC)], <span class="st">&quot;all&quot;</span>)
 <span class="co"># xax &lt;- seq(0, 7, 6 / (length(yax) - 2)); length(xax)</span>
@@ -680,6 +659,29 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(lev_vec)) {
        <span class="dt">pch =</span> pchs, <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="dv">2</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
 <span class="kw">dev.off</span>()</code></pre>
 <p><a href="#top">Back to top</a></p>
+</div>
+<div id="supplementary-mean-bias-tables" class="section level4">
+<h4><span class="header-section-number">0.4.2.4</span> Supplementary mean bias tables</h4>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
+nmrepl &lt;-<span class="st"> </span><span class="kw">cbind</span>(snms, lcnms)
+mu0[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
+mu0a[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
+mu0[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
+mu0a[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
+mu0s &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;actual&quot;</span>, mu0), <span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;absolute&quot;</span>, mu0a))
+mu0s_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mu0s)
+<span class="kw">print</span>(mu0s_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-all-SA.tex&quot;</span>)
+
+<span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
+nmrepl &lt;-<span class="st"> </span><span class="kw">cbind</span>(snms, lcnms)
+mu[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
+mua[, <span class="kw">c</span>(lev_vec) :<span class="er">=</span><span class="st"> </span><span class="kw">lapply</span>(.SD, round), .SDcols =<span class="st"> </span>lev_vec]
+mu[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
+mua[, V1 :<span class="er">=</span><span class="st"> </span>nmrepl[<span class="kw">match</span>(V1, nmrepl), <span class="dv">2</span>]]
+mus &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;actual&quot;</span>, mu), <span class="kw">cbind</span>(<span class="dt">stat =</span> <span class="st">&quot;absolute&quot;</span>, mua))
+mus_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mus)
+<span class="kw">print</span>(mu0s_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
+      <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-cropland-SA.tex&quot;</span>)</code></pre>
 </div>
 </div>
 </div>

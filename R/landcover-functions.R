@@ -42,6 +42,36 @@ aggregate_rast_list <- function(fact, rlist, fun = mean) {
   return(aggs2)
 }
 
+#' Disaggregates a raster or list of rasters
+#' 
+#' @param names1 names or indices for outer loop of 2 level raster list
+#' @param names2 inner list names denoting aggregation level (see details)
+#' @param rlist List of rasters to be aggregated
+#' @param mask Masking raster to be applied
+#' @return List of rasters disaggregated back to original resolution
+#' @details This is essentially the reverse of aggregate_rast_list, thus has a
+#' structure that is highly specific to this project. The names 2 vector should
+#' be of the form c("f1", "f5", "f10"), etc, where the f stands for factor and 
+#' the number gives the factor by which the raster being disaggregated was 
+#' aggregated from its original resolution.  
+#' @export
+disaggregate_rast_list <- function(names1, names2, rlist, rmask) {
+  disagg <- lapply(names1, function(x) {
+    l1 <- lapply(names2, function(y) {
+      fact <- as.numeric(gsub("f", "", y))
+      if(fact == 1) {
+        r <- rlist[[x]][[y]][[1]]
+      } else {
+        r <- disaggregate(rlist[[x]][[y]][[1]], fact = fact)
+        r <- mask(crop(r, rmask), rmask)
+      }
+    })
+    named_out(l1, names2)
+  })
+  named_out(disagg, names1)
+}
+
+
 #' @title Apply math on two lists
 #' @description Apply arbitrary math to two objects within two lists 
 #' @param ilist A 3 element list of list indices (names or index numbers). See details. 
