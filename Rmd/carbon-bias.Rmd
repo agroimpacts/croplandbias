@@ -635,7 +635,7 @@ pp <- list("x" = c(-2, 21), "y" = c(0, 0),
                        seq(10, 100, 10)), 
            "y1lwd" = list(2, 1),  
            "y2lwd" = 0.5, 
-           "y2lc" = list(c("black", rep("grey80", 4), "black", rep("grey80", 4), 
+           "y2lc" = list(c("black", rep("grey80", 4), "black", rep("grey80", 4),
                            rep("grey80", 4), "black", rep("grey80", 4),"black"),
                          rep("grey80", 10)),
            "yl" = list(c(-100, 100), c(0, 100)), 
@@ -650,7 +650,7 @@ yax <- seq(-100, 100, 10)
 xax <- seq(0, 22, 20 / (length(yax) - 2))
 
 pdf(full_path(p_fig, "carbon_biases_1-100km_v1.pdf"), width = 7.5, height = 7)
-par(mfrow = c(6, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,  
+par(mfrow = c(6, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,
     oma = c(6, 4, 1, 0))
 for(f in 1:length(LC)) {
   for(j in c(1, 4:6)) {#j <- 1; f <- 1
@@ -690,7 +690,7 @@ toohigh <- function(x, y, col = "black", yadj = 0, cex = 1.1) {
 }
 
 pdf(full_path(p_fig, "carbon_biases_1-100km_v2.pdf"), width = 7.5, height = 7)
-par(mfrow = c(4, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,  
+par(mfrow = c(4, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,
     oma = c(6, 4, 1, 0))
 for(f in 1:length(snms)) {
   for(i in c(1, 4:6)) {#i <- 1; j <- 1; f <- 2
