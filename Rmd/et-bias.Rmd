@@ -1,0 +1,430 @@
+---
+title: "ET bias"
+author: "Lyndon Estes"
+date: "August 17, 2015"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+    number_sections: true
+---
+
+# Overview
+
+Bias in PET estimates as calculated using different version of the cropland datasets to determine the vegetation properties in VIC.  
+
+# Analysis
+## Prepare datasets
+
+Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc. 
+```{r, eval = FALSE}
+library(SAcropland)
+p_root <- full_path(proj_root("SAcropland"), "SAcropland")
+p_fig <- full_path(p_root, "paper/figures/")
+p_data <- full_path(p_root, "external/ext_data/")
+p_data2 <- full_path(p_root, "data/")
+p_et <- full_path(p_root, "external/ext_data/vic/")
+
+# cropland data
+load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
+load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
+gti <- raster(paths) / 100  # gti 2011
+
+# Reconstruct original landcover estimates
+snms <- c("sa30", "globmu", "modmu", "geow")
+anms <- c("gti", snms)
+dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
+lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
+
+# check
+# plot(lc_list[[1]])
+# plot(gti)
+# tst <- raster("external/ext_data/geowikisa_masked.tif")  # check
+# plot(round(tst / 100 - lc_list[[4]], 4)) # okay
+
+# aggregate rasters
+fact <- 25
+lc_agg <- aggregate_rast_list(fact, lc_list)   # landcover rasters 
+gti_agg <- aggregate_rast_list(fact, list("gti" = gti))  # GTI rasters
+
+# Create namask to remove all NA areas across datasets
+sumna <- function(x) sum(x, na.rm = FALSE)
+namask <- calc(stack(gti, stack(lc_list)), sumna)
+namask2 <- !is.na(namask)  # set NAs to zero
+# # namaskt <- raster(full_path(p_data, "namask.tif")) # load in NA mask
+# # namaskt2 <- !is.na(namaskt)  # set NAs to zero
+# cellStats(is.na(gti), sum); cellStats(namask2, sum); cellStats(namask2t, sum)
+# cellStats(namaskt, sum)
+awgts <- aggregate_rast_list(fact, list(namask2), fun = sum)
+awgts <- lapply(awgts$f25, function(x) {
+  r <- x[[1]]
+  projection(r) <- sa.shp@proj4string
+  r
+})  # reshape a bit into list for subsequent use
+names(awgts) <- "f25"
+mask25k <- awgts$f25 > 0  # mask for et datasets
+
+# read in ET estimates, but drop first year because of VIC problem in January
+etf <- dir(p_et, pattern = "nc", full.names = TRUE)
+etb <- lapply(etf, function(x) brick(x))
+etb <- lapply(etb, function(x) dropLayer(x, i = 1:12))
+
+# reproject them to Albers
+etba <- lapply(etb, function(x) {
+  b <- projectRaster(x, awgts$f25)
+})
+
+# rename layers and convert to total month mm
+dts <- seq.Date(as.Date("1981/1/1"), as.Date("2008/12/31"), "days")
+allmos <- substr(dts, 6, 7)
+allyrs <- substr(dts, 1, 4)
+ndays <- unlist(lapply(unique(allyrs), function(x) {
+  unname(sapply(unique(allmos), function(y) {
+    length(which(allyrs == x & allmos == y))
+  }))
+}))  # n days in each month in time series
+
+mos <- format(ISOdatetime(2000,1:12,1,0,0,0),"%b")
+lnames <- sapply(1981:2008, function(x) paste0(mos, "_", substr(x, 3, 4)))
+lnames <- lnames[1:length(lnames)]
+# length(lnames) == nlayers(etba[[1]])
+etba <- lapply(etba, function(x) {
+  b <- mask(x, mask25k, maskvalue = 0)
+  names(b) <- lnames
+  b
+})
+names(etba) <- anms
+
+# check that mm/month multiplies through correctly
+tst <- etba[[1]] * ndays
+plot(tst[[15]] - etba[[1]][[15]] * ndays[15])
+
+# convert to monthly total mm
+etba <- lapply(etba, function(x) x * ndays)
+# plot(etba[[1]][[1]])
+
+# year indices
+yrs <- gsub("*.*_", "", lnames)
+mos <- gsub("_.*", "", lnames)
+yi <- t(sapply(unique(yrs), function(x) range(which(yrs == x))))
+mi <- sapply(unique(mos), function(x) which(mos == x))
+```
+<a href="#top">Back to top</a>
+
+## Process ET time series
+
+Figure out which months produce maximum ET values, calculate monthly means, overall country-wide time series, etc. 
+```{r, eval=FALSE}
+# Calculate mean, median, mode of dates in time series when PET max occurs
+et_max <- lapply(etba, function(x) {
+  bi <- stack(lapply(1:nrow(yi), function(y) {
+    ind <- yi[y, 1]:yi[y, 2]
+    which.max(x[[ind]])
+  }))
+  s <- stack(calc(bi, max), calc(bi, modal), calc(bi, mean), calc(bi, median))
+  names(s) <- c("maxmax", "mode", "mean", "median")
+  s
+})
+
+# plot to see which statistic picks out PET peak date most effectively
+plot(et_max$gti)  # all the same, not coherent
+plot(et_max$gti %in% 6:9)  # median looks most sensible and coherent 
+plot(et_max$gti - et_max$sa30)  # some differences in date of max
+plot(et_max$gti - et_max$globmu) 
+plot(et_max$gti - et_max$modmu)  
+plot(et_max$gti - et_max$geow)  
+
+# Monthly mean values
+et_momu <- lapply(etba, function(x) {
+  bi <- stack(lapply(1:ncol(mi), function(y) {
+    ind <- mi[, y]
+    calc(x[[ind]], mean)
+  }))
+  names(bi) <- unique(mos)
+  bi
+})
+
+# do a focal max to separate out noisy areas
+et_medsm <- focal(et_max$gti$median, w = matrix(1, 3, 3), fun = modal, pad = 3)
+buf <- (!is.na(et_max$gti$median) - !is.na(et_medsm)) * et_max$gti$median
+et_medsm[is.na(et_medsm)] <- 0
+et_medsm <- buf + et_medsm  # fill back in areas edged out by moving window
+# plot((et_medsm > 0) - (et_momu$gti[[1]] > 0))
+
+# 1 month before and after peak
+et_meds_m1 <- et_medsm - 1
+# plot(et_medsm - 1)  # a few zero areas
+et_meds_m1[et_meds_m1 < 1] <- 12  # set to 12 (December) if median - 1 = 0
+et_meds_p1 <- et_medsm + 1
+# plot(et_medsm + 1)  # nothing greater than 12
+
+# calculate 3 month peak ET
+gs_peak <- lapply(et_momu, function(x) {
+  et1 <- stackSelect(x, et_meds_m1)
+  et2 <- stackSelect(x, et_medsm)
+  et3 <- stackSelect(x, et_meds_p1)
+  stack(et1, et2, et3)
+})
+
+# Annual mean values
+et_amu <- lapply(etba, function(x) {
+  bi <- stack(lapply(1:nrow(yi), function(y) {
+    ind <- yi[y, 1]:yi[y, 2]
+    calc(x[[ind]], sum)
+  }))
+  et_ts <- cellStats(bi, mean)
+  names(et_ts) <- 1981:2008
+  list("gridmu" = calc(bi, mean), "cntry_ts" = et_ts)
+})
+
+# plot annual mean values
+rbcol <- rainbow(4)
+plot(1981:2008, et_amu$gti$cntry_ts, type = "l", las = 2)
+for(i in 2:5) lines(1981:2008, et_amu[[i]]$cntry_ts, col = rbcol[i])
+
+# figure out min_max years
+mm_yr <- sapply(list(which.min, which.max), function(x) x(et_amu$gti$cntry_ts))
+
+# annual totals
+et_mutot <- lapply(etba, function(x) {
+  bi <- stack(lapply(1:nrow(yi), function(y) {
+    ind <- yi[y, 1]:yi[y, 2]
+    calc(x[[ind]], sum)
+  }))
+})
+et_mm <- lapply(et_mutot, function(x) x[[mm_yr]])
+```
+<a href="#top">Back to top</a>
+
+## Calculate ET differences
+```{r, eval=FALSE}
+# difference rasters and convert to percent
+# between time series annual mean
+ilist <- lapply(et_amu[2:5], function(x) x[[1]])
+a <- et_amu$gti$gridmu
+amu_diff <- lapply(ilist, function(b) {
+  (a - b) / a * 100
+})
+
+# between time series mins
+ilist <- lapply(et_mm[2:5], function(x) x[[1]])
+a <- et_mm$gti[[1]]
+mumin_diff <- lapply(ilist, function(b) {
+  (a - b) / a * 100
+})
+
+# between time series maxs
+ilist <- lapply(et_mm[2:5], function(x) x[[2]])
+a <- et_mm$gti[[2]]
+mumax_diff <- lapply(ilist, function(b) {
+  (a - b) / a * 100
+})
+
+# between mean peak growing season ET (3 month total)
+ilist <- lapply(gs_peak[2:5], function(x) calc(x, sum))
+a <- calc(gs_peak$gti, sum)
+gs3_diff <- lapply(ilist, function(b) {
+  (a - b) / a * 100
+})
+
+# between median max growing season ET (3 month total)
+ilist <- lapply(gs_peak[2:5], function(x) x[[2]])
+a <- gs_peak$gti[[2]]
+gsmx_diff <- lapply(ilist, function(b) {
+  bl <- (a - b) / a * 100
+})
+```
+<a href="#top">Back to top</a>
+
+## Plot difference maps
+### Reshape and disaggregate lists
+```{r, eval = FALSE}
+# function to reshape lists for use in disaggregate_rast_list
+disaggl <- function(rl, lev = "f25") {
+  bo <- lapply(rl, function(x) {
+    b <- list(x)
+    names(b) <- lev
+    b
+  })
+  bo  
+}
+
+# reshape in list
+l2dag <- list(amu_diff, mumax_diff, mumin_diff, gs3_diff, gsmx_diff)
+names(l2dag) <- c("mu", "mumx", "mumn", "gs", "gspk")
+l2dag <- lapply(l2dag, disaggl)
+
+# disaggregate
+l2dagd <- lapply(l2dag, function(x) {
+  disaggregate_rast_list(snms, "f25", x, namask)
+})
+
+# stats for plotting
+dstats <- function(dlist) {
+  statsd <- lapply(dlist, function(x) {
+    sapply(x, function(y) {
+      c(cellStats(y, mean), quantile(y, seq(0, 1, 0.05)))
+    })
+  })
+}
+```
+<a href="#top">Back to top</a>
+
+### Plot maps
+```{r, eval=FALSE}
+# calculate single set of breakranges for all sets
+statsl <- lapply(l2dag, dstats)
+rng <- do.call(cbind, lapply(statsl, function(x) {
+  ilims <- c(ceiling(min(sapply(x, function(y) y[3, ]))), 
+             floor(max(sapply(x, function(y) y[21, ]))))
+  olims <- range(sapply(x, function(y) range(y)))
+  c(olims[1], ilims, olims[2])
+}))
+rngdt <- data.table(t(rng))
+rng <- unname(unlist(rngdt[, lapply(.SD, function(x) x[which.max(abs(x))])]))
+
+fnm <- "et_bias_map.pdf"
+legtext <- rep("%", 5)
+cx <- 1.4
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+ecap <- c("Annual mean", "TS max", "TS min", "Peak 3", "Peak")
+
+rnder <- function(x) {
+  dig <- nchar(max(round(x)))
+  rmat <- cbind(1:8, c(1, 5, 10, 20, 50, 100, 100, 1000))
+  rnd <- rmat[dig, 2]
+  round(c(floor(x[1] / rnd), ceiling(x[2] / rnd))) * rnd 
+}
+
+brks <- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))
+cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
+cols[c(1, length(cols))] <- c("darkred", "purple3")
+pdf(full_path(p_fig, fnm), height = 6, width = 7)
+par(mfcol = c(4, 5), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+for(j in 1:length(l2dagd)) {
+  print(names(l2dagd)[j])
+  for(k in 1:length(snms)) {
+    rl <- l2dagd[[j]][[k]]$f25
+    print(snms[k])
+    plot(sa.shp, lty = 0)
+    image(rl, add = TRUE, col = cols, breaks = brks, legend = FALSE)
+    if(j == 1) mtext(mcap[k], side = 2, line = 1, cex = cx)
+    if(k == 1) mtext(ecap[j], side = 3, line = 0, cex = cx)
+  }
+}
+flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i], 
+            legend.vals = brks, longdims = c(0.2, 0.8), 
+            shortdims = c(0.06, 0.01), 
+            colvec = cols, #(length(brks) - 1), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 5), leg.adj = list(c(0.1, 0.3), c(-1, -0.5)), 
+            cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
+dev.off()
+```
+<a href="#top">Back to top</a>
+
+## Calculate bias statistics
+
+### Mean percent bias in ET estimates
+```{r, eval=FALSE}
+lev_vec <- "f25"
+# create mask for non-cropland areas, unioning GTI and each LC, filtering out
+# areas of no-cropland (<1/2% total cover)
+lcu <- lapply(lev_vec, function(x) {
+  lcb <- lapply(snms, function(y) {
+    gti_gt0 <- Which(round(gti_agg[[x]]$gti * 100) > 0)
+    lc_gt0 <- Which(round(lc_agg[[x]][[y]] * 100) > 0)
+    all_gt0 <- gti_gt0 + lc_gt0
+    all_gt0[all_gt0 > 0] <- 1
+    all_gt0
+  })
+  named_out(lcb, snms)
+})
+names(lcu) <- lev_vec
+
+# cropland cover bins, for looking at error as a function of cover
+binv <- seq(0, 1, 0.05)
+bins <- lapply(gti_agg[[2]], function(x) {
+  cut(x$gti, breaks = binv, include.lowest = TRUE)
+})
+names(bins) <- lev_vec
+
+# weighted mean functions
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+
+# calculate bias stats
+vnms <- names(l2dag)
+bstats <- lapply(vnms, function(x) {
+  a <- bias_stats_list(bins, awgts, lcu, l2dag[[x]], wm, "mu", "bias", TRUE)
+  b <- bias_stats_list(bins, awgts, lcu, l2dag[[x]], wma, "mua", "bias", TRUE)
+  stat <- rbind(a, b)
+})
+names(bstats) <- vnms
+
+# checks to see if stats correct
+# bias_stats* functions correct
+chk <- bias_stats(bins$f25, awgts$f25, lcu$f25$globmu, l2dag$mu$globmu$f25, wm,
+                  "mu", "bias", TRUE)
+all(chk[bvals == "mu", bias] == bstats$mu[il == "globmu" & bvals == "mu", bias])
+# compared to raster
+for(i in snms) {
+  msk <- lcu$f25[[i]]
+  msk[msk == 0] <- NA
+  a <- l2dag$mu[[i]]$f25 * msk
+  b <- awgts$f25 * msk
+  d <- weighted.mean(values(a), values(b), na.rm = TRUE)
+  print(round(d, 2) == bstats$mu[il == i & bvals == "mu" & bin == "all", bias])
+}  # check
+
+# extract stats
+mu <- lapply(bstats, function(x) {
+  extract_stat(lev_vec, snms, "all", "mu", "bias", x)
+})
+mua <- lapply(bstats, function(x) {
+  extract_stat(lev_vec, snms, "all", "mua", "bias", x)
+})
+
+# reshape
+mus <- rbindlist(lapply(names(mu), function(x) cbind(x, mu[[x]])))
+mus[, ol := NULL]
+setnames(mus, c("x", "il"), c("ETvar", "dataset"))
+setkeyv(mus, c("dataset", "ETvar"))
+muas <- rbindlist(lapply(names(mua), function(x) cbind(x, mua[[x]])))
+muas[, ol := NULL]
+setnames(muas, c("x", "il", "bias"), c("ETvar", "dataset", "absbias"))
+setkeyv(muas, c("dataset", "ETvar"))
+mutab <- mus[muas]
+mutab[, lapply(.SD, function(x) max(abs(x))), .SDcols = 3:4]
+
+mutab_xtab <- xtable::xtable(mutab, digits = 1)
+print(mutab_xtab, type = "latex", 
+      file = "paper/figures/et-bias.tex")
+```
+<a href="#top">Back to top</a>
+
+The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.43%, so not much here.
+
+### Bias in relation to rainfall
+
+We'll end by having a look at the relationship between bias and rainfall
+
+```{r, eval = FALSE}
+# rainfall layer prepared for SA crop subsidy analysis
+load("external/ext_data/climate/mag_dist_clim.rda")
+pre <- calc(pre2, mean)  # 31 year mean rainfall for Africa
+p4s <- projection(raster(nrow = 10, ncol = 10)) # GCS
+presa <- crop(pre, spTransform(sa.shp, p4s))  # crop to SA
+projection(presa) <- p4s  
+presa <- projectRaster(presa, mask25k)  # project to Albers
+presa <- mask(presa, awgts$f25, maskvalue = 0)  # mask
+
+plot(presa)
+plot(abs(l2dag$mu$globmu$f25))
+plot(presa, abs(l2dag$mu$globmu$f25))
+
+```
+

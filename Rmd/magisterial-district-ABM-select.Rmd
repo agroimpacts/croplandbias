@@ -7,13 +7,14 @@ output:
     highlight: tango
     theme: spacelab
     toc: yes 
+    number_sections: true
 ---
 
-## Overview 
+# Overview 
 
 Selection of magisterial districts and associated landcover sets for use in ABM example.
 
-## Data
+# Data
 ```{r, eval=FALSE}
 library(raster)
 library(rgdal)
@@ -27,12 +28,12 @@ p_data2 <- full_path(p_root, "SAcropland/data/")
 
 # landcover data
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
-paths <- full_path(p_data, dir(p_data, paste0("cover*.*07sum_mask*")))
-gti <- raster(paths)  # gti 2007 rather than 2011, to match census data
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
+gti <- raster(paths[2])  # gti 2011
 
 # Reconstruct original landcover estimates
 snms <- c("sa30", "globmu", "modmu", "geow")
-dlist_1km <- stack(lapply(dlist_act[snms], function(x) x$f1$g2007))
+dlist_1km <- stack(lapply(dlist_act[snms], function(x) x$f1$g2011))
 lc_list <- gti - dlist_1km 
 
 # magisterial district data cropland statistics (2011, but only to look at for 
@@ -46,7 +47,6 @@ colnames(mu) <- c("N", "na", "f")
 # district shapes, filtered by N missing data, minimum fraction, and area
 md <- readOGR("external/ext_data/mag_dists.sqlite", layer = "mag_dists")
 mdfilt <- mu[mu$na < 20 & mu$f > 5 & mu$N < 1500, ]  
-md@data[mdsel, 7:8]
 mdsel <- as.numeric(row.names(mdfilt))
 
 # Examine, including in QGIS
@@ -57,7 +57,7 @@ writeOGR(md[mdsel[mdsel < 314], ], dsn = "external/ext_data/md_abms.sqlite",
 
 ```
 
-### Selection
+# Selection
 
 Looking at the data in QGIS, including some rainfall maps from earlier papers and the inter-tubes, it looks like the following districts are a good match: 
 
@@ -71,58 +71,77 @@ abm_md <- md[mdsel[mdsel %in% c(269, 274:275, 288)], ]
 writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4", 
          driver = "SQLite")
 
+# Deprecated: earlier used when running 2007 rather than 2011
 # Let's compare the fractions between the GTI 2007 and GTI 2011 datasets for 
 # interest's sake
-gti_abm <- extract(gti, abm_md)
-abm_mu <- data.frame(t(sapply(gti_abm, function(x) {
-  c(length(x), length(which(is.na(x))), round(mean(x, na.rm = TRUE), 1))
-})))
-colnames(abm_mu) <- c("N", "na", "f")
-abm_mu$f - mu[mdsel[mdsel %in% c(269, 274:275, 288)], "f"]
+# gti_abm <- extract(gti, abm_md)
+# abm_mu <- data.frame(t(sapply(gti_abm, function(x) {
+#   c(length(x), length(which(is.na(x))), round(mean(x, na.rm = TRUE), 1))
+# })))
+# colnames(abm_mu) <- c("N", "na", "f")
+# abm_mu$f - mu[mdsel[mdsel %in% c(269, 274:275, 288)], "f"]
  # -1.0  0.0 -0.4 -0.2  # tinf differences!
 ```
 
-### Extraction
+## Extraction
 ```{r, eval=FALSE}
 gti4 <- crop(gti, extent(abm_md))
 lc4 <- crop(lc_list, extent(abm_md))
-cb <- brick(stack(gti4, lc4), filename = "external/ext_data/cropland-md4.tif")
+cb <- brick(stack(gti4, lc4), filename = "external/ext_data/cropland-md4.tif", 
+            overwrite = TRUE)
 ```
 
-### Visuals
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-library(raster)
-library(rgdal)
-library(lmisc)
+## Plots
+```{r, eval = FALSE}
+brks1 <- seq(0, 100, 10)
+cols1 <- rev(terrain.colors(length(brks1) - 1))
+brks2 <- c(-100, -80, -60, -40, -20, -10, -5, -1)
+brks2 <- c(brks2, rev(abs(brks2)))
+cols2 <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks2) - 1)
+cols2[c(1, length(cols2))] <- c("darkred", "purple3")
+cx <- 1.1
+lcol <- "black"
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
 
-setwd(full_path(proj_root("SAcropland"), "SAcropland"))
-md <- readOGR("external/ext_data/mag_dists.sqlite", layer = "mag_dists")
-abm_md <- readOGR("external/ext_data/md4.sqlite", layer = "md4")
-cb <- brick("external/ext_data/cropland-md4.tif")
-```
-
-```{r}
-par(mar = c(0, 0, 0, 0))
+# layout.show()
+# pdf(full_path(p_fig, "abm-selected-districts.pdf"), height = 7, width = 7)
+png(full_path(p_fig, "abm-selected-districts.png"), height = 700, width = 700)
+par(mfrow = c(3, 2), mar = c(0, 0, 0, 0), oma = c(2, 0, 0, 0))
 plot(md, col = "grey", border = "transparent")
 plot(abm_md, col = "red", border = "grey30", add = TRUE)
-```
-
-The four selected districts. 
-
-```{r}
-par(mar = c(0, 0, 0, 0))
-plot(cb[[1]], axes = FALSE, box = FALSE)
+par(mar = c(3, 0, 0, 0))
+plot(abm_md)
+plot(cb[[1]], axes = FALSE, box = FALSE, breaks = brks1, col = cols1, add = TRUE, 
+     legend = FALSE)
 plot(abm_md, add = TRUE)
-```
-
-2007 cropland fraction in the four districts.
-
-```{r}
-par(mar = c(0, 0, 0, 0), mfrow = c(2, 2))
 for(i in 2:5) {
-  plot(cb[[i]], axes = FALSE, box = FALSE, zlim = c(0, 101))
-  plot(abm_md, add = TRUE)
+  plot(abm_md)
+  plot(cb[[1]] - cb[[i]], axes = FALSE, box = FALSE, breaks = brks, col = cols, 
+       add = TRUE, legend = FALSE)
+  plot(abm_md, add = TRUE, lwd = 2)
+  mtext(mcap[i - 1], side = 1, line = -4, adj = 0.7)
 }
+nct <- length(brks1) - 1
+flex_legend(ncuts = nct, legend.text = "% cropland", legend.vals = rep("", nct),
+            longdims = c(0.6, 0.9), shortdims = c(0.72, 0.012), colvec = cols1, 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 3), leg.adj = list(c(4.2, 0), c(-0.5, -0.5)), 
+            cex.val = 1.1, textcol = lcol, bordercol = lcol)
+tc <- rect_coords(0.6, 0.9, nct, constEWorNS = 0.72, resEWorNS = 0.02)
+xs <- c(tc[[1]][1, 1], sapply(tc, function(x) x[2, 1]))
+ys <- sapply(tc, function(x) x[1, 2])
+text(xs, ys, labels = brks1, srt = 270, adj = c(-0.15, 0.5), cex = 1.1)
+nct <- length(brks2) - 1
+flex_legend(ncuts = nct, legend.text = "% bias", legend.vals = rep("", nct),
+            longdims = c(0.2, 0.8), shortdims = c(0.05, 0.015), colvec = cols2, 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 6), leg.adj = list(c(4.2, 0), c(-0.5, -0.5)), 
+            cex.val = 1.1, textcol = lcol, bordercol = lcol)
+tc <- rect_coords(0.2, 0.8, nct, constEWorNS = 0.047, resEWorNS = 0.012)
+xs <- c(tc[[1]][1, 1], sapply(tc, function(x) x[2, 1]))
+ys <- sapply(tc, function(x) x[1, 2])
+text(xs, ys, labels = brks2, srt = 270, adj = c(-0.1, 0.5), cex = 1.1)
+dev.off()
 ```
 
-Cropland fractions estimated by South Africa's landcover product, GLobCover, MODIS, and Geo-Wiki for the same 4 districts. Note the substantial variability. 
+![figure](../paper/figures/abm-selected-districts.png)

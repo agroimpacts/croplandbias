@@ -1110,7 +1110,7 @@ ygap_bias <- sapply(lev, function(x) {
   notprez <- (preagg < 300) | (preagg > 400)
   sapply(snms, function(y) {
     yg <- (g1 * cyld_agg[[x]]$gti * notprez) + (g2 * cyld_agg[[x]]$gti * prez)
-    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2 * cyld_agg[[x]][[y]] * prez)
+    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2*cyld_agg[[x]][[y]] * prez)
     pg <- tareas[[x]] * carea_agg[[x]]$gti * yg
     pg2 <- tareas[[x]] * carea_agg[[x]][[y]] * yg2
     cellStats(pg - pg2, sum) / cellStats(pg, sum) * 100
@@ -1128,7 +1128,7 @@ ygap_bias2 <- sapply(lev, function(x) {
   notprez <- preagg != 400
   sapply(snms, function(y) {
     yg <- (g1 * cyld_agg[[x]]$gti * notprez) + (g2 * cyld_agg[[x]]$gti * prez)
-    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2 * cyld_agg[[x]][[y]] * prez)
+    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2 * cyld_agg[[x]][[y]]*prez)
     pg <- tareas[[x]] * carea_agg[[x]]$gti * yg
     pg2 <- tareas[[x]] * carea_agg[[x]][[y]] * yg2
     cellStats(pg - pg2, sum) / cellStats(pg, sum) * 100
@@ -1138,7 +1138,7 @@ ygap_bias2 <- sapply(lev, function(x) {
 # Assume a yield gap over-estimated by 100% in 500 mm isohyet
 ygap_bias3 <- sapply(lev, function(x) {
   if(x != "f1") { 
-    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), fun = modal)
+    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), fun=modal)
   } else {
     preagg <- prebin
   }
@@ -1146,7 +1146,7 @@ ygap_bias3 <- sapply(lev, function(x) {
   notprez <- preagg != 500
   sapply(snms, function(y) {
     yg <- (g1 * cyld_agg[[x]]$gti * notprez) + (g2 * cyld_agg[[x]]$gti * prez)
-    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2 * cyld_agg[[x]][[y]] * prez)
+    yg2 <- (g1 * cyld_agg[[x]][[y]] * notprez) + (g2 * cyld_agg[[x]][[y]]*prez)
     pg <- tareas[[x]] * carea_agg[[x]]$gti * yg
     pg2 <- tareas[[x]] * carea_agg[[x]][[y]] * yg2
     cellStats(pg - pg2, sum) / cellStats(pg, sum) * 100
