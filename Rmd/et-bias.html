@@ -90,7 +90,10 @@ img {
 <li><a href="#reshape-and-disaggregate-lists"><span class="toc-section-number">2.4.1</span> Reshape and disaggregate lists</a></li>
 <li><a href="#plot-maps"><span class="toc-section-number">2.4.2</span> Plot maps</a></li>
 </ul></li>
-<li><a href="#calculate-bias-statistics"><span class="toc-section-number">2.5</span> Calculate bias statistics</a></li>
+<li><a href="#calculate-bias-statistics"><span class="toc-section-number">2.5</span> Calculate bias statistics</a><ul>
+<li><a href="#mean-percent-bias-in-et-estimates"><span class="toc-section-number">2.5.1</span> Mean percent bias in ET estimates</a></li>
+<li><a href="#bias-in-relation-to-rainfall"><span class="toc-section-number">2.5.2</span> Bias in relation to rainfall</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </div>
@@ -142,14 +145,14 @@ namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <s
 <span class="co"># # namaskt2 &lt;- !is.na(namaskt)  # set NAs to zero</span>
 <span class="co"># cellStats(is.na(gti), sum); cellStats(namask2, sum); cellStats(namask2t, sum)</span>
 <span class="co"># cellStats(namaskt, sum)</span>
-area_wgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask2), <span class="dt">fun =</span> sum)
-area_wgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(area_wgts, function(x) {
+awgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask2), <span class="dt">fun =</span> sum)
+awgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(awgts$f25, function(x) {
   r &lt;-<span class="st"> </span>x[[<span class="dv">1</span>]]
   <span class="kw">projection</span>(r) &lt;-<span class="st"> </span>sa.shp@proj4string
   r
-})
-mask25k &lt;-<span class="st"> </span>area_wgts$f25 &gt;<span class="st"> </span><span class="dv">0</span>  <span class="co"># mask for et datasets</span>
-<span class="kw">plot</span>(mask25k)
+})  <span class="co"># reshape a bit into list for subsequent use</span>
+<span class="kw">names</span>(awgts) &lt;-<span class="st"> &quot;f25&quot;</span>
+mask25k &lt;-<span class="st"> </span>awgts$f25 &gt;<span class="st"> </span><span class="dv">0</span>  <span class="co"># mask for et datasets</span>
 
 <span class="co"># read in ET estimates, but drop first year because of VIC problem in January</span>
 etf &lt;-<span class="st"> </span><span class="kw">dir</span>(p_et, <span class="dt">pattern =</span> <span class="st">&quot;nc&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)
@@ -158,7 +161,7 @@ etb &lt;-<span class="st"> </span><span class="kw">lapply</span>(etb, function(x
 
 <span class="co"># reproject them to Albers</span>
 etba &lt;-<span class="st"> </span><span class="kw">lapply</span>(etb, function(x) {
-  b &lt;-<span class="st"> </span><span class="kw">projectRaster</span>(x, area_wgts$f25)
+  b &lt;-<span class="st"> </span><span class="kw">projectRaster</span>(x, awgts$f25)
 })
 
 <span class="co"># rename layers and convert to total month mm</span>
@@ -409,10 +412,12 @@ for(j in <span class="dv">1</span>:<span class="kw">length</span>(l2dagd)) {
 </div>
 <div id="calculate-bias-statistics" class="section level2">
 <h2><span class="header-section-number">2.5</span> Calculate bias statistics</h2>
-<pre class="sourceCode r"><code class="sourceCode r">lev_vec &lt;-<span class="st"> </span><span class="kw">names</span>(c_pct_diff)
-<span class="co"># created mask for non-cropland areas, unioning GTI and each LC, filtering out</span>
+<div id="mean-percent-bias-in-et-estimates" class="section level3">
+<h3><span class="header-section-number">2.5.1</span> Mean percent bias in ET estimates</h3>
+<pre class="sourceCode r"><code class="sourceCode r">lev_vec &lt;-<span class="st"> &quot;f25&quot;</span>
+<span class="co"># create mask for non-cropland areas, unioning GTI and each LC, filtering out</span>
 <span class="co"># areas of no-cropland (&lt;1/2% total cover)</span>
-lc_union &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev_vec, function(x) {
+lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev_vec, function(x) {
   lcb &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
     gti_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(<span class="kw">round</span>(gti_agg[[x]]$gti *<span class="st"> </span><span class="dv">100</span>) &gt;<span class="st"> </span><span class="dv">0</span>)
     lc_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(<span class="kw">round</span>(lc_agg[[x]][[y]] *<span class="st"> </span><span class="dv">100</span>) &gt;<span class="st"> </span><span class="dv">0</span>)
@@ -422,7 +427,85 @@ lc_union &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev_vec, f
   })
   <span class="kw">named_out</span>(lcb, snms)
 })
-<span class="kw">names</span>(lc_union) &lt;-<span class="st"> </span>lev_vec</code></pre>
+<span class="kw">names</span>(lcu) &lt;-<span class="st"> </span>lev_vec
+
+<span class="co"># cropland cover bins, for looking at error as a function of cover</span>
+binv &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="fl">0.05</span>)
+bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg[[<span class="dv">2</span>]], function(x) {
+  <span class="kw">cut</span>(x$gti, <span class="dt">breaks =</span> binv, <span class="dt">include.lowest =</span> <span class="ot">TRUE</span>)
+})
+<span class="kw">names</span>(bins) &lt;-<span class="st"> </span>lev_vec
+
+<span class="co"># weighted mean functions</span>
+wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
+wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+
+<span class="co"># calculate bias stats</span>
+vnms &lt;-<span class="st"> </span><span class="kw">names</span>(l2dag)
+bstats &lt;-<span class="st"> </span><span class="kw">lapply</span>(vnms, function(x) {
+  a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, l2dag[[x]], wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+  b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, l2dag[[x]], wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+  stat &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+})
+<span class="kw">names</span>(bstats) &lt;-<span class="st"> </span>vnms
+
+<span class="co"># checks to see if stats correct</span>
+<span class="co"># bias_stats* functions correct</span>
+chk &lt;-<span class="st"> </span><span class="kw">bias_stats</span>(bins$f25, awgts$f25, lcu$f25$globmu, l2dag$mu$globmu$f25, wm,
+                  <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+<span class="kw">all</span>(chk[bvals ==<span class="st"> &quot;mu&quot;</span>, bias] ==<span class="st"> </span>bstats$mu[il ==<span class="st"> &quot;globmu&quot;</span> &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mu&quot;</span>, bias])
+<span class="co"># compared to raster</span>
+for(i in snms) {
+  msk &lt;-<span class="st"> </span>lcu$f25[[i]]
+  msk[msk ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  a &lt;-<span class="st"> </span>l2dag$mu[[i]]$f25 *<span class="st"> </span>msk
+  b &lt;-<span class="st"> </span>awgts$f25 *<span class="st"> </span>msk
+  d &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(<span class="kw">values</span>(a), <span class="kw">values</span>(b), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+  <span class="kw">print</span>(<span class="kw">round</span>(d, <span class="dv">2</span>) ==<span class="st"> </span>bstats$mu[il ==<span class="st"> </span>i &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mu&quot;</span> &amp;<span class="st"> </span>bin ==<span class="st"> &quot;all&quot;</span>, bias])
+}  <span class="co"># check</span>
+
+<span class="co"># extract stats</span>
+mu &lt;-<span class="st"> </span><span class="kw">lapply</span>(bstats, function(x) {
+  <span class="kw">extract_stat</span>(lev_vec, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, x)
+})
+mua &lt;-<span class="st"> </span><span class="kw">lapply</span>(bstats, function(x) {
+  <span class="kw">extract_stat</span>(lev_vec, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, x)
+})
+
+<span class="co"># reshape</span>
+mus &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(<span class="kw">names</span>(mu), function(x) <span class="kw">cbind</span>(x, mu[[x]])))
+mus[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NULL</span>]
+<span class="kw">setnames</span>(mus, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;ETvar&quot;</span>, <span class="st">&quot;dataset&quot;</span>))
+<span class="kw">setkeyv</span>(mus, <span class="kw">c</span>(<span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;ETvar&quot;</span>))
+muas &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(<span class="kw">names</span>(mua), function(x) <span class="kw">cbind</span>(x, mua[[x]])))
+muas[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NULL</span>]
+<span class="kw">setnames</span>(muas, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;ETvar&quot;</span>, <span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;absbias&quot;</span>))
+<span class="kw">setkeyv</span>(muas, <span class="kw">c</span>(<span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;ETvar&quot;</span>))
+mutab &lt;-<span class="st"> </span>mus[muas]
+mutab[, <span class="kw">lapply</span>(.SD, function(x) <span class="kw">max</span>(<span class="kw">abs</span>(x))), .SDcols =<span class="st"> </span><span class="dv">3</span>:<span class="dv">4</span>]
+
+mutab_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mutab, <span class="dt">digits =</span> <span class="dv">1</span>)
+<span class="kw">print</span>(mutab_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
+      <span class="dt">file =</span> <span class="st">&quot;paper/figures/et-bias.tex&quot;</span>)</code></pre>
+<p><a href="#top">Back to top</a></p>
+<p>The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.43%, so not much here.</p>
+</div>
+<div id="bias-in-relation-to-rainfall" class="section level3">
+<h3><span class="header-section-number">2.5.2</span> Bias in relation to rainfall</h3>
+<p>We’ll end by having a look at the relationship between bias and rainfall</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># rainfall layer prepared for SA crop subsidy analysis</span>
+<span class="kw">load</span>(<span class="st">&quot;external/ext_data/climate/mag_dist_clim.rda&quot;</span>)
+pre &lt;-<span class="st"> </span><span class="kw">calc</span>(pre2, mean)  <span class="co"># 31 year mean rainfall for Africa</span>
+p4s &lt;-<span class="st"> </span><span class="kw">projection</span>(<span class="kw">raster</span>(<span class="dt">nrow =</span> <span class="dv">10</span>, <span class="dt">ncol =</span> <span class="dv">10</span>)) <span class="co"># GCS</span>
+presa &lt;-<span class="st"> </span><span class="kw">crop</span>(pre, <span class="kw">spTransform</span>(sa.shp, p4s))  <span class="co"># crop to SA</span>
+<span class="kw">projection</span>(presa) &lt;-<span class="st"> </span>p4s  
+presa &lt;-<span class="st"> </span><span class="kw">projectRaster</span>(presa, mask25k)  <span class="co"># project to Albers</span>
+presa &lt;-<span class="st"> </span><span class="kw">mask</span>(presa, awgts$f25, <span class="dt">maskvalue =</span> <span class="dv">0</span>)  <span class="co"># mask</span>
+
+<span class="kw">plot</span>(presa)
+<span class="kw">plot</span>(<span class="kw">abs</span>(l2dag$mu$globmu$f25))
+<span class="kw">plot</span>(presa, <span class="kw">abs</span>(l2dag$mu$globmu$f25))</code></pre>
+</div>
 </div>
 </div>
 

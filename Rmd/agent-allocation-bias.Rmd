@@ -1,5 +1,5 @@
 ---
-title: "Districts for ABM"
+title: "Bias in Allocation of ABM Agents"
 author: "Lyndon Estes"
 date: "June 26, 2015"
 output: 
@@ -12,7 +12,7 @@ output:
 
 # Overview 
 
-Selection of magisterial districts and associated landcover sets for use in ABM example.
+Selection of magisterial districts and associated landcover sets for use in ABM example, and analysis of bias after initial allocation of agents performed based on available farmland estimated from 100 m downscaled versions of the landcover data. 
 
 # Data
 ```{r, eval=FALSE}
