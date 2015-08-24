@@ -1,0 +1,196 @@
+%% PNAStwoS.tex
+%% Sample file to use for PNAS articles prepared in LaTeX
+%% For two column PNAS articles
+%% Version1: Apr 15, 2008
+%% Version2: Oct 04, 2013
+
+%% BASIC CLASS FILE
+\documentclass{pnastwo}
+
+%% ADDITIONAL OPTIONAL STYLE FILES Font specification
+
+%\usepackage{pnastwoF}
+\usepackage{cite}
+\usepackage{lineno}
+\setlength\linenumbersep{4pt}
+
+%% OPTIONAL MACRO DEFINITIONS
+\def\s{\sigma}
+%%%%%%%%%%%%
+%% For PNAS Only:
+\url{www.pnas.org/cgi/doi/10.1073/pnas.0709640104}
+\copyrightyear{2008}
+\issuedate{Issue Date}
+\volume{Volume}
+\issuenumber{Issue Number}
+%\setcounter{page}{2687} %Set page number here if desired
+%%%%%%%%%%%%
+
+\begin{document}
+
+\title{Quantifying the impacts of bias in landcover data on global change analyses}
+
+\author{Lyndon Estes\affil{1}{Princeton University, Princeton, NJ USA},
+Peng Chen\affil{2}{Indiana University, Bloomington, IN USA},
+Stephanie Debats\affil{1}{Princeton University, Princeton, NJ USA},
+Tom Evans\affil{2}{Indiana University, Bloomington, IN USA},
+Fanie Ferreira\affil{3}{GeoTerraImage, Pretoria, RSA},
+Gabrielle Ragazzo\affil{1}{Princeton University, Princeton, NJ USA},
+Justin Sheffield\affil{1}{Princeton University, Princeton, NJ USA}
+\and
+Kelly Caylor\affil{1}{Princeton University, Princeton, NJ USA}}
+
+\contributor{Submitted to Proceedings of the National Academy of Sciences
+of the United States of America}
+
+%%%Newly updated.
+%%% If significance statement need, then can use the below command otherwise just delete it.
+%\significancetext{LDE developed the concept of the study, conducted the analysis, data interpretation and drafted the manuscript. \color{red}{To be completed}}
+
+\maketitle
+
+\begin{article}
+\begin{abstract}
+{Blah blah.}
+\end{abstract}
+
+\keywords{landcover | bias | remote sensing | agriculture | crop yield | harvested area | carbon | agent-based model | landscape}
+
+\abbreviations{GTI, GeoTerraImage}
+\linenumbers
+
+\dropcap{T}he nature and distribution of landcover is a fundamental determinant of many environmental and social processes that drive or are affected by global change \cite{lambin_modelling_1997}, such as agricultural production and food security \cite{lark_cropland_2015,wright_recent_2013, licker_mind_2010}, carbon cycling \cite{asner_high-resolution_2010,gaveau_major_2014}, biodiversity loss \cite{newbold_global_2015,luoto_predicting_2004}, or demographic changes \cite{linard_assessing_2010}. Landcover maps are therefore critical for understanding the nature and impact of such changes \cite{see_improved_2015}, and they need to be accurate at the finest scales at which the underlying processes operate. For example, agricultural productivity and nutrient loadings can vary greatly between neighboring fields, and field sizes are often $<$2 hectares in regions where smallholder farming still dominates \cite{jain_mapping_2013, debats_generalized_????}. To understand agriculturally driven processes, it is thus necessary to accurately delineate fields at their smallest grain size, and to do so at regional to global scales to have a consistent set of maps.   
+
+Landcover data can only be developed with satellite imaging, but often the average size class of the cover type of interest is smaller than the sensor resolution, or spectrally indistinct from other neighboring covers, which propagates classification error \cite{see_improved_2015,lobell_use_2013,estes_diylandcover:_2015}. The result is that landcover datasets are generally inaccurate at finer scales and greatly differ between one another, particularly in those parts of the world undergoing the most rapid land use changes, where the aforementioned sources of bias tend to be most pronounced \cite{estes_projected_2013,fritz_comparison_2010,fritz_cropland_2011}.  
+
+These errors are well-known \cite{fritz_comparison_2010, fritz_cropland_2011, see_improved_2015, fritz_mapping_2015,verburg_challenges_2011}, and there are a variety of efforts underway to improve landcover maps, particularly for agriculture \cite{fritz_geo-wiki:_2012,estes_diylandcover:_2015}. What is less known is the degree to which these errors bias measurements built upon the distributional and areal information in landcover. An impediment to this understanding is that the errors are hard to quantify because spatially extensive reference data are not available for most regions of the world--particularly over Africa and other developing regions. Errors assessment therefore typically rely on a small number of ground truth points or survey data aggregated to political boundaries. For this reason, we have a better understanding of the biases between landcover datasets or in relation to country-level statistics (e.g. \cite{fritz_comparison_2010,fritz_cropland_2011}) than we do of how error changes over spatial gradients or as a function of aggregation scale. 
+
+Not being able to full quantify the errors in landcover maps of course makes it difficult, if not impossible, to quantify their impact on downstream analyses. There has been some work examining how such error influences climate simulations \cite{ge_impacts_2007}, agricultural land use patterns \cite{schmit_limitations_2006}, and carbon flux \cite{quaife_impact_2008} and human population estimates \cite{linard_assessing_2010}, but these use either simulated landcover errors \cite{ge_impacts_2007} or compare relevant differences in estimates between different satellite-derived landcover maps \cite{linard_assessing_2010, quaife_impact_2008}. The exception is \cite{schmit_limitations_2006}, who use a high quality, ground-collected reference map detailing farm land use parcels in central Belgium, but the number of sites and region were both fairly restricted, and the parcels were not spatially contiguous. 
+
+There is thus an urgent need in global change science to more precisely quantify landcover map errors and how these vary over large regions, particularly for the regions where landcover is changing most rapidly yet is most poorly known.  We address this need in this study, using a unique, high accuracy agricultural landcover map for South Africa to quantify the errors in several latest generation landcover maps that are broadly used in global change studies.  We use this information to examine how i) landcover properties and related classification schemes influence error, ii) how these errors change with aggregation scale, with the specific goal of determining ``safe'' scales for drawing area-based inferences, and 3) how these errors propagate through several different forms of downstream analyses that broadly represent the global change research focus areas, including biogeochemical and land use change studies, food security assessments, land surface hydrology and climatology, and human geography.  
+
+\section{}
+
+
+\subsection{Data Sources}
+%large gradient ($\sim \displaystyle{ \inlinefrac{1}{\delta}}$).
+
+\section{Discussion}
+\subsection{Blather}
+% $\theta$ changes from 0 to 1. (see Figure \ref{afoto}).That means we are considering $\theta$  of the form
+%For these solutions we have the following
+
+%\begin{remark}
+%Note that equation \eqref{theta} specifies  the function $\varphi$
+%up to an error of order $\delta$. Theorem 1 provides an evolution
+%equation for the function $\varphi$ up to an error of order
+%$\delta |log \delta|$.
+%\end{remark}
+
+%(see \eqref{weaksol}). 
+\subsection{More blather}
+
+
+\begin{materials}
+\section{Methods} 
+Perhaps it is right {\it SI Materials and Methods}.
+
+\section{Digital RCD Analysis} 
+
+\end{materials}
+
+\appendix[App 1]
+
+\appendix
+This is an example of an appendix without a title.
+
+\begin{acknowledgments}
+I thank everyone tearfully. 
+\end{acknowledgments}
+
+
+% bib solution from here
+% http://tex.stackexchange.com/questions/167650/is-there-a-more-recent-bibliography-style-file-bst-for-pnas
+% https://github.com/jburon/pnas2011.bst
+\bibliographystyle{pnas2011} 
+\bibliography{bias}
+
+%\begin{thebibliography}{10}
+%\bibitem{BN}
+%M.~Belkin and P.~Niyogi, {\em Using manifold structure for partially
+%  labelled classification}, Advances in NIPS, 15 (2003).
+%
+%\bibitem{BBG:EmbeddingRiemannianManifoldHeatKernel}
+%P.~B\'erard, G.~Besson, and S.~Gallot, {\em Embedding {R}iemannian
+%  manifolds by their heat kernel}, Geom. and Fun. Anal., 4 (1994),
+%  pp.~374--398.
+%\end{thebibliography}
+
+
+\end{article}
+
+%\begin{figure}
+%\centerline{\includegraphics[width=.4\textwidth]{figsamp.eps}}
+%\caption{LKB1 phosphorylates Thr-172 of AMPK$\alpha$ \textit{in vitro}
+%and activates its kinase activity.}\label{afoto}
+%\end{figure}
+%
+%\begin{figure*}[ht]
+%\begin{center}
+%\centerline{\includegraphics[width=.7\textwidth]{figsamp.eps}}
+%\caption{LKB1 phosphorylates Thr-172 of AMPK$\alpha$ \textit{in vitro}
+%and activates its kinase activity.}\label{afoto2}
+%\end{center}
+%\end{figure*}
+%
+%\begin{table}[h]
+%\caption{Repeat length of longer allele by age of onset class.
+%This is what happens when the text continues.}
+%\begin{tabular}{@{\vrule height 10.5pt depth4pt  width0pt}lrcccc}
+%&\multicolumn5c{Repeat length}\\
+%\noalign{\vskip-11pt}
+%Age of onset,\\
+%\cline{2-6}
+%\vrule depth 6pt width 0pt years&\multicolumn1c{\it n}&Mean&SD&Range&Median\\
+%\hline
+%Juvenile, 2$-$20&40&60.15& 9.32&43$-$86&60\\
+%Typical, 21$-$50&377&45.72&2.97&40$-$58&45\\
+%Late, $>$50&26&41.85&1.56&40$-$45&42\tablenote{The no. of wells for all samples was 384. Genotypes were
+%determined by mass spectrometric assay. The $m_t$ value indicates the
+%average number of wells positive for the over represented allele.}
+%\\
+%\hline
+%\end{tabular}
+%\end{table}
+%
+%
+%\begin{table*}[ht]
+%\caption{Summary of the experimental results}
+%\begin{tabular*}{\hsize}
+%{@{\extracolsep{\fill}}rrrrrrrrrrrrr}
+%\multicolumn{3}{l}{Parameters}&
+%\multicolumn{5}{c}{Averaged Results}&
+%\multicolumn{5}{c}{Comparisons}\cr
+%\hline
+%\multicolumn1c{$n$}&\multicolumn1c{$S^*_{MAX}$}&
+%\multicolumn1c{$t_1$}&\multicolumn1c{\ $r_1$}&
+%\multicolumn1c{\ $m_1$}&\multicolumn1c{$t_2$}&
+%\multicolumn1c{$r_2$}&\multicolumn1c{$m_2$}
+%&\multicolumn1c{$t_{lb}$}&\multicolumn1c{\ \ $t_1/t_2$}&
+%$r_1/r_2$&$m_1/m_2$&
+%$t_1/t_{lb}$\cr
+%\hline
+%10\tablenote{Stanford Synchrotron Radiation Laboratory (Stanford University,
+%Stanford, CA)}&1\quad &4&.0007&4&4&.0020&4&4&1.000&.333&1.000&1.000\cr
+%10\tablenote{$R_{\rm FREE}=R$ factor for the $\sim 5$\% of the randomly
+%chosen unique ref\/lections not used in the ref\/inement.}&5\quad &50&.0008&8&50&.0020&12&49&.999&.417&.698&1.020\cr
+%100\tablenote{Calculated for all observed data}&20\quad &2840975&.0423&95&2871117&.1083&521&---&
+%.990&.390&.182&---\ \ \cr
+%\hline
+%\end{tabular*}
+%\end{table*}
+
+
+\end{document}
+
+
