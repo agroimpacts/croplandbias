@@ -1102,7 +1102,8 @@ g2 <- 1
 
 ygap_bias <- sapply(lev, function(x) {
   if(x != "f1") { 
-    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), fun = modal)
+    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), 
+                        fun = modal)
   } else {
     preagg <- prebin
   }
@@ -1120,7 +1121,7 @@ ygap_bias <- sapply(lev, function(x) {
 # Assume a yield gap over-estimated by 100% in 400 mm isohyet
 ygap_bias2 <- sapply(lev, function(x) {
   if(x != "f1") { 
-    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), fun = modal)
+    preagg <- aggregate(prebin, fact = as.numeric(gsub("f", "", x)), fun=modal)
   } else {
     preagg <- prebin
   }

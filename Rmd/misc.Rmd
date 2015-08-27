@@ -1,0 +1,76 @@
+---
+title: "Miscallaneous calculations"
+author: "Lyndon Estes"
+date: "August 24, 2015"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+    number_sections: true
+---
+
+Various small calculations made for the analysis. 
+
+```{r, eval=FALSE}
+library(rgdal)
+library(SAcropland)
+library(rgeos)
+
+p_dat <- full_path(full_path(proj_root("SAcropland"), "SAcropland"), 
+                   "external/ext_data")
+
+```
+
+Area of sub-Saharan Africa and South Africa's share of that area
+```{r, eval=FALSE}
+eco <- readOGR(dsn = full_path(p_dat, "africa_ecofloristic_zones.sqlite"), 
+               layer = "africa_ecofloristic_zones")
+eco@proj4string <- CRS(projection(raster(nrow = 1, ncol = 1)))
+af <- readOGR(dsn = full_path(p_dat, "africa_countries_alb.sqlite"), 
+               layer = "africa_countries_alb")
+af@data <- af@data[, c(1, 3:4)]
+ecoalb <- spTransform(eco, af@proj4string)
+
+# cut down countries
+nms <- af$cntry_name[af$region == "Northern Africa"]
+nms <- nms[nms != "Sudan"]  # keep Sudan
+ssa <- af[!af$cntry_name %in% nms, ]
+ssa <- ssa[-grep("Island|Sao|Verde|Mauritius|Helena|Comoros|Portugal|Seychell",
+                 as.character(ssa@data$cntry_name)), ]
+ssa <- gBuffer(ssa, width = 0)
+# plot(ssa)
+
+desert <- ecoalb[grep("desert", ecoalb$gez_term), ]
+# plot(ecoalb[names(which.max(gArea(desert, byid = TRUE) / 10000 / 100)), ])
+sahara <- as.numeric(names(which.max(gArea(desert, byid = TRUE))))
+
+nosahara <- ecoalb[-sahara, ]
+plot(nosahara, col = "red")
+
+ovs <- which(!is.na(over(nosahara, ssa)))
+ssaeco <- nosahara[ovs, ]
+ssaeco <- ssaeco[-1, ]  # drop a couple Saharan mountains
+ssaeco <- ssaeco[-1, ]
+# plot(ssaeco[ssaeco@data$gez_term == "Tropical mountain system", ][1, ])
+plot(ssa)
+plot(ssaeco, col = "red", add = TRUE)
+
+# calculate area of remainder
+afarea <- gArea(ssaeco) / 10000
+# plot(af[af$cntry_name == "South Africa", ])
+saarea <- gArea(af[af$cntry_name == "South Africa", ]) / 10000
+saarea / afarea
+
+```
+
+
+```{r, eval=FALSE}
+a <- sample(1:100, size = 20)
+b <- sample(1:80, size = 20)
+mean(a - b)
+sum(a) / sum(b)
+
+
+```
+

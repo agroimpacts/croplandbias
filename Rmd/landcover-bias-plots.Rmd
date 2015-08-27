@@ -9,9 +9,9 @@ output:
     toc: yes 
 ---
 
-## Plotting bias figures
-### Biases in space
-Load in necessary datasets
+# Plotting bias figures
+# Spatial biases
+## Datasets
 
 ```{r, eval = FALSE}
 library(raster)
@@ -31,6 +31,7 @@ load(full_path(p_data, "bias_stats.rda"))  # bias statistics
 load(full_path(p_data, "bias_stats_gti.rda"))  # bias statistics
 ```
 
+## Plots
 Plot maps of biases at different resolutions, for publication output (and display here). To avoid the visual distortion of NA areas filled in by larger levels of aggregation, each aggregated difference must be disaggregated first and then masked before plotting.   
 ```{r, eval = FALSE}
 namask <- raster(full_path(p_data, "namask.tif"))
@@ -53,37 +54,38 @@ disagg <- lapply(snms, function(x) {
 names(disagg) <- snms
 ```
 
-Plot of selected rasters and levels 
+## Plot of selected rasters and levels 
 ```{r, eval = FALSE}
 # Plotting colors
 cols <- colorRampPalette(c("red", "grey80", "blue4"))
-brks <- c(-100.1, -75, -50, -25, -10, 0, 10, 25, 50, 75, 100.1)
-n_cols <- length(brks) - 1
+brks <- c(-100.1, -75, -50, -25, -10, -5, -1, 1, 5, 10, 25, 50, 75, 100.1)
+brklen <- length(brks) - 1
+cols <- cols(brklen)
+cols[c(1, length(cols))] <- c("darkred", "purple3")
 legtext <- "% Difference"
 cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
 lev2 <- c("1 km", "25 km", "50 km", "100 km")
-pdf(full_path(p_fig, "bias_map.pdf"), height = 6, width = 7)
-par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+pdf(full_path(p_fig, "bias_map.pdf"), height = 7, width = 7)
+par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(3.7, 1.5, 1.5, 0))
 for(i in 1:length(snms)) {
   print(snms[i])
   for(j in 1:length(lev)) {
     print(lev[j])
     plot(sa.shp, lty = 0)
-    plot(disagg[[snms[i]]][[lev[j]]], add = TRUE, col = cols(n_cols), 
-         breaks = brks, legend = FALSE)
-  if(j == 1) mtext(mcap[i], side = 2, line = 1, cex = cx)
-  if(i == 1) mtext(lev2[j], side = 3, line = 0, cex = cx)
+    plot(disagg[[snms[i]]][[lev[j]]], add = TRUE, col = cols, breaks = brks,
+         legend = FALSE)
+  if(j == 1) mtext(mcap[i], side = 2, line = -0.25, cex = cx)
+  if(i == 1) mtext(lev2[j], side = 3, line = -0.5, cex = cx)
   }
 }
-flex_legend(ncuts = length(brks) - 1, legend.text = legtext, 
-            legend.vals = round(brks), 
-            longdims = c(0.2, 0.8), shortdims = c(0.06, 0.01), 
-            colvec = cols(length(brks) - 1), 
-            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
-            legend.pos = c(4, 5), leg.adj = list(c(0.25, 0), c(0.5, -0.5)), 
-            cex.val = cx, textcol = lcol, bordercol = lcol)
+flex_legend(ncuts = brklen, legend.text = legtext, 
+            legend.vals = round(brks), longdims = c(0.2, 0.8), 
+            shortdims = c(0.05, 0.01), colvec = cols, srt = c(270, 0), 
+            horiz = TRUE, textside = "bottom", legend.pos = c(4, 5), 
+            leg.adj = list(c(0.2, 0.35), c(0.5, -0.5)), cex.val = cx, 
+            textcol = lcol, bordercol = lcol)
 dev.off()
 ```
 The map below was created by the code above, showing biases at 1 km, 25 km, 50 km, and 100 km from South Africa's landcover product, the mean estimates from 
@@ -91,10 +93,10 @@ GlobCover and MODIS, and Geowiki/GLC-SHARE.
 
 <p align="center"><img src="../paper/figures/bias_map.pdf" width="400px"></p> 
 
-[[back to top]][Plotting bias figures]
+<a href="#top">Back to top</a>
 
-### Bias in relation to field density
-1. Supplementary figures - bias plots at 1 km with boxplots.
+# Supplementary figures: bias in relation to field density
+## Bias plots at 1 km with boxplots.
 
 ```{r, eval = FALSE}
 #btype <- c("bias_act.pdf", "bias_abs.pdf")
@@ -118,16 +120,11 @@ pp <- list("x" = c(-2, 21), "y" = c(0, 0),
                            rep("grey80", 4), "black", rep("grey80", 4),"black"),
                          rep("grey80", 10)),
            "yl" = list(c(-100, 100), c(0, 100)), 
-           #"yl2" = list(c(-40, 40), c(0, 60)), "xl" = c(1, 20),
            "yl2" = c(-20, 60), "xl" = c(1, 20),
            "xaxl" = unlist(lapply(seq(5, 100, 10), function(x) c(x, " "))),
            "xaxl2" = ifelse(seq(5, 100, 5) %in% c(25, 50, 75), seq(5, 100, 5), 
                             " "),
            "yax1" = list(seq(-100, 100, 50), seq(0, 100, 20)), 
-           #"yax2" = list(
-            # unlist(lapply(seq(-40, 40, 20), function(x) c(" ", x)))[-1], 
-            # unlist(lapply(seq(0, 60, 20), function(x) c(" ", x)))[-1]),
-           #"yaxp" = list(-100, 0), 
            "ycol" = c("grey70"))  # plot parameters
 
 pdf(full_path(p_fig, "biases_1km.pdf"), width = 7, height = 5)
@@ -167,9 +164,9 @@ mtext("% cropland", side = 1, outer = TRUE, line = -1, cex = 0.8)
 dev.off()
 ```
 
-2. Bias with scale
+## Bias with scale
 ```{r, eval=FALSE}
-lev <- lev[!lev %in% c("f5", "f300")]
+#lev <- lev[!lev %in% c("f5", "f300")]
 levnms <- paste(gsub("f", "", lev), "km")
 m2 <- unlist(lapply(seq(1, by = 1, length = length(lev) * 4), function(x) {
   rep(x, nc)
@@ -183,8 +180,9 @@ ylcol <- c("black", "grey", "black", rep("grey", 5), "black")
 lt <- c(5, 1)
 ylwd <- c(1.5, 2)
 
-pdf(full_path(p_fig, "biases_1-200km.pdf"), width = 7.5, height = 7)
+pdf(full_path(p_fig, "biases_1-100km.pdf"), width = 7.5, height = 7)
 l <- layout(m3)
+# layout.show(l)
 # i <- 1; j <- 1
 par(mar = c(0.5, 0, 1, 0.3), oma = c(5, 4, 2, 2))
 for(i in 1:length(snms)) {
@@ -234,6 +232,9 @@ legend(x = x, y = y, legend = c("actual bias", "absolute bias"), lty = lt,
        lwd = ylwd, bty = "n", cex = 1.2)
 dev.off()
 
+```
+
+```{r, eval=FALSE, echo=FALSE}
 DF <- do.call(rbind.data.frame, lapply(snms[4], function(x) {
   dstats_all[[2]][[x]]$f1[, c(1, 8)]
 }))
@@ -241,7 +242,6 @@ dlm <- lm(mu ~ poly(V1, degree = 2), data = DF)
 plot(DF[, 1], DF[, 2])
 lines(predict.lm(dlm, newdata = data.frame("V1" = 1:110)))
 ```
-
 
 
 
