@@ -7,12 +7,13 @@ output:
     highlight: tango
     theme: spacelab
     toc: yes 
+    number_sections: true
 ---
 
-## Bias in relation to typical crop cover
+# Bias as a function of typical crop cover
 
-### Data
-```{r, eval = FALSE}
+## Data
+```{r, message=FALSE, results='hold'}
 library(raster)
 library(lmisc)
 library(nlme)
@@ -31,19 +32,27 @@ load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
 load(full_path(p_data2, "ZAF_adm2.Rdata"))  # magisterial districts
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 load(full_path(p_data, "d_grid_abs.rda"))  # actual diffence grids
-paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask*")))
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths)  # gti 2011
 gti@crs <- sa.shp@proj4string
 
 # Transform magisterial districts, remove Prince Edward Islands
 md <- spTransform(gadm, CRSobj = sa.shp@proj4string)
 md <- md[md$ID_2 != 313, ]
+```
+
+Mean area of magisterial district.
+```{r}
 round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))
 ```
 
-### Analyses
+<a href="#top">Back to top</a>
 
-1. Extract the cropland percentages for magisterial district, as well as the absolute biases. 
+# Analyses
+
+## Extract data for magisterial districts
+
+Both cropland percentages and absolute biases. 
 ```{r, eval=FALSE}
 # GTI data
 # mean cropland cover
@@ -154,9 +163,11 @@ med <- bind_stats(x = gti_median, y = dlist_median)
 med$w <- med$N - med$nd  # weight - N contributing pixels
 med0 <- bind_stats(x = gti_median0, y = dlist_median0)
 med0$w <- nonzero  # weight - N contributing pixels (non-zeros)
-```
 
-2. Run regressions and check for spatial autocorrelation
+```
+<a href="#top">Back to top</a>
+
+## Run regressions and check for spatial autocorrelation
 ```{r, eval=FALSE}
 # check the polygons and rows line up for coordinates
 # i <- 300
@@ -200,8 +211,9 @@ lm_med0 <- lapply(nms, function(x) {
   return(list("model" = dlm, "dat" = dat))
 })
 ```
+<a href="#top">Back to top</a>
 
-Plot the fitted LM models
+### Plot the fitted LM models
 ```{r, eval=FALSE}
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
 cols <- c("red", "orange3", "green4", "blue", "black", "grey50")
@@ -293,8 +305,9 @@ legend(x = 80, y = -5, c(mcap, "All 4", "No GlobCover"), lty = lt, lwd = lw,
        col = cols, bty = "n", xpd = NA, title = "Fit")
 dev.off()
 ```
+<a href="#top">Back to top</a>
 
-Check for spatial autocorrelation in residuals
+### Check for spatial autocorrelation in residuals
 ```{r, eval=FALSE}
 dists <- as.matrix(dist(mu[, c("x", "y")]))
 dists_inv <- 1 / dists
@@ -310,10 +323,11 @@ for(i in 1:length(snms)) {
   print(Moran.I(residuals(lm_mu0[[i]]$model), dists_inv)$p.value)  
 } 
 ```
+<a href="#top">Back to top</a>
 
 Present and significant. To deal with it, first try to use:
 
-3. A generalized least squares (GLS) with spatial autocovariance terms. 
+### A generalized least squares (GLS) with spatial autocovariance terms. 
 
 ```{r, eval=FALSE}
 # mean of all data
@@ -335,7 +349,7 @@ plot(Variogram(dgls_exp, form = ~x+y, resType = "n"))  # funny shape remains
 
 That seemed inadequate for removing autocorrelation in residuals. The GLS did not seem to properly deal with residual autocorrelation, probably because the spatial structure is complex, given the pattern of rainfall and cropland in it.  A better approach is to include coordinates directly in the model, leveraging the 2-D smoothing capabilities of the GAM model in the mgcv library. 
 
-3. Use a GAM instead
+### Use a GAM instead
 
 First check fit of model family, and whether assumptions of normally distributed errors are met. 
 ```{r, eval=FALSE}
@@ -415,12 +429,13 @@ plot.gam(dgam4b, residuals = TRUE, select = 1, se = TRUE, all.terms = TRUE,
          pages = 0)
 
 ```
+<a href="#top">Back to top</a>
 
 Testing each of the main landcover sets for model shape, the best fit in terms of AIC and assumption of normality of residuals is from a log-normal model.  
 
-### Plot final results
+## Plot final results
 
-1. Helper functions
+Helper functions
 ```{r, eval = FALSE}
 
 predfunc <- function(model, newdat) {
@@ -445,8 +460,9 @@ polyfunc <- function(pdat) {
 }
 
 ```
+<a href="#top">Back to top</a>
 
-2. GAM fits
+### GAM fits
 ```{r, eval = FALSE}
 gam_mods <- lapply(nms, function(i) {
   dat1 <- proc_df(x = mu0, nm = i)
@@ -465,15 +481,15 @@ gam_mods <- lapply(nms, function(i) {
               "pdat2" = pdat2,  "data1" = dat1, "data2" = dat2))  
 })
 ```
+<a href="#top">Back to top</a>
 
-3. GAM plots
+
+### GAM plots
 ```{r, eval = FALSE}
-plot(xl, yl2, pch = "", ylab = "% bias)", xlab = "% cropland", xaxs = "i",
-     yaxs = "i", yaxt = "n")
-
-
-round(log(seq(1, 90, 10)), 2)
-exp(seq(0, 4.5, 0.5))
+# plot(xl, yl2, pch = "", ylab = "% bias)", xlab = "% cropland", xaxs = "i",
+#      yaxs = "i", yaxt = "n")
+# round(log(seq(1, 90, 10)), 2)
+# exp(seq(0, 4.5, 0.5))
 
 ptcols <- sapply(cols, function(x) makeTransparent(x, 80))  # CI colors
 lw <- c(rep(2, 4), 3, 3)
@@ -517,8 +533,10 @@ lapply(gam_mods, function(x) {
         "med" = round(c(m2$p.table[, 4], m2$s.pv), 3))
 })  # all terms significant at p < 0.001 except 2nd order term on GlobCov med
 ```
+<a href="#top">Back to top</a>
 
-Final plot of magisterial districts, for supplementals
+
+### Final plot of magisterial districts, for supplementals
 ```{r, eval=FALSE}
 provs <- unique(md$ID_1)
 greys <- paste0("grey", seq(15, 95, 10))
@@ -530,6 +548,7 @@ for(i in 1:length(provs)) {
        add = TRUE, lwd = 1)
 }
 dev.off()
-```
 
+```
+<a href="#top">Back to top</a>
 

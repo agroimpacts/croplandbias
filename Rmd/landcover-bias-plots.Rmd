@@ -7,6 +7,7 @@ output:
     highlight: tango
     theme: spacelab
     toc: yes 
+    number_sections: true
 ---
 
 # Plotting bias figures
@@ -95,8 +96,11 @@ GlobCover and MODIS, and Geowiki/GLC-SHARE.
 
 <a href="#top">Back to top</a>
 
-# Supplementary figures: bias in relation to field density
-## Bias plots at 1 km with boxplots.
+# Bias in relation to field density
+
+For supplementary data. 
+
+## Bias plots at 1 km with boxplots
 
 ```{r, eval = FALSE}
 #btype <- c("bias_act.pdf", "bias_abs.pdf")
@@ -163,6 +167,8 @@ for(bt in 1:2) {
 mtext("% cropland", side = 1, outer = TRUE, line = -1, cex = 0.8)
 dev.off()
 ```
+
+<a href="#top">Back to top</a>
 
 ## Bias with scale
 ```{r, eval=FALSE}
@@ -233,6 +239,70 @@ legend(x = x, y = y, legend = c("actual bias", "absolute bias"), lty = lt,
 dev.off()
 
 ```
+<a href="#top">Back to top</a>
+
+# Total bias
+
+Calculate how much cropland estimates differ between datasets
+```{r, eval = FALSE}
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
+gti <- lapply(paths, raster)
+names(gti) <- c("g2007", "g2011")
+snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
+
+# recreate cropland percentages
+lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
+lc2011 <- lapply(snms, function(x) gti$g2011 - dlist_act[[x]]$f1$g2011)
+# plot(lc2007[[2]] - lc2011[[2]])  # same thing, as it should be
+
+# calculate km2 cropland in LC datasets
+lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
+refkm2 <- sapply(gti, function(x) cellStats(x / 100, sum))
+refkm2[2] / refkm2[1]  # 3.6 percent more in 2011 than 2007
+
+# bias in total cropland relative to GTI
+stats2007 <- round((refkm2[2] - lckm2) / refkm2[2] * 100, 1)
+stats2011 <- round((refkm2[1] - lckm2) / refkm2[1] * 100, 1)
+
+# N km^2 in country
+#sapply(lc2007, function(x) cellStats(!is.na(x), sum))
+# sapply(lc2011, function(x) cellStats(!is.na(x) , sum))
+# sapply(gti, function(x) cellStats(!is.na(x) , sum))
+totkm2 <- cellStats(!is.na(gti$g2011) , sum)
+save(stats2007, stats2011, totkm2, refkm2, 
+     file = full_path(p_data, "total-cropland.rda"))
+```
+<a href="#top">Back to top</a>
+
+Total square kilometers of South Africa being evaluated
+```{r, echo = FALSE}
+library(lmisc)
+p_root <- proj_root("SAcropland")
+p_data <- full_path(p_root, "SAcropland/external/ext_data/")
+load(full_path(p_data, "total-cropland.rda"))
+totkm2
+```
+
+Total square kilometers of cropland according to 2007 and 2011 GTI data
+```{r, echo = FALSE}
+refkm2
+```
+
+Percent bias in total cropland area estimates relative to 2007 GTI data
+```{r, echo = FALSE}
+stats2007
+```
+
+And relative to 2011 GTI data
+```{r, echo = FALSE}
+stats2011
+```
+
+<a href="#top">Back to top</a>
+
+
+
+
 
 ```{r, eval=FALSE, echo=FALSE}
 DF <- do.call(rbind.data.frame, lapply(snms[4], function(x) {
