@@ -427,7 +427,7 @@ md_lcl <- lapply(c("gti", snms), function(j) {
     DT <- md_dta[, list("carea" = round(sum(get(j)), 2),  # crop area
                         "parea" = length(get(j)),  # non-NA area in MD
                         "cf" = round(sum(get(j)) / length(get(j)), 4)),
-                   by = md]
+                 by = md]
     # calculate crop fraction, adjusting ha first by how much non-NA area there
     # is in MD
     DTy <- DT[mdvay][, mfrac := round(((mzha * fmd) / 100) / carea, 4)]
@@ -473,7 +473,7 @@ crop_ayr <- lapply(crop_ay, function(x) {
   dt_to_raster(x[, list(x, y, fa, mzya)], CRSobj = sa.shp@proj4string)
 })
 
-# redo NA mask because of some slighting shifts
+# redo NA mask because of some slight shifts
 namask <- calc(stack(lapply(crop_ayr, function(x) x$fa)), sumna)
 namask[namask > 0] <- 1
 namask2 <- !is.na(namask)  # set NAs to zero
@@ -515,8 +515,7 @@ cyldf1 <- lapply("f1", function(i) {
 })
 names(cyldf1) <- lev[1]
 cyld_agg <- c(cyldf1, cyldr)
-
-plot(cyld_agg$f10$gti)
+# plot(cyld_agg$f10$gti)
 
 # check Monfreda's yield data to see how it deals with null areas
 monf <- full_path("external/ext_data/monfreda_data/maize_HarvAreaYield_NetCDF",
@@ -601,7 +600,7 @@ rm(yat)
 for(i in lev) {
   for(j in snms) {
     ck <- crop_ay[[j]][, sum(fa)] * 100
-    d <- round((ck - cellStats(tareas[[i]] * carea_agg[[i]][[j]], sum)) / ck, 2)
+    d <- round((ck - cellStats(tareas[[i]] * carea_agg[[i]][[j]], sum)) / ck,2)
     print(d)
   }
 }  # all equal
@@ -694,6 +693,7 @@ for(i in lev) {
     print(round(cellStats(a, sum), 5))
   }
 }
+
 # Production differences
 ilist <- list(names(cpagg1[[1]])[-1], names(cpagg1), "gti")
 list1 <- lapply(cpaggII, function(x) x[[1]])
@@ -710,10 +710,11 @@ list1 <- lapply(cyld_agg, function(x) x[1])
 list2 <- lapply(cyld_agg, function(x) x[-1])
 y_diff1 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 1 
 # type 2 (non-zero)
-list2 <- lapply(cyld_agg3, function(x) x[-1]) # reuse cyld_agg for a, b/c correct
+list2 <- lapply(cyld_agg3, function(x) x[-1]) # cyld_agg for a, b/c correct
 y_diff2 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 2
 
-# convert them to percent differences relative to the mean pixel-wise production
+# convert them to percent differences relative to mean pixel-wise production
+# here only for map plotting.
 # plot(y_diff2$sa30$f25$gti)
 pdiffs <- lapply(list(p_diff1, p_diff2, p_diff3), function(x) {
   l1 <- lapply(snms, function(y) {
@@ -938,7 +939,8 @@ bins <- lapply(gti_agg, function(x) {
 # mean(tst$a)
 # sum(tst$a)
 
-# selection variables
+# Spatial bias stats calculation on yield and production differences, not on
+# percentages
 a <- bias_stats_list(bins, awgts, lcu, p_diff1, wm, "mu", "bias", TRUE)
 b <- bias_stats_list(bins, awgts, lcu, p_diff1, wma, "mua", "bias", TRUE)
 d <- bias_stats_list(bins, awgts, lcu, p_diff1, sum, "sum", "bias", FALSE)
@@ -960,8 +962,8 @@ yd2_st <- rbind(a, b)
 
 # Output statistics
 p1mu <- extract_stat(lev, snms, "all", "mu", "bias", pd1_st)  # identical to p3
-p1ma <- extract_stat(lev, snms, "all", "mua", "bias", pd1_st)  # identical to p3
-p1sm <- extract_stat(lev, snms, "all", "sum", "bias", pd1_st)  # identical to p3
+p1ma <- extract_stat(lev, snms, "all", "mua", "bias", pd1_st)  # ident to p3
+p1sm <- extract_stat(lev, snms, "all", "sum", "bias", pd1_st)  # ident to p3
 p2mu <- extract_stat(lev, snms, "all", "mu", "bias", pd2_st)
 p2ma <- extract_stat(lev, snms, "all", "mua", "bias", pd2_st)
 p2sm <- extract_stat(lev, snms, "all", "sum", "bias", pd2_st)
@@ -1031,13 +1033,14 @@ pchs <- c("*", "+", "o", "x", "-")
 yax <- seq(yl[1], yl[2], 10)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-pdf(full_path(p_fig, "yield_bias_scale2.pdf"), height = 7, width = 7)
+pdf(full_path(p_fig, "yield_bias_scale.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
 for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
+# grid(NA, NULL, lwd = 1, lty = 1)
+abline(h = yax, v = NULL, col = "grey80", lty = 1)
 polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
-grid(NA, length(yax), lwd = 1, lty = 1)
 lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey80")
 for(ii in 1:length(lev)) {
   lv <- lev[ii]
@@ -1046,8 +1049,10 @@ for(ii in 1:length(lev)) {
     nm <- snms[i]
     for(k in 1:length(malmul)) {
       mm <- malmul[[k]]
+      # fetch bias stats, convert to percentage relative to mean
+      # e.g. GTI mean yield
       v <- sapply(1:length(mm), function(j) {
-        round(get(mm[j])[ol == lv & il == nm,  bias] / get(pyl[j])[lv] * 100, 1)
+        round(get(mm[j])[ol == lv & il == nm,  bias] / get(pyl[j])[lv] * 100,1)
       })
       pcol <- makeTransparent(cols[i], alpha = alph[k])
       polyfunc2(xa[i, ii] + o[k], range(v), w = w, col = pcol, bcol = pcol)
@@ -1065,11 +1070,27 @@ legend(x = 12.4, y = -40, legend = lcnms, pch = 15, col = cols, adj = 0,
 legend(x = 11.9, y = -40, legend = rep("", 4), pch = 15, adj = 0, 
        col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
        cex = 0.8)
-text(x = 12.7, y = -42, labels = "Absolute", srt = 45, adj = c(0, 0), cex = 0.8)
+text(x = 12.7, y = -42, labels = "Absolute", srt = 45, adj = c(0, 0), cex= 0.8)
 text(x = 12.2, y = -42, labels = "Actual", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 65, legend = c("Prod I", "Prod II", "Yield 1", "Yield 2"), 
-       pch = pchs, pt.cex = c(2.5, 1.5, 1.5, 1.5), bty = "n", cex = 0.8)
+legend(x = 12.1, y = 65, legend = c("Prod I", "Prod II", "Yield 1", "Yield 2"),        pch = pchs, pt.cex = c(2.5, 1.5, 1.5, 1.5), bty = "n", cex = 0.8)
 dev.off()
+
+
+lapply(1:length(lev), function(ii) {
+  lv <- lev[ii]
+  lapply(1:length(snms), function(i) {
+    nm <- snms[i]
+    lapply(1:length(malmul), function(k) {
+      mm <- malmul[[k]]
+      v <- sapply(1:length(mm), function(j) {
+        round(get(mm[j])[ol == lv & il == nm,  bias] / get(pyl[j])[lv] * 100,1)
+      })
+    })
+  })
+})
+
+
+
 ```
 <a href="#top">Back to top</a>
 

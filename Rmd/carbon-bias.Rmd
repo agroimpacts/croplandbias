@@ -10,12 +10,10 @@ output:
     number_sections: true
 ---
 
-## Bias in carbon stock estimates
+# Bias in carbon stock estimates
 Based on the Ruesch & Gibbs (2008) approach for estimating carbon density. 
 
-## Data
-
-### Paths
+# Data
 ```{r, eval=FALSE}
 library(raster)
 library(rgdal)
@@ -23,7 +21,7 @@ library(lmisc)
 library(data.table)
 library(SAcropland)
 library(RColorBrewer)
-
+library(xtable)
 
 # Paths
 p_root <- proj_root("SAcropland")
@@ -33,7 +31,7 @@ p_data2 <- full_path(p_root, "SAcropland/data/")
 p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
 ```
 
-### Carbon values
+## Carbon values
 
 Starting with the carbon look-up tables used for Africa by Ruesch & Gibbs (2008), inputs downloaded from [here](http://cdiac.ornl.gov/epubs/ndp/global_carbon/carbon_documentation.html#methods).
 ```{r, eval=FALSE}
@@ -129,8 +127,8 @@ colnames(ctabo) <- LC
 ```
 <a href="#top">Back to top</a>
 
-## Analysis
-### Prepare raster data
+# Analysis
+## Prepare raster data
 ```{r, eval=FALSE}
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
@@ -151,8 +149,12 @@ lc_agg <- aggregate_rast_list(fact, lc_list)   # landcover rasters
 gti_agg <- aggregate_rast_list(fact, list("gti" = gti))  # GTI rasters
 
 # need NA mask for weighting of aggregated value
-namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
-namask2 <- !is.na(namask)  # set NAs to zero
+sumna <- function(x) sum(x, na.rm = FALSE)
+namask <- calc(stack(gti, stack(lc_list)), sumna)
+namask[namask > 0] <- 1
+namask2 <- !is.na(namask) 
+# namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
+# namask2 <- !is.na(namask)  # set NAs to zero
 area_wgts <- aggregate_rast_list(fact, list(namask2), fun = sum)
 
 # cropland cover bins, for looking at error as a function of cover
@@ -164,10 +166,10 @@ gti_bins <- lapply(gti_agg, function(x) {
 ```
 <a href="#top">Back to top</a>
 
-### Create cropland carbon estimates
+## Create cropland carbon estimates
 ```{r, eval=FALSE}
 # Apply carbon estimates
-cc <- ctab2[ctab2$class == 16, 2]
+# Function for pixel-wise carbon density from crop & non-crop fractions
 carbon <- function(fcrop, cropC, noncropC) {
   carb <- fcrop * cropC + noncropC * (1 - fcrop)
   return(round(carb, 2))
@@ -181,7 +183,7 @@ gti_c <- lapply(gti_agg, function(x) {
   }))
   names(s) <- colnames(ctabo)
   s
-})
+})  # gti
 
 lc_c <- lapply(lc_agg, function(x) {
   lc <- lapply(x, function(j) {
@@ -193,7 +195,7 @@ lc_c <- lapply(lc_agg, function(x) {
   })
   names(lc) <- names(x)
   lc
-})
+})  # landcover datasets
 
 # checks--right rasters being referenced? 
 tst <- cbind(sample(1:5, 10, replace = TRUE), 
@@ -203,12 +205,12 @@ sapply(1:nrow(tst), function(i) {
   cellStats(lc_c[[tst[i, 1]]][[tst[i, 2]]][[tst[i, 3]]] - 
               carbon(lc_agg[[tst[i, 1]]][[tst[i, 2]]], cc, ctabo[1, tst[i, 3]]),
               sum)
-}) # all zeroes
+}) # should be all zeroes
 
 ```
 <a href="#top">Back to top</a>
 
-### Difference the carbon datasets
+## Difference the carbon datasets
 ```{r, eval=FALSE}
 # percent difference
 pct_diff <- function(x, y) (x - y) / x * 100
@@ -242,7 +244,7 @@ c_pct_diff_mu <- lapply(c_pct_diff, function(x) {
 })
 
 # # disggregate selected rasters at selected levels for plotting
-namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
+# namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
 lev <- names(c_pct_diff_mu) 
 disagg <- lapply(snms, function(x) {
   l1 <- lapply(lev, function(y) {
@@ -266,8 +268,8 @@ stats <- lapply(disagg, function(x) {
 ```
 <a href="#top">Back to top</a>
 
-## Outputs
-### Carbon bias maps
+# Outputs
+## Carbon bias maps
 ```{r, eval=FALSE}
 load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
 
@@ -315,25 +317,9 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
-### Carbon bias statistics
-#### Calculate weighted bias statistics
-```{r, eval=FALSE}
-# Helper functions to pass into data.table
-# not used - switch on if quantiles needs
-# bfn <- function(x, y) {
-#   box_stats(x, weighted = TRUE, weight.opts = list("weights" = y))
-# }
-# bfna <- function(x, y) {
-#   box_stats(abs(x), weighted = TRUE, weight.opts = list("weights" = y))
-# }
-wm <- function(x, w) stats::weighted.mean(x, w)
-wma <- function(x, w) stats::weighted.mean(abs(x), w)
-
-# check constancy of < 1/2% cropland being excluded
-areas <- sapply(lc_agg, function(x) res(x[[1]])[1]^2 / 10000)
-plot(areas, (areas * 0.005))  # scales
-(areas * 0.005)  # 1/2 to 5000 ha
-
+## Carbon bias statistics
+### Calculate how much country-lvel carbon estimates differ between datasets
+```{r, eval = FALSE}
 lev_vec <- names(c_pct_diff)
 # created mask for non-cropland areas, unioning GTI and each LC, filtering out
 # areas of no-cropland (<1/2% total cover)
@@ -350,6 +336,105 @@ lc_union <- lapply(lev_vec, function(x) {
 names(lc_union) <- lev_vec
 # plot(lc_union$f50$globmu)
 # plot(gti_agg$f50$gti)
+
+# calculate for whole country
+tareas <- lapply(area_wgts, function(x) x[[1]] * 100)
+gti_ctot <- sapply(1:length(gti_c), function(x) {
+  cellStats(gti_c[[x]] * tareas[[x]], sum)
+})  # gti total carbon stock
+lc_c2 <- lapply(snms, function(x) {
+  sapply(names(lc_c), function(y) lc_c[[y]][[x]])
+})  # reshape lc_c2 -> landcover in outer list
+names(lc_c2) <- snms
+lc_ctot <- lapply(lc_c2, function(x) {
+  sapply(1:length(x), function(y) {
+    cellStats(x[[y]] * tareas[[y]], sum)
+  })
+})  # landcover total carbon stocks
+totc_cntry <- lapply(lc_ctot, function(x) {
+  stats <- (gti_ctot - x) / gti_ctot * 100
+  colnames(stats) <- names(lc_c2$sa30)
+  rownames(stats) <- names(lc_c2$sa30$f1)
+  stats
+})  # country-level percent differences: gti versus landcover
+names(totc_cntry) <- snms
+
+# for cropped areas only - note here we are masking on cropland fraction only,
+# not on union of gti and each landcover map, which is needed below for mean 
+# bias estimates
+tot_area <- sum(freq(namask)[1:2, ])
+crop_areas <- lapply(lc_union$f1, freq)
+sapply(crop_areas, function(x) x[2, 2] / tot_area)  # 29, 31, 33, 53 (Glob)%
+
+lc_ag2 <- lapply(snms, function(x) {
+  sapply(names(lc_agg), function(y) lc_agg[[y]][[x]])
+})  # reshape lc_ag2 -> landcover fractions in outer list
+gti_ctot2 <- sapply(1:length(gti_c), function(x) {
+  msk <- gti_agg[[x]]$gti > 0.005  # farmland > 0.05% mask
+  msked <- mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
+  cellStats(msked, sum)
+})  # gti 
+lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
+  xx <- lc_c2[[x]]  # recycle reshaped lc_c2 list
+  jj <- lc_ag2[[x]]  # recycle reshaped lc_c2 list
+  sapply(1:length(xx), function(y) {
+    msk <- jj[[y]] > 0.005  # farmland > 0.05% mask
+    msked <- mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
+    cellStats(msked, sum)
+  })
+})  # landcover carbon estimates
+
+# but discrepancy will only be relevant at 1 km scale, because the carbon total 
+# keeps increasing when cropland areas are the only ones being considered
+totc_crop <- lapply(lc_ctot2, function(x) {
+  stats <- (gti_ctot2 - x) / gti_ctot2 * 100
+  colnames(stats) <- names(lc_c2$sa30)
+  rownames(stats) <- names(lc_c2$sa30$f1)
+  stats
+})
+names(totc_crop) <- snms
+
+# Combine tables for output to supplementals, 1 km % differences for country
+# and agricultural levels
+totc_out <- rbind(t(sapply(totc_cntry, function(x) x[, 1])),
+                  t(sapply(totc_crop, function(x) x[, 1])))
+pnms <- c("Forest", "Secondary", "Shrubland", "Grassland", "Sparse")
+knms <- rep(mcap, 2)
+totc_out <- cbind.data.frame(knms, round(unname(totc_out), 2))
+colnames(totc_out) <- c("map", pnms)
+totc_out <- cbind(region = c(rep("Country", 4), rep("Agricultural", 4)), 
+                  totc_out)
+caption <- paste("Percent differences in total carbon stock estimates", 
+                 "calculated from the reference maps and from each of the four",
+                 "cropland maps. Differences are evaluated for total carbon",
+                 "estimates either at the country scale or over just the",
+                 "agricultural regions (cropland $>$0.05\\%), using",
+                 "the carbon densities of 5 different cover types to provide", 
+                 "the values for the non-agricultural portions of each pixel",  
+                 "(cover types indicated by column names).")
+totc_xtab <- xtable(totc_out, caption = caption, digits = 1)
+print(totc_xtab, type = "latex", caption.placement = "top",
+      file = "paper/figures/totC-bias.tex", include.rownames = FALSE)
+
+```
+
+### Calculate weighted bias statistics
+```{r, eval=FALSE}
+# Helper functions to pass into data.table
+# not used - switch on if quantiles needs
+# bfn <- function(x, y) {
+#   box_stats(x, weighted = TRUE, weight.opts = list("weights" = y))
+# }
+# bfna <- function(x, y) {
+#   box_stats(abs(x), weighted = TRUE, weight.opts = list("weights" = y))
+# }
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+
+# check constancy of < 1/2% cropland being excluded
+areas <- sapply(lc_agg, function(x) res(x[[1]])[1]^2 / 10000)
+plot(areas, (areas * 0.005))  # scales
+(areas * 0.005)  # 1/2 to 5000 ha
 
 # selection variables
 nms1 <- c(colnames(ctabo), "wgt")
@@ -413,19 +498,24 @@ names(cb_stats) <- lev_vec
 #save(cb_stats, file = "external/ext_data/carbon_bias_tables.rda")
 save(cb_stats, file = "external/ext_data/carbon_bias_tables_mus.rda")
 
-extract_stat <- function(namevec, stats, i1, i2) {
-  estats <- do.call(rbindlist(lapply(namevec, function(i) {
-    data.table(sapply(stats, function(x) {
-      unlist(sapply(x, function(y) {
+namevec <- LC
+stats <- cb_stats
+i1 <- "all"
+i2 <- "m"
+
+extract_stat0 <- function(namevec, stats, i1, i2) {
+  estats <- do.call(rbind, lapply(namevec, function(i) {
+      dat <- sapply(stats, function(x) {
+      vals <- unlist(sapply(x, function(y) {
         v <- y[bin == i1 & bvals == i2, i, with = FALSE]
         if(nrow(v) == 0) v <- rbindlist(list(v, as.list(NA)))
         v
       }))
-    }))
+    })#)
   }))
   out <- cbind(do.call(rbind, strsplit(rownames(estats), "\\.")), 
                data.table(round(estats, 2)))
-  setnames(out, old = names(mu), new = )
+  #setnames(out, old = names(mu), new = "")
   return(out)
 }
 N <- function(namevec, stats, i1, i2) {
@@ -439,25 +529,25 @@ N <- function(namevec, stats, i1, i2) {
 ```
 <a href="#top">Back to top</a>
 
-#### Plot means against scale, supplemental version 
+### Plot means against scale, supplemental version 
 ```{r, eval=FALSE}
-a <- extract_stat(LC, cb_stats, "all", "m")  # mean abs crop only
-b <- cbind(V2 = "all", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+a <- extract_stat0(LC, cb_stats, "all", "m")  # mean cropland only 
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(a, c(2:1, 3:ncol(a)))
 mu <- rbind(a, b)
 
-a <- extract_stat(LC, cb_stats, "all", "ma")  # mean abs crop only
-b <- cbind(V2 = "all", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+a <- extract_stat0(LC, cb_stats, "all", "ma")  # mean abs cropland only
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
 mua <- rbind(a, b)
 
-a <- extract_stat(LC, cb_stats, "all", "m0")  # mean abs crop only
-b <- cbind(V2 = "all", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+a <- extract_stat0(LC, cb_stats, "all", "m0")  # mean whole country
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
 mu0 <- rbind(a, b)
 
-a <- extract_stat(LC, cb_stats, "all", "ma0")  # mean abs crop only
-b <- cbind(V2 = "all", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+a <- extract_stat0(LC, cb_stats, "all", "ma0")  # mean abs whole country
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
 mu0a <- rbind(a, b)
 
@@ -476,10 +566,11 @@ xax <- seq(1, 6, 5 / (length(yax) - 1))
 
 # Version 1 of mean carbon bias against scale - probably for supplementals, if 
 # retained
+LC2 <- c(LC, "all")
 pdf(full_path(p_fig, "carbon_veg_scale.pdf"), height = 7, width = 5)
 par(mfrow = c(3, 2), mar = c(1, 0, 1, 1.25), mgp = c(1, 0.5, 0), tcl = -0.3,  
     oma = c(6, 4, 1, 0))
-for(f in 1:length(LC)) {
+for(f in 1:length(LC2)) {
   plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
        ylab = "", xlab = "", 
        panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
@@ -489,25 +580,25 @@ for(f in 1:length(LC)) {
   if(f %in% c(1, 3, 5)) axis(2, at = yax, labels = yax, las = 2)
   if(f %in% c(2, 4)) axis(2, at = yax, labels = rep("", length(yax)), las = 2)
   for(i in 1:4) {
-    lines(1:6, mu[V1 == snms[i] & V2 == LC[f], lev_vec, with = FALSE], 
+    lines(1:6, mu[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
           col = cols[i], lty = 2, lwd = lw)
   }
   for(i in 1:4) {
-    lines(1:6, mua[V1 == snms[i] & V2 == LC[f], lev_vec, with = FALSE], 
+    lines(1:6, mua[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
           col = cols[i], lty = 1, lwd = lw)
   }
 }
-plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-     ylab = "", xlab = "", 
-     panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
-for(i in 1:4) {
- lines(1:6, all_mu[V1 == snms[i], lev_vec, with = FALSE], col = cols[i], 
-       lty = 2, lwd = lw)
-}
-for(i in 1:4) {
-  lines(1:6, all_mua[V1 == snms[i], lev_vec, with = FALSE], col = cols[i],
-        lty = 1, lwd = lw)
-}
+# plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
+#      ylab = "", xlab = "", 
+#      panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
+# for(i in 1:4) {
+#  lines(1:6, mu[V1 == snms[i], lev_vec, with = FALSE], col = cols[i], 
+#        lty = 2, lwd = lw)
+# }
+# for(i in 1:4) {
+#   lines(1:6, mua[V1 == snms[i], lev_vec, with = FALSE], col = cols[i],
+#         lty = 1, lwd = lw)
+# }
 mtext(side = 3, text = "Vegetation mean", line = 0)
 axis(1, at = 1:6, labels = c(1, fact))
 axis(2, at = yax, labels = rep("", length(yax)), las = 2)
@@ -527,11 +618,11 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
-#### Main text version of mean carbon bias against scale
+### Main text version of mean carbon bias against scale
 ```{r, eval=FALSE}
 alph <- c(225, 40)
 #Ccols <- brewer.pal(n = 7, name = "Greys")
-LC2 <- c(LC[-grep("second|grass", LC)], "all")
+LC2 <- c(LC[-grep("second|grass", LC)], "All")
 # xax <- seq(0, 7, 6 / (length(yax) - 2)); length(xax)
 x <- c(0, 3, 6, 9, 12, 15)
 w <- 3 / 8
@@ -542,7 +633,8 @@ mutype <- c("mua", "mu")
 
 o <- c(0, w)
 pchs <- c("*", "+", "o", "-")
-cx <- c(1, 0.7, 0.6, 1)
+# cx <- c(1, 0.7, 0.6, 1)
+cx <- c(2, 1.25, 1, 1)
 g1 <- "grey90"
 # pchShow()
 # ctabo
@@ -550,7 +642,7 @@ xl <- c(-0.5, 18)
 yl <- c(-60, 70)
 shd <- c(4.5, 10.5, 16.5)
 
-pdf(full_path(p_fig, "carbon_veg_scale2.pdf"), height = 7, width = 7)
+pdf(full_path(p_fig, "carbon_veg_scale3.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -589,31 +681,47 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
-#### Supplementary mean bias tables
+### Supplementary mean bias tables
 ```{r, eval=FALSE}
 # Statistics from non-croplands areas included in means, for supplementals
-nmrepl <- cbind(snms, lcnms)
-mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu0[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mu0a[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mu0s <- rbind(cbind(stat = "actual", mu0), cbind(stat = "absolute", mu0a))
-mu0s_xtab <- xtable::xtable(mu0s)
-print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex")
+# mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+# mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mu0s <- copy(rbind(cbind(Bias = "Actual", mu0), 
+                   cbind(Bias = "Absolute", mu0a)))
+for(i in 1:length(LC)) mu0s[V2 == LC[i], V2 := pnms[i]]
+for(i in 1:length(snms)) mu0s[V1 == snms[i], V1 := mcap[i]]
+setnames(mu0s, c("V1", "V2", lev_vec), 
+         c("Map", "Cover", paste(c(1, fact), "km")))
+caption <- paste("Mean actual and absolute biases for each of the cropland", 
+                 "maps across aggregation scales and each possible landcover", 
+                 "type sharing the pixel with cropland. Means were calculated",
+                 "across the entire country.")
+mu0s_xtab <- xtable(mu0s, digits = 1, caption = caption)
+print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex", 
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
 
 # Statistics from non-croplands areas included in means, for supplementals
-nmrepl <- cbind(snms, lcnms)
-mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mua[, V1 := nmrepl[match(V1, nmrepl), 2]]
-mus <- rbind(cbind(stat = "actual", mu), cbind(stat = "absolute", mua))
-mus_xtab <- xtable::xtable(mus)
-print(mu0s_xtab, type = "latex", 
-      file = "paper/figures/C-bias-mean-cropland-SA.tex")
+# mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+# mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+mus <- copy(rbind(cbind(Bias = "Actual", mu), 
+                  cbind(Bias = "Absolute", mua)))
+for(i in 1:length(LC)) mus[V2 == LC[i], V2 := pnms[i]]
+for(i in 1:length(snms)) mus[V1 == snms[i], V1 := mcap[i]]
+setnames(mus, c("V1", "V2", lev_vec), 
+         c("Map", "Cover", paste(c(1, fact), "km")))
+caption <- paste("Mean actual and absolute biases for each of the cropland", 
+                 "maps across aggregation scales and each possible landcover", 
+                 "type sharing the pixel with cropland. Means were calculated",
+                 "across the union of agricultural areas", 
+                 "(cropland $>$0.05\\%) identified by the reference map and", 
+                 "the cropland map to which it was being compared")
+mus_xtab <- xtable::xtable(mus, digits = 1, caption = caption)
+print(mus_xtab, type = "latex", 
+      file = "paper/figures/C-bias-mean-cropland-SA.tex", 
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
 ```
-
-
 
 ```{r, eval=FALSE, echo=FALSE}
 # Plot means against cropland density (to possibly be run - for now, 
@@ -730,7 +838,6 @@ mub[V1 == i1 & V2 == i2, ]
 mub[V1 == i1 & V2 == i2, plot(bin, f1, type = "l")]
 mubin[V1 == i1 & V2 == i2, plot(bin, f1, type = "l")]
 ```
-
 
 ```{r, eval=FALSE, echo=FALSE}
 # Checks on data values (embedded code)
