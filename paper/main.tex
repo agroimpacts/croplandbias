@@ -88,7 +88,7 @@ We undertook five further analyses to investigate how map error can impact asses
 For the second-order analyses, we examined how cropland cover errors influence 25 km resolution monthly evapotranspiration estimates produced using the Variable Infiltration Capacity \cite{liang_simple_1994} land surface hydrology model. For this example, we used the cropland maps to adjust the seasonally varying, landcover-specific leaf area index (LAI) values that VIC uses to partition water vapor fluxes into their evaporative and transpirative components. In the second example, we examined how these errors can impact the parameterization of an agent-based food security model \cite{chen_dependency_2013}. Spatially-explicit, agent-based models are frequently employed in land change science, and require an initialization step to assign landscape resources to model agents  \cite[e.g.][]{manson_agent-based_2007,evans_multi-scale_2004,kelley_relative_2011}. In this case, we used the cropland maps to allocate farmland to agents representing individual households in political districts, with the model assigning each household its initial cropland holdings using a function that considers total district cropland and how much cropland is near the agent's location.  
 
 \vspace{-0.5 cm}
-\section{Results}
+\section{Bias}
 \subsection{Landcover bias}
 
 We created the 1 km reference and landcover maps, removing all croplands marked as communal or smallholder farmland in the reference vector maps (individual fields were not mapped with the same precision), as horticulture, or plantation forestry (SI), and calculated the total cropland extent in the remaining area (1,081,000 km$^2$, or 90\% of South Africa).  The 2011 reference map showed a cropland area of 104,310 km$^2$, which the SA-LC and GeoWiki maps overestimated by 26 and 5.8\%, respectively, and GlobCover and MODIS underestimated by 21 and 26.1\%.  
@@ -131,32 +131,23 @@ The spatial patterns of carbon bias (Fig. S4) are a reflection of the cropland b
 \label{afoto}
 \end{figure}
 
-The patterns of mean absolute spatial bias (solid colored bars in Fig. 3) generally follow that of actual bias, but with somewhat higher magnitudes and a few notable differences. The most notable is that Geo-Wiki has fairly large absolute bias at 1 km, averaging 27\% across across cover types (line in solid blue bar, Fig. 3, Table S2), which is close to the 36-37\% for GlobCover and MODIS. SA-LC has the lowest absolute bias across scales, averaging (across cover types) from 14\% at 1 km to 3\% at 100 km. (Fig. 3, Table S2). The increase in Geo-Wiki's absolute spatial bias relative to SA-LC's can be attributed to the spatially heterogeneous nature of its cropland biases (Fig. 1) compared to the other three cropland maps.
+The patterns of mean absolute spatial bias (solid colored bars in Fig. 3) generally follow that of actual bias, but with somewhat higher magnitudes and a few important differences. The most notable is that Geo-Wiki has fairly large absolute bias at 1 km, averaging 27\% across across cover types (line in solid blue bar, Fig. 3, Table S2), which is close to the 36-37\% for GlobCover and MODIS. SA-LC has the lowest absolute bias across scales, averaging (across cover types) from 14\% at 1 km to 3\% at 100 km. (Fig. 3, Table S2). The increase in Geo-Wiki's absolute spatial bias relative to SA-LC's can be attributed to the spatially heterogeneous nature of its cropland biases (Fig. 1) compared to the other three cropland maps.
 
 \subsection{Bias in harvested areas, yield, and production estimates}
+We used the reference dataset to calculate total cropland area within South Africa's nine provinces, and then adjusted the the four cropland maps so that they each summed to the same area within each province \cite[per][]{ramankutty_farming_2008}. Despite this statistical constraint, the updated cropland maps still had substantial spatial biases similar in pattern (Fig. S5) to those in the unadjusted maps (Fig. 1), and we evaluated how these biases affected crop production estimates. We derived maize yield and harvested area estimates by disaggregating district-level  (n = 354, mean area = 3,445 km$^2$) agricultural census data \cite{statistics_south_africa_commercial_2007} following Monfreda \emph{et al.} \cite{monfreda_farming_2008}, and used that to calculate spatial biases in yield and production estimates at each aggregation scale. 
 
-\begin{itemize}
-  \item Used provincial boundaries to extract total cropland from reference data. Cropland totals used to adjust cropland fractions falling within those boundaries from each cropland map so cropland map totals equal the provincial-level total from the reference (SI). 
-  \item Disaggregated magisterial district level maize yield and maize harvested area onto the adjusted cropland fractions, and onto the reference map.
-  \item Calculated differences in spatial biases of yields and total production estimates at different scales of aggregation. 
-  \item Yields aggregated to higher scale using two methods: 1) weighted mean aggregation, where harvested area fractions used to weight yields at each aggregation scale, technically more difficult; 2) mean of any harvested area contributing to aggregation, without weighting. Production aggregated by either calculating production at 1 km and then aggregating to each scale and differencing, or aggregating harvested fractions and type 2 yield, and calculating production at each level.
-  \item Average bias normalized as a percentage of mean pixel-level yield or production calculated from the reference map.   
- \end{itemize}
+The yields disaggregated onto the cropland maps were markedly different to those on the reference map, particularly in the lower density cropland areas in the center of the country, where GlobCover overestimated yields and MODIS and GeoWiki (to a lesser extent) underestimated them at 1 km resolution (Fig. S6). However, the mean spatial bias in yields at this resolution was pronounced only for GlobCover, equivalent to nearly 60\% of the mean reference yield of 3.4 tons ha$^{-1}$, compared to +/-5\% for the other maps (Fig. 5). Interestingly, GeoWiki and MODIS biases increased with aggregation, peaking at 10 km where both datasets underestimated yields by 30\%, thereafter declining to 10\% at 100 km, whereas GlobCover's mean yield bias declined linearly with aggregation (Fig. 5). 
 
-
-\vspace{-1 cm}
-\begin{figure}[ht]
+%\vspace{-1 cm}
+\begin{figure}[!ht]
 \centerline{\includegraphics[width=.4\textwidth]{figures/yield_bias_scale.pdf}}
 \caption{The mean spatial biases in disaggregated maize yield estimates, and the bias in total crop production estimates calculated from these yields and constrained crop area estimates. The values of actual bias (incorporating bias direction and magnitude) and absolute bias (magnitude only) are presented in semi-transparent and solid colors, respectively, with colors denoting the specific cropland map and symbols indicating whether the bias is related to one of two yield aggregation methods and associated crop production estimates.}
 \label{afoto}
 \end{figure}
 
-\begin{itemize}
- \item GlobCover average bias shows large yield overestimates (nearly 60\%) at 1 km, declining with aggregation scales. Interestingly, MODIS and GeoWiki start with small yield underestimates that grow to 30\% yield under-estimates at 10 km, declining thereafter. SA-LC has lowest, +/-5\%. (Fig. 4) 
- \item No production biases.
- \item Absolute biases in both yield and production are large. All $>$40\% for both production and yield at 1 km, except SA-LC which is between 15-20\%.  The biases decline with aggregation, but remain above 10\% for yield for most datasets at 100 km.  
+In contrast to yields, production errors were unbiased in aggregate (Fig. 5). The statistical constraints on harvested and cropland areas led to the canceling out of spatial errors in production estimates, which is evident in the checkerboard-like pattern in maps of production biases (Figure S7). However, this pattern of bias means that the average absolute biases in  production estimates are large, between 40 to 55\% for GeoWiki, MODIS, and GlobCover at 1 km, and remaining generally high ($<$10\%) for these three datasets even up to 50-100 km of aggregation (Fig. 5). SA-LC production biases were lowest across all spatial scales (20\% at 1 km to 2\% in 100 km).  
 
-\end{itemize}
+Absolute mean biases in yield were also substantial, and generally 10-15\% larger than production biases across all spatial scales, except for GlobCover where absolute production biases exceeded yield bias at 5-100 km of aggregation . 
 
 \subsection{Bias in evapotranspiration estimates}
 \begin{itemize}

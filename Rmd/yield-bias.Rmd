@@ -49,6 +49,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 
 ```{r, eval=FALSE}
 library(SAcropland)
+library(xtable)
 p_root <- full_path(proj_root("SAcropland"), "SAcropland")
 p_fig <- full_path(p_root, "paper/figures/")
 p_data <- full_path(p_root, "external/ext_data/")
@@ -309,12 +310,14 @@ yld <- fread(full_path(p_data, "maize_wheat_2007.csv"))
 # Transform magisterial districts, remove Prince Edward Islands
 md <- spTransform(gadm, CRSobj = sa.shp@proj4string)
 md <- md[md$ID_2 != 313, ]
-# round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))
 md@data <- md@data[, c("PID", "ID_2", "NAME_1", "NAME_2")]  # trim down columns
 # fix a few names that occur more than once to make unique for merging properly
 md@data[md$ID_2 == 43, "NAME_2"] <- "MiddelburgEC"
 md@data[md$ID_2 == 143, "NAME_2"] <- "RichmondKZ"
 md@data[md$ID_2 == 86, "NAME_2"] <- "HeidelbergG"
+
+# mean MD area
+round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))  # 3445 km square
 
 # check names in two datasets
 # match(md@data$NAME_2, yld$district)
@@ -708,7 +711,22 @@ p_diff3 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type II agg
 # yield differences
 list1 <- lapply(cyld_agg, function(x) x[1])
 list2 <- lapply(cyld_agg, function(x) x[-1])
-y_diff1 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 1 
+y_diff1 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 1
+
+# check grids (output in QGIS and examine for sensible results--they are)
+# for(i in lev) {
+#   writeRaster(y_diff1$globmu[[i]]$gti, 
+#               file = full_path(p_data, paste0("test/globdiff", i, ".tif")))
+# }
+# for(i in lev) {
+#   writeRaster(list1[[i]]$gti, 
+#               file = full_path(p_data, paste0("test/gtiyldtst", i, ".tif")))
+# }
+# for(i in lev) {
+#   writeRaster(list2[[i]]$globmu, 
+#               file = full_path(p_data, paste0("test/globyld2tst", i, ".tif")))
+# }
+
 # type 2 (non-zero)
 list2 <- lapply(cyld_agg3, function(x) x[-1]) # cyld_agg for a, b/c correct
 y_diff2 <- rast_list_math(ilist, list1, list2, expr = "a - b")  # type 2
@@ -1010,23 +1028,28 @@ xo <- (cumsum(rep(w, 8)) - w / 2)[-c(2, 4, 6, 8)]
 #x + xo[j] + o[k]
 o <- c(0, w)
 xa <- sapply(x, function(x) x + xo)
-cx <- c(2, 1.25, 1, 1)
+# cx <- c(2, 1.25, 1, 1)
+cx <- c(1.25, 1)
 g1 <- "grey90"
 
 # mul <- c("p1mu", "p2mu", "p3mu", "y1mu", "y2mu")
-mul <- c("p2mu", "p3mu", "y1mu", "y2mu")
+# mul <- c("p2mu", "p3mu", "y1mu", "y2mu")
+mul <- c("p1mu", "y1mu")
 #mal <- c("p1ma", "p2ma", "p3ma", "y1ma", "y2ma")
-mal <- c("p2ma", "p3ma", "y1ma", "y2ma")
+# mal <- c("p2ma", "p3ma", "y1ma", "y2ma")
+mal <- c("p1ma", "y1ma")
 malmul <- list(mal, mul)
 #pyl <- c("mup", "mup", "mup", "muy", "muy")
-pyl <- c("mup", "mup", "muy", "muy")
+# pyl <- c("mup", "mup", "muy", "muy")
+pyl <- c("mup", "muy")
 
 xl <- c(-0.5, 18)
 yl <- c(-70, 80)
 shd <- c(4.5, 10.5, 16.5)
 cols <- c("red", "orange3", "green4", "blue")
 lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
-pchs <- c("*", "+", "o", "x", "-")
+# pchs <- c("*", "+", "o", "x", "-")
+pchs <- c("+", "o")
 
 #yl <- range(mu[, 3:8, with = FALSE], mua[, 3:8, with = FALSE])
 #yl <- round(yl / 10) * 10
@@ -1072,9 +1095,11 @@ legend(x = 11.9, y = -40, legend = rep("", 4), pch = 15, adj = 0,
        cex = 0.8)
 text(x = 12.7, y = -42, labels = "Absolute", srt = 45, adj = c(0, 0), cex= 0.8)
 text(x = 12.2, y = -42, labels = "Actual", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 65, legend = c("Prod I", "Prod II", "Yield 1", "Yield 2"),        pch = pchs, pt.cex = c(2.5, 1.5, 1.5, 1.5), bty = "n", cex = 0.8)
-dev.off()
+# legend(x = 12.1, y = 65, legend = c("Prod I", "Prod II", "Yield 1", "Yield 2"),        pch = pchs, pt.cex = c(2.5, 1.5, 1.5, 1.5), bty = "n", cex = 0.8)
+legend(x = 12.1, y = 65, legend = c("Production", "Yield"), pch = pchs, 
+       pt.cex = c(1.5, 1.5), bty = "n", cex = 0.8)
 
+dev.off()
 
 lapply(1:length(lev), function(ii) {
   lv <- lev[ii]
@@ -1089,6 +1114,44 @@ lapply(1:length(lev), function(ii) {
   })
 })
 
+do.call(cbind, lapply(lev, function(x) {
+  rbind(cbind.data.frame("Map" = y1mu[ol == x, il], 
+                         "v" = round(y1mu[ol == x, bias] / muy[x] * 100, 1)),
+        cbind.data.frame("Map" = p1mu[ol == x, il], 
+                         "v" = round(p1mu[ol == x, bias] / mup[x] * 100, 1)))
+}))
+
+
+vnms <- c(rep("Yield", length(snms)), rep("Production", length(snms)))
+aa <- c("Actual", "Absolute")
+out_tab <- do.call(rbind, lapply(1:2, function(x) {
+  out <- do.call(cbind, lapply(1:length(lev), function(ii) {
+    lv <- lev[ii]  
+    mm <- malmul[2:1][[x]] 
+    v <- do.call(rbind, lapply(length(mm):1, function(j) {
+      v2 <- do.call(rbind, lapply(1:length(snms), function(i) {
+        nm <- snms[i]
+        round(get(mm[j])[ol == lv & il == nm,  bias] / get(pyl[j])[lv] * 100,1)
+      }))
+      rownames(v2) <- snms
+      v2
+    }))
+  }))
+  out <- cbind.data.frame(aa[x], mcap, "Variable" = vnms, unname(out))
+  colnames(out) <- c("Bias", "Map", "Variable", paste(c(1, fact), "km"))
+  out
+}))  
+
+caption <- paste("Mean actual and absolute biases for yield and", 
+                 "production estimates disaggregated from magisterial", 
+                 "district level farm census data onto adjusted cropland", 
+                 "maps. Biases were calculated as percent differences", 
+                 "relative to the mean value calculated from the reference", 
+                 "map.")    
+out_xtab <- xtable(out_tab, digits = 1, caption = caption)
+print(out_xtab, type = "latex", file = "paper/figures/yldprod-bias.tex", 
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
 
 
 ```

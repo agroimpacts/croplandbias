@@ -508,7 +508,7 @@ md_lcl &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
     DT &lt;-<span class="st"> </span>md_dta[, <span class="kw">list</span>(<span class="st">&quot;carea&quot;</span> =<span class="st"> </span><span class="kw">round</span>(<span class="kw">sum</span>(<span class="kw">get</span>(j)), <span class="dv">2</span>),  <span class="co"># crop area</span>
                         <span class="st">&quot;parea&quot;</span> =<span class="st"> </span><span class="kw">length</span>(<span class="kw">get</span>(j)),  <span class="co"># non-NA area in MD</span>
                         <span class="st">&quot;cf&quot;</span> =<span class="st"> </span><span class="kw">round</span>(<span class="kw">sum</span>(<span class="kw">get</span>(j)) /<span class="st"> </span><span class="kw">length</span>(<span class="kw">get</span>(j)), <span class="dv">4</span>)),
-                   by =<span class="st"> </span>md]
+                 by =<span class="st"> </span>md]
     <span class="co"># calculate crop fraction, adjusting ha first by how much non-NA area there</span>
     <span class="co"># is in MD</span>
     DTy &lt;-<span class="st"> </span>DT[mdvay][, mfrac :<span class="er">=</span><span class="st"> </span><span class="kw">round</span>(((mzha *<span class="st"> </span>fmd) /<span class="st"> </span><span class="dv">100</span>) /<span class="st"> </span>carea, <span class="dv">4</span>)]
@@ -552,7 +552,7 @@ crop_ayr &lt;-<span class="st"> </span><span class="kw">lapply</span>(crop_ay, f
   <span class="kw">dt_to_raster</span>(x[, <span class="kw">list</span>(x, y, fa, mzya)], <span class="dt">CRSobj =</span> sa.shp@proj4string)
 })
 
-<span class="co"># redo NA mask because of some slighting shifts</span>
+<span class="co"># redo NA mask because of some slight shifts</span>
 namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(<span class="kw">lapply</span>(crop_ayr, function(x) x$fa)), sumna)
 namask[namask &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
 namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
@@ -592,8 +592,7 @@ cyldf1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
 })
 <span class="kw">names</span>(cyldf1) &lt;-<span class="st"> </span>lev[<span class="dv">1</span>]
 cyld_agg &lt;-<span class="st"> </span><span class="kw">c</span>(cyldf1, cyldr)
-
-<span class="kw">plot</span>(cyld_agg$f10$gti)
+<span class="co"># plot(cyld_agg$f10$gti)</span>
 
 <span class="co"># check Monfreda's yield data to see how it deals with null areas</span>
 monf &lt;-<span class="st"> </span><span class="kw">full_path</span>(<span class="st">&quot;external/ext_data/monfreda_data/maize_HarvAreaYield_NetCDF&quot;</span>,
@@ -678,7 +677,7 @@ for(i in lev[-<span class="dv">1</span>]) {
 for(i in lev) {
   for(j in snms) {
     ck &lt;-<span class="st"> </span>crop_ay[[j]][, <span class="kw">sum</span>(fa)] *<span class="st"> </span><span class="dv">100</span>
-    d &lt;-<span class="st"> </span><span class="kw">round</span>((ck -<span class="st"> </span><span class="kw">cellStats</span>(tareas[[i]] *<span class="st"> </span>carea_agg[[i]][[j]], sum)) /<span class="st"> </span>ck, <span class="dv">2</span>)
+    d &lt;-<span class="st"> </span><span class="kw">round</span>((ck -<span class="st"> </span><span class="kw">cellStats</span>(tareas[[i]] *<span class="st"> </span>carea_agg[[i]][[j]], sum)) /<span class="st"> </span>ck,<span class="dv">2</span>)
     <span class="kw">print</span>(d)
   }
 }  <span class="co"># all equal</span></code></pre>
@@ -770,6 +769,7 @@ for(i in lev) {
     <span class="kw">print</span>(<span class="kw">round</span>(<span class="kw">cellStats</span>(a, sum), <span class="dv">5</span>))
   }
 }
+
 <span class="co"># Production differences</span>
 ilist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">names</span>(cpagg1[[<span class="dv">1</span>]])[-<span class="dv">1</span>], <span class="kw">names</span>(cpagg1), <span class="st">&quot;gti&quot;</span>)
 list1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpaggII, function(x) x[[<span class="dv">1</span>]])
@@ -786,10 +786,11 @@ list1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg, fun
 list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg, function(x) x[-<span class="dv">1</span>])
 y_diff1 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 1 </span>
 <span class="co"># type 2 (non-zero)</span>
-list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg3, function(x) x[-<span class="dv">1</span>]) <span class="co"># reuse cyld_agg for a, b/c correct</span>
+list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg3, function(x) x[-<span class="dv">1</span>]) <span class="co"># cyld_agg for a, b/c correct</span>
 y_diff2 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 2</span>
 
-<span class="co"># convert them to percent differences relative to the mean pixel-wise production</span>
+<span class="co"># convert them to percent differences relative to mean pixel-wise production</span>
+<span class="co"># here only for map plotting.</span>
 <span class="co"># plot(y_diff2$sa30$f25$gti)</span>
 pdiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">list</span>(p_diff1, p_diff2, p_diff3), function(x) {
   l1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
@@ -1007,7 +1008,8 @@ bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg, funct
 <span class="co"># mean(tst$a)</span>
 <span class="co"># sum(tst$a)</span>
 
-<span class="co"># selection variables</span>
+<span class="co"># Spatial bias stats calculation on yield and production differences, not on</span>
+<span class="co"># percentages</span>
 a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff1, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
 b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff1, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
 d &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff1, sum, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">FALSE</span>)
@@ -1029,8 +1031,8 @@ yd2_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
 
 <span class="co"># Output statistics</span>
 p1mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># identical to p3</span>
-p1ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># identical to p3</span>
-p1sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># identical to p3</span>
+p1ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># ident to p3</span>
+p1sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># ident to p3</span>
 p2mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
 p2ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
 p2sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
@@ -1097,13 +1099,14 @@ pchs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&q
 yax &lt;-<span class="st"> </span><span class="kw">seq</span>(yl[<span class="dv">1</span>], yl[<span class="dv">2</span>], <span class="dv">10</span>)
 xax &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">5</span> /<span class="st"> </span>(<span class="kw">length</span>(yax) -<span class="st"> </span><span class="dv">1</span>))
 
-<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;yield_bias_scale2.pdf&quot;</span>), <span class="dt">height =</span> <span class="dv">7</span>, <span class="dt">width =</span> <span class="dv">7</span>)
+<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;yield_bias_scale.pdf&quot;</span>), <span class="dt">height =</span> <span class="dv">7</span>, <span class="dt">width =</span> <span class="dv">7</span>)
 <span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">rep</span>(<span class="dv">1</span>, <span class="dv">4</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">tcl =</span> -<span class="fl">0.3</span>)
 <span class="kw">plot</span>(xl, yl, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
      <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>)<span class="co">#,</span>
 for(i in shd) <span class="kw">polyfunc2</span>(<span class="dt">x =</span> i, <span class="dt">y =</span> yl, <span class="dt">w =</span> <span class="dv">3</span>, <span class="dt">col =</span> g1, <span class="dt">bcol =</span> g1, <span class="dt">lwd =</span> <span class="dv">1</span>)
+<span class="co"># grid(NA, NULL, lwd = 1, lty = 1)</span>
+<span class="kw">abline</span>(<span class="dt">h =</span> yax, <span class="dt">v =</span> <span class="ot">NULL</span>, <span class="dt">col =</span> <span class="st">&quot;grey80&quot;</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 <span class="kw">polyfunc2</span>(<span class="dt">x =</span> <span class="fl">8.75</span>, <span class="dt">y =</span> yl, <span class="dt">w =</span> <span class="fl">18.5</span>, <span class="dt">col =</span> <span class="st">&quot;transparent&quot;</span>, <span class="dt">bcol =</span> <span class="st">&quot;black&quot;</span>)
-<span class="kw">grid</span>(<span class="ot">NA</span>, <span class="kw">length</span>(yax), <span class="dt">lwd =</span> <span class="dv">1</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 <span class="kw">lines</span>(<span class="kw">c</span>(-<span class="dv">1</span>, <span class="dv">18</span>), <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> <span class="st">&quot;grey80&quot;</span>)
 for(ii in <span class="dv">1</span>:<span class="kw">length</span>(lev)) {
   lv &lt;-<span class="st"> </span>lev[ii]
@@ -1112,8 +1115,10 @@ for(ii in <span class="dv">1</span>:<span class="kw">length</span>(lev)) {
     nm &lt;-<span class="st"> </span>snms[i]
     for(k in <span class="dv">1</span>:<span class="kw">length</span>(malmul)) {
       mm &lt;-<span class="st"> </span>malmul[[k]]
+      <span class="co"># fetch bias stats, convert to percentage relative to mean</span>
+      <span class="co"># e.g. GTI mean yield</span>
       v &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(mm), function(j) {
-        <span class="kw">round</span>(<span class="kw">get</span>(mm[j])[ol ==<span class="st"> </span>lv &amp;<span class="st"> </span>il ==<span class="st"> </span>nm,  bias] /<span class="st"> </span><span class="kw">get</span>(pyl[j])[lv] *<span class="st"> </span><span class="dv">100</span>, <span class="dv">1</span>)
+        <span class="kw">round</span>(<span class="kw">get</span>(mm[j])[ol ==<span class="st"> </span>lv &amp;<span class="st"> </span>il ==<span class="st"> </span>nm,  bias] /<span class="st"> </span><span class="kw">get</span>(pyl[j])[lv] *<span class="st"> </span><span class="dv">100</span>,<span class="dv">1</span>)
       })
       pcol &lt;-<span class="st"> </span><span class="kw">makeTransparent</span>(cols[i], <span class="dt">alpha =</span> alph[k])
       <span class="kw">polyfunc2</span>(xa[i, ii] +<span class="st"> </span>o[k], <span class="kw">range</span>(v), <span class="dt">w =</span> w, <span class="dt">col =</span> pcol, <span class="dt">bcol =</span> pcol)
@@ -1131,11 +1136,24 @@ for(ii in <span class="dv">1</span>:<span class="kw">length</span>(lev)) {
 <span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">11.9</span>, <span class="dt">y =</span> -<span class="dv">40</span>, <span class="dt">legend =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="dv">4</span>), <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">adj =</span> <span class="dv">0</span>, 
        <span class="dt">col =</span> <span class="kw">makeTransparent</span>(cols, <span class="dt">alpha =</span> alph[<span class="dv">2</span>]), <span class="dt">pt.cex =</span> <span class="fl">1.5</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, 
        <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Absolute&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
+<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Absolute&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex=</span> <span class="fl">0.8</span>)
 <span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.2</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Actual&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">65</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Prod I&quot;</span>, <span class="st">&quot;Prod II&quot;</span>, <span class="st">&quot;Yield 1&quot;</span>, <span class="st">&quot;Yield 2&quot;</span>), 
-       <span class="dt">pch =</span> pchs, <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="fl">2.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">dev.off</span>()</code></pre>
+<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">65</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Prod I&quot;</span>, <span class="st">&quot;Prod II&quot;</span>, <span class="st">&quot;Yield 1&quot;</span>, <span class="st">&quot;Yield 2&quot;</span>),        <span class="dt">pch =</span> pchs, <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="fl">2.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
+<span class="kw">dev.off</span>()
+
+
+<span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(lev), function(ii) {
+  lv &lt;-<span class="st"> </span>lev[ii]
+  <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(snms), function(i) {
+    nm &lt;-<span class="st"> </span>snms[i]
+    <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(malmul), function(k) {
+      mm &lt;-<span class="st"> </span>malmul[[k]]
+      v &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(mm), function(j) {
+        <span class="kw">round</span>(<span class="kw">get</span>(mm[j])[ol ==<span class="st"> </span>lv &amp;<span class="st"> </span>il ==<span class="st"> </span>nm,  bias] /<span class="st"> </span><span class="kw">get</span>(pyl[j])[lv] *<span class="st"> </span><span class="dv">100</span>,<span class="dv">1</span>)
+      })
+    })
+  })
+})</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
 </div>
@@ -1167,7 +1185,8 @@ g2 &lt;-<span class="st"> </span><span class="dv">1</span>
 
 ygap_bias &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(x) {
   if(x !=<span class="st"> &quot;f1&quot;</span>) { 
-    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), <span class="dt">fun =</span> modal)
+    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), 
+                        <span class="dt">fun =</span> modal)
   } else {
     preagg &lt;-<span class="st"> </span>prebin
   }
@@ -1175,7 +1194,7 @@ ygap_bias &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, func
   notprez &lt;-<span class="st"> </span>(preagg &lt;<span class="st"> </span><span class="dv">300</span>) |<span class="st"> </span>(preagg &gt;<span class="st"> </span><span class="dv">400</span>)
   <span class="kw">sapply</span>(snms, function(y) {
     yg &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>prez)
-    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>prez)
+    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2*cyld_agg[[x]][[y]] *<span class="st"> </span>prez)
     pg &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]]$gti *<span class="st"> </span>yg
     pg2 &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]][[y]] *<span class="st"> </span>yg2
     <span class="kw">cellStats</span>(pg -<span class="st"> </span>pg2, sum) /<span class="st"> </span><span class="kw">cellStats</span>(pg, sum) *<span class="st"> </span><span class="dv">100</span>
@@ -1185,7 +1204,7 @@ ygap_bias &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, func
 <span class="co"># Assume a yield gap over-estimated by 100% in 400 mm isohyet</span>
 ygap_bias2 &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(x) {
   if(x !=<span class="st"> &quot;f1&quot;</span>) { 
-    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), <span class="dt">fun =</span> modal)
+    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), <span class="dt">fun=</span>modal)
   } else {
     preagg &lt;-<span class="st"> </span>prebin
   }
@@ -1193,7 +1212,7 @@ ygap_bias2 &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, fun
   notprez &lt;-<span class="st"> </span>preagg !=<span class="st"> </span><span class="dv">400</span>
   <span class="kw">sapply</span>(snms, function(y) {
     yg &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>prez)
-    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>prez)
+    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]][[y]]*prez)
     pg &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]]$gti *<span class="st"> </span>yg
     pg2 &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]][[y]] *<span class="st"> </span>yg2
     <span class="kw">cellStats</span>(pg -<span class="st"> </span>pg2, sum) /<span class="st"> </span><span class="kw">cellStats</span>(pg, sum) *<span class="st"> </span><span class="dv">100</span>
@@ -1203,7 +1222,7 @@ ygap_bias2 &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, fun
 <span class="co"># Assume a yield gap over-estimated by 100% in 500 mm isohyet</span>
 ygap_bias3 &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(x) {
   if(x !=<span class="st"> &quot;f1&quot;</span>) { 
-    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), <span class="dt">fun =</span> modal)
+    preagg &lt;-<span class="st"> </span><span class="kw">aggregate</span>(prebin, <span class="dt">fact =</span> <span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&quot;f&quot;</span>, <span class="st">&quot;&quot;</span>, x)), <span class="dt">fun=</span>modal)
   } else {
     preagg &lt;-<span class="st"> </span>prebin
   }
@@ -1211,7 +1230,7 @@ ygap_bias3 &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, fun
   notprez &lt;-<span class="st"> </span>preagg !=<span class="st"> </span><span class="dv">500</span>
   <span class="kw">sapply</span>(snms, function(y) {
     yg &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]]$gti *<span class="st"> </span>prez)
-    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>prez)
+    yg2 &lt;-<span class="st"> </span>(g1 *<span class="st"> </span>cyld_agg[[x]][[y]] *<span class="st"> </span>notprez) +<span class="st"> </span>(g2 *<span class="st"> </span>cyld_agg[[x]][[y]]*prez)
     pg &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]]$gti *<span class="st"> </span>yg
     pg2 &lt;-<span class="st"> </span>tareas[[x]] *<span class="st"> </span>carea_agg[[x]][[y]] *<span class="st"> </span>yg2
     <span class="kw">cellStats</span>(pg -<span class="st"> </span>pg2, sum) /<span class="st"> </span><span class="kw">cellStats</span>(pg, sum) *<span class="st"> </span><span class="dv">100</span>
