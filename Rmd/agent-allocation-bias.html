@@ -161,14 +161,25 @@ mdsel &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span cla
 <span class="co"># })))</span>
 <span class="co"># colnames(abm_mu) &lt;- c(&quot;N&quot;, &quot;na&quot;, &quot;f&quot;)</span>
 <span class="co"># abm_mu$f - mu[mdsel[mdsel %in% c(269, 274:275, 288)], &quot;f&quot;]</span>
- <span class="co"># -1.0  0.0 -0.4 -0.2  # tinf differences!</span></code></pre>
+ <span class="co"># -1.0  0.0 -0.4 -0.2  # tinf differences!</span>
+rgeos::<span class="kw">gArea</span>(abm_md, <span class="dt">byid =</span> <span class="ot">TRUE</span>) /<span class="st"> </span><span class="dv">10000</span> /<span class="st"> </span><span class="dv">100</span></code></pre>
 <p><a href="#top">Back to top</a></p>
 <div id="extract-cropland-percentage-from-selected-districts" class="section level3">
 <h3><span class="header-section-number">2.1.1</span> Extract cropland percentage from selected districts</h3>
 <pre class="sourceCode r"><code class="sourceCode r">gti4 &lt;-<span class="st"> </span><span class="kw">crop</span>(gti, <span class="kw">extent</span>(abm_md))
 lc4 &lt;-<span class="st"> </span><span class="kw">crop</span>(lc_list, <span class="kw">extent</span>(abm_md))
 cb &lt;-<span class="st"> </span><span class="kw">brick</span>(<span class="kw">stack</span>(gti4, lc4), <span class="dt">filename =</span> <span class="st">&quot;external/ext_data/cropland-md4.tif&quot;</span>, 
-            <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)</code></pre>
+            <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)
+cpct &lt;-<span class="st"> </span><span class="kw">extract</span>(gti4, abm_md)
+abm_md@data
+dcrop_pct &lt;-<span class="st"> </span><span class="kw">round</span>(<span class="kw">sapply</span>(cpct, sum, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>) /<span class="st"> </span><span class="kw">sapply</span>(cpct, length), <span class="dv">1</span>)</code></pre>
+<p>Cropland percentages:</p>
+<ul>
+<li>Clocolan (269) - 45%</li>
+<li>Ficksburg (274) - 39%</li>
+<li>Fouriesburg (275) - 29%</li>
+<li>Marquard (288) - 44%</li>
+</ul>
 <p><a href="#top">Back to top</a></p>
 </div>
 <div id="map-selected-districts-cropland-percentage-and-bias" class="section level3">
@@ -278,7 +289,7 @@ cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">re
 yst &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.03</span>, <span class="fl">0.13</span>, <span class="fl">0.07</span> /<span class="st"> </span><span class="dv">3</span>)
 xy &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="kw">grconvertX</span>(<span class="kw">rep</span>(<span class="fl">0.5</span>, <span class="dv">5</span>), <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>), 
             <span class="kw">grconvertY</span>(yst, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>))
-for(i in <span class="dv">2</span>:<span class="kw">length</span>(xst)) {
+for(i in <span class="dv">2</span>:<span class="kw">length</span>(yst)) {
   if(i ==<span class="st"> </span><span class="dv">5</span>) {
     leg &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;District&quot;</span>, <span class="dv">1</span>:<span class="dv">4</span>)
   } else {

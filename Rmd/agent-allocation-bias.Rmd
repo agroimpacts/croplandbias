@@ -16,10 +16,12 @@ Selection of magisterial districts and associated landcover sets for use in ABM 
 
 # Data
 ```{r, eval=FALSE}
+library(SAcropland)
 library(raster)
 library(rgdal)
 library(lmisc)
 library(readxl)
+library(rgeos)
 
 # Paths
 p_root <- proj_root("SAcropland")
@@ -83,6 +85,7 @@ writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4",
 # colnames(abm_mu) <- c("N", "na", "f")
 # abm_mu$f - mu[mdsel[mdsel %in% c(269, 274:275, 288)], "f"]
  # -1.0  0.0 -0.4 -0.2  # tinf differences!
+rgeos::gArea(abm_md, byid = TRUE) / 10000 / 100
 ```
 <a href="#top">Back to top</a>
 
@@ -92,7 +95,16 @@ gti4 <- crop(gti, extent(abm_md))
 lc4 <- crop(lc_list, extent(abm_md))
 cb <- brick(stack(gti4, lc4), filename = "external/ext_data/cropland-md4.tif", 
             overwrite = TRUE)
+cpct <- extract(gti4, abm_md)
+dcrop_pct <- round(sapply(cpct, sum, na.rm = TRUE) / sapply(cpct, length), 1)
 ```
+Cropland percentages:
+
+  + Clocolan (269) - 45%
+  + Ficksburg (274) - 39%
+  + Fouriesburg (275) - 29%
+  + Marquard (288) - 44%
+
 <a href="#top">Back to top</a>
 
 ### Map selected districts, cropland percentage, and bias
@@ -115,14 +127,17 @@ plot(md, col = "grey", border = "transparent")
 plot(abm_md, col = "red", border = "grey30", add = TRUE)
 par(mar = c(3, 0, 0, 0))
 plot(abm_md)
-plot(cb[[1]], axes = FALSE, box = FALSE, breaks = brks1, col = cols1, add = TRUE, 
-     legend = FALSE)
+plot(cb[[1]], axes = FALSE, box = FALSE, breaks = brks1, col = cols1, 
+     add = TRUE, legend = FALSE)
 plot(abm_md, add = TRUE)
+polygonsLabel(abm_md, labels = paste0(abm_md$name_2, " (", 1:4, ")"), 
+              method = "buffer", cex = 0.9)
 for(i in 2:5) {
   plot(abm_md)
-  plot(cb[[1]] - cb[[i]], axes = FALSE, box = FALSE, breaks = brks, col = cols, 
-       add = TRUE, legend = FALSE)
+  plot(cb[[1]] - cb[[i]], axes = FALSE, box = FALSE, breaks = brks2, 
+       col = cols2, add = TRUE, legend = FALSE)
   plot(abm_md, add = TRUE, lwd = 2)
+  
   mtext(mcap[i - 1], side = 1, line = -4, adj = 0.7)
 }
 nct <- length(brks1) - 1
@@ -185,11 +200,14 @@ unalloc <- round(abias[var == "ag_area_unalloc", snms, with = FALSE] /
   abias[var == "ag_area", snms, with = FALSE] * 100, 2)
 
 cexs <- seq(1, 2, 1 / 3)
-pdf(full_path(p_fig, "agent-bias.pdf"), height = 5, width = 3)
+# pdf(full_path(p_fig, "agent-bias.pdf"), height = 5, width = 3)
+pdf(full_path(p_fig, "agent-bias.pdf"), height = 3, width = 5)
 cx <- c(0.7, 0.8, 0.6)
 # png(full_path(p_fig, "agent-bias.png"), height = 350, width = 700)
-par(mfrow = c(2, 1), mar = c(0.5, 2.5, 0.5, 1), mgp = c(1, 0.05, 0), 
-    tcl = -0.2, oma = c(3.5, 0, 0, 0))
+# par(mfrow = c(2, 1), mar = c(0.5, 2.5, 0.5, 1), mgp = c(1, 0.05, 0), 
+#     tcl = -0.2, oma = c(3.5, 0, 0, 0))
+par(mfrow = c(1, 2), mar = c(2, 2, 0.5, 0), mgp = c(0.75, 0.05, 0), 
+    tcl = -0.2, oma = c(3.5, 0, 0, 0.1))
 scols <- c("red", "orange3", "green4", "blue")
 cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
 plot(unlist(pctbias), unlist(noland), col = cols, cex = cexs, pch = 20, 
@@ -200,10 +218,10 @@ plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20,
      cex.axis = cx[1])
 par(xpd = NA)
 
-yst <- seq(0.03, 0.13, 0.07 / 3)
+yst <- seq(0.05, 0.23, 0.18 / 4)
 xy <- cbind(grconvertX(rep(0.5, 5), from = "ndc"), 
             grconvertY(yst, from = "ndc"))
-for(i in 2:length(xst)) {
+for(i in 2:length(yst)) {
   if(i == 5) {
     leg <- c("District", 1:4)
   } else {
@@ -214,13 +232,17 @@ for(i in 2:length(xst)) {
          horiz = TRUE, adj = c(4, -5.75),  
          col = scols[i - 1], pt.cex = cexs, bty = "n")#cex = cexs,)
 }
-yst <- seq(0.005, 0.105, 0.07 / 3)
-xy <- cbind(grconvertX(rep(0.55, 5), from = "ndc"), 
+yst <- seq(0.05, 0.23, 0.18 / 4)
+xy <- cbind(grconvertX(rep(0.515, 5), from = "ndc"), 
             grconvertY(yst, from = "ndc"))
-text(x = xy[2:5, 1], y = xy[2:5, 2], labels = c(mcap),# "District"), 
+text(x = xy[, 1], y = xy[, 2], labels = c(mcap, "District"), 
      #srt = 90, #pos = 2, 
      #adj = c(-1, 1), 
-     pos = 2, col = c(scols), cex = cx[1])
+     pos = 2, col = c(scols, "black"), cex = cx[1])
+xst <- seq(0.545, 0.65, 0.105 / 3)
+xy <- cbind(grconvertX(xst, from = "ndc"), 
+            grconvertY(rep(yst[length(yst)], 4), from = "ndc"))
+text(x = xy[, 1], y = xy[, 2], labels = 1:4, pos = 2, cex = cx[1])
 dev.off()
 
 ```

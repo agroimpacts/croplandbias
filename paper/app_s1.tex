@@ -1,0 +1,138 @@
+\RequirePackage{lineno}  % http://www-d0.fnal.gov/Run2Physics/WWW/templates/lineno.html
+\documentclass[12pt]{iopart}
+\newcommand{\gguide}{{\it Preparing graphics for IOP journals}}
+%Uncomment next line if AMS fonts required
+%\usepackage{iopams}  
+% parameters from other files
+\newcommand{\citetapos}[1]{\citeauthor{#1}'s \citeyearpar{#1}}  % apostrophe's in cites
+%\usepackage[square,numbers,sort&compress]{natbib}
+\def\linenumberfont{\normalfont\small\sffamily}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+% From link below: next two lines allow caption to fill the full figure box, and caption formats to be changed (e.g. font)
+% http://tex.stackexchange.com/questions/107350/caption-below-the-figure-and-aligned-with-left-side-of-figure
+% http://ctan.mackichan.com/macros/latex/contrib/caption/caption-eng.pdf
+\usepackage{caption}
+\captionsetup[figure]{slc=off, font=footnotesize}
+%\usepackage{amsmath}
+\usepackage{longtable}
+\usepackage{placeins}
+
+
+\begin{document}
+\bibliographystyle{unsrt}
+
+\setpagewiselinenumbers
+%\modulolinenumbers[5]
+%\linenumbers
+\section*{\large Appendix S1: Supplementary Results}
+%\begin{table}[ht]
+%\centering
+%\caption{Confidence classes for the forcing data based on bias-correction weights.}
+%\begin{tabular}{cc}
+%  \hline
+%  Confidence class & Bias-correction weight \\ 
+%  \hline
+%High & 0.75-1.00 \\ 
+%Medium-High & 0.50-0.75\\ 
+%Medium-Low & 0.25-0.50\\ 
+% Low & 0.05-0.25 \\ 
+% None & $<$0.05 \\ 
+%   \hline
+%\end{tabular}
+%\end{table}  
+\section*{Landcover map bias}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 16cm]{figures/biases_1-100km.pdf} 
+%     \vspace{-3cm}
+      \caption{Mean biases for each of the landcover maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate mean actual bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute bias.  The black numbers in each plot area present the overall means of actual and absolute bias for each sensor-scale combination (actual/absolute). }
+      \label{fig:default}
+\end{figure}
+
+%\vspace{0.5 cm}
+%\begin{equation}
+%\hspace*{1.5 cm} 
+%   \label{metric}
+%     R_n  = \frac{(1 - \alpha)dswr + dlwr - \sigma * T^4}{\lambda}
+%\end{equation}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/biases_1km.pdf} 
+%     \vspace{-3cm}
+      \caption{Mean biases for each of the landcover maps at 1 km resolution, as a function of cropland density. Colored lines (color-coded to map product name) show the mean bias at each level of cropland density, calculated in bins spanning 5\% (e.g. 0-5\% cropland cover, 5-10\%, etc.). Box plots show the variability of bias in each bin (whiskers = 2.5 and 97.5 percentiles, box the inter-quartile, and grey bar in box the median). Actual biases are presented in the top row, and absolute biases in the bottom row.}
+      \label{fig:default}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 8cm]{figures/md_map.pdf} 
+%     \vspace{-3cm}
+      \caption{South Africa's magisterial districts.}
+      \label{fig:default}
+\end{figure}
+
+%\FloatBarrier
+\section*{Carbon bias}
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/carbon_bias_map.pdf} 
+%     \vspace{-3cm}
+      \caption{Spatial patterns of mean bias (across four different possible cover types adjacent to cropland) in carbon stock estimates. }
+      \label{fig:default}
+\end{figure}
+
+\input{figures/totC-bias.tex}
+
+\FloatBarrier
+\input{figures/C-bias-mean-cropland-SA.tex}
+
+\input{figures/C-bias-mean-all-SA.tex}
+
+
+\section*{Yield and Harvested Area Bias}
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/cropland_adj_bias_map2.pdf} 
+      \caption{Biases in cropland maps adjusted using provincial level cropland area estimates.}
+      \label{fig:default}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/yld_bias_map_2.pdf} 
+      \caption{Biases in disaggregated maize yield estimates.}
+      \label{fig:default}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/prod_bias_map_2.pdf} 
+      \caption{Biases in production estimates calculated from disaggregated maize yield and harvested area estimates.}
+      \label{fig:default}
+\end{figure}
+
+\FloatBarrier
+\input{figures/yldprod-bias.tex}
+
+\section*{Evapotranspiration bias}
+\input{figures/et-bias.tex}
+
+\section*{Agent allocation bias}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/abm-selected-districts.pdf} 
+      \caption{The location of the four selected magisterial districts (top left) used in evaluating agent allocation bias, the reference levels of cropland cover within those districts (top right), and the difference in cropland percentage between the reference and each of the four cropland maps (lower four panels). }
+      \label{fig:default}
+\end{figure}
+
+
+
+\FloatBarrier
+\section*{References}
+\bibliography{}
+\end{document}  
+

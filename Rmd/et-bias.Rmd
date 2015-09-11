@@ -20,6 +20,7 @@ Bias in PET estimates as calculated using different version of the cropland data
 Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc. 
 ```{r, eval = FALSE}
 library(SAcropland)
+library(RColorBrewer)
 p_root <- full_path(proj_root("SAcropland"), "SAcropland")
 p_fig <- full_path(p_root, "paper/figures/")
 p_data <- full_path(p_root, "external/ext_data/")
@@ -105,11 +106,11 @@ plot(tst[[15]] - etba[[1]][[15]] * ndays[15])
 etba <- lapply(etba, function(x) x * ndays)
 # plot(etba[[1]][[1]])
 
-# year indices
+# date indices
 yrs <- gsub("*.*_", "", lnames)
 mos <- gsub("_.*", "", lnames)
-yi <- t(sapply(unique(yrs), function(x) range(which(yrs == x))))
-mi <- sapply(unique(mos), function(x) which(mos == x))
+yi <- t(sapply(unique(yrs), function(x) range(which(yrs == x))))  # year index
+mi <- sapply(unique(mos), function(x) which(mos == x))  # month index
 ```
 <a href="#top">Back to top</a>
 
@@ -252,8 +253,10 @@ disaggl <- function(rl, lev = "f25") {
 }
 
 # reshape in list
-l2dag <- list(amu_diff, mumax_diff, mumin_diff, gs3_diff, gsmx_diff)
-names(l2dag) <- c("mu", "mumx", "mumn", "gs", "gspk")
+# l2dag <- list(amu_diff, mumax_diff, mumin_diff, gs3_diff, gsmx_diff)
+# names(l2dag) <- c("mu", "mumx", "mumn", "gs", "gspk")
+l2dag <- list(amu_diff, mumax_diff, mumin_diff, gs3_diff)
+names(l2dag) <- c("mu", "mumx", "mumn", "gs")
 l2dag <- lapply(l2dag, disaggl)
 
 # disaggregate
@@ -285,12 +288,13 @@ rng <- do.call(cbind, lapply(statsl, function(x) {
 rngdt <- data.table(t(rng))
 rng <- unname(unlist(rngdt[, lapply(.SD, function(x) x[which.max(abs(x))])]))
 
-fnm <- "et_bias_map.pdf"
+fnm <- "et_bias_map4.pdf"
 legtext <- rep("%", 5)
 cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
-ecap <- c("Annual mean", "TS max", "TS min", "Peak 3", "Peak")
+# ecap <- c("Annual mean", "TS max", "TS min", "Peak 3", "Peak")
+ecap <- c("Annual mean", "TS max", "TS min", "Peak")
 
 rnder <- function(x) {
   dig <- nchar(max(round(x)))
@@ -299,16 +303,22 @@ rnder <- function(x) {
   round(c(floor(x[1] / rnd), ceiling(x[2] / rnd))) * rnd 
 }
 
-brks <- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))
-cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
-cols[c(1, length(cols))] <- c("darkred", "purple3")
+
+# For Supplementals
+# brks <- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))
+brks <- c(-25, -15, -10, -5, -3, -1, 1, 3, 5, 10, 15, 25)
+# cvec <- c("red", "orange", "grey80", "green", "blue4")
+# cols <- colorRampPalette(cvec)(length(brks) - 1)
+# cols[c(1, length(cols))] <- c("darkred", "purple3")
+cols <- brewer.pal(length(brks) - 1, name = "RdBu")
+cols[6] <- "grey80"
 pdf(full_path(p_fig, fnm), height = 6, width = 7)
-par(mfcol = c(4, 5), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
+par(mfcol = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
 for(j in 1:length(l2dagd)) {
   print(names(l2dagd)[j])
   for(k in 1:length(snms)) {
     rl <- l2dagd[[j]][[k]]$f25
-    print(snms[k])
+    print(paste("...", snms[k]))
     plot(sa.shp, lty = 0)
     image(rl, add = TRUE, col = cols, breaks = brks, legend = FALSE)
     if(j == 1) mtext(mcap[k], side = 2, line = 1, cex = cx)
@@ -323,6 +333,30 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i],
             legend.pos = c(4, 5), leg.adj = list(c(0.1, 0.3), c(-1, -0.5)), 
             cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
 dev.off()
+
+
+fnm <- "et_bias_map.pdf"
+pdf(full_path(p_fig, fnm), height = 6, width = 7)
+par(mfcol = c(2, 2), mar = c(0, 0, 0, 0), oma = c(4, 0, 1, 0))
+for(j in 1) {
+  print(names(l2dagd)[j])
+  for(k in 1:length(snms)) {
+    rl <- l2dagd[[j]][[k]]$f25
+    print(paste("...", snms[k]))
+    plot(sa.shp, lty = 0)
+    image(rl, add = TRUE, col = cols, breaks = brks, legend = FALSE)
+    mtext(mcap[k], side = 3, line = -1, cex = cx)
+  }
+}
+flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i], 
+            legend.vals = brks, longdims = c(0.2, 0.8), 
+            shortdims = c(0.07, 0.01), 
+            colvec = cols, #(length(brks) - 1), 
+            srt = c(270, 0), horiz = TRUE, textside = "bottom", 
+            legend.pos = c(4, 5), leg.adj = list(c(0.3, 0.3), c(-1, -0.75)), 
+            cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
+dev.off()
+
 ```
 <a href="#top">Back to top</a>
 
@@ -391,22 +425,35 @@ mua <- lapply(bstats, function(x) {
 # reshape
 mus <- rbindlist(lapply(names(mu), function(x) cbind(x, mu[[x]])))
 mus[, ol := NULL]
-setnames(mus, c("x", "il"), c("ETvar", "dataset"))
-setkeyv(mus, c("dataset", "ETvar"))
+setnames(mus, c("x", "il", "bias"), c("Variable", "Map", "Bias"))
+setkeyv(mus, c("Map", "Variable"))
 muas <- rbindlist(lapply(names(mua), function(x) cbind(x, mua[[x]])))
 muas[, ol := NULL]
-setnames(muas, c("x", "il", "bias"), c("ETvar", "dataset", "absbias"))
-setkeyv(muas, c("dataset", "ETvar"))
+setnames(muas, c("x", "il", "bias"), c("Variable", "Map", "Abs Bias"))
+setkeyv(muas, c("Map", "Variable"))
 mutab <- mus[muas]
 mutab[, lapply(.SD, function(x) max(abs(x))), .SDcols = 3:4]
+setkey(mutab, "Variable")
+vnmr <- c("Annual Mean", "29-year Max", "29-year Min", "Peak")
+for(i in 1:length(vnms)) mutab[Variable == vnms[i], Variable := vnmr[i]]
+setkey(mutab, "Map")
+for(i in 1:length(snms)) mutab[Map == snms[i], Map := mcap[i]]
+mutab[order(-rank(Map))]
 
-mutab_xtab <- xtable::xtable(mutab, digits = 1)
-print(mutab_xtab, type = "latex", 
-      file = "paper/figures/et-bias.tex")
+caption <- paste("Mean actual and absolute biases (as \\%) for",              
+                 "evapotranspiration variables derived from a 29-year time",
+                 "series calculated by the VIC model, including the average", 
+                 "total ET for the", 
+                 "3 months of the year when ET is highest, the annual mean", 
+                 "and the minimum and maximum annual ETs in the time series.")
+mutab_xtab <- xtable::xtable(mutab, digits = 1, caption = caption)
+print(mutab_xtab, type = "latex", file = "paper/figures/et-bias.tex",
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
 ```
 <a href="#top">Back to top</a>
 
-The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.43%, so not much here.
+The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.25%, so not much here.
 
 ### Bias in relation to rainfall
 
@@ -422,7 +469,7 @@ projection(presa) <- p4s
 presa <- projectRaster(presa, mask25k)  # project to Albers
 presa <- mask(presa, awgts$f25, maskvalue = 0)  # mask
 
-plot(presa)
+plot(presa, breaks = seq(0, 1000, 100), col = topo.colors(9))
 plot(abs(l2dag$mu$globmu$f25))
 plot(presa, abs(l2dag$mu$globmu$f25))
 
