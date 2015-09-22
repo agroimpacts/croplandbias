@@ -211,11 +211,11 @@ par(mfrow = c(1, 2), mar = c(2, 2, 0.5, 0), mgp = c(0.75, 0.05, 0),
 scols <- c("red", "orange3", "green4", "blue")
 cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
 plot(unlist(pctbias), unlist(noland), col = cols, cex = cexs, pch = 20, 
-     ylab = "% HH without farms", xlab = "% cropland bias", cex.lab = cx[2], 
-     cex.axis = cx[1])
+     ylab = "% HH without farms", xlab = "% error in cropland area", 
+     cex.lab = cx[2], cex.axis = cx[1])
 plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20, 
-     ylab = "% land unallocated", xlab = "% cropland bias", cex.lab = cx[2], 
-     cex.axis = cx[1])
+     ylab = "% land unallocated", xlab = "% error in cropland area", 
+     cex.lab = cx[2], cex.axis = cx[1])
 par(xpd = NA)
 
 yst <- seq(0.05, 0.23, 0.18 / 4)

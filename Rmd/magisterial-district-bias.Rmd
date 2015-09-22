@@ -500,13 +500,16 @@ par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2), mgp = c(1.5, 0.5, 0))
 plot(xl, yl2, pch = "", ylab = "% bias", xlab = "% cropland", xaxs = "i",
      mgp = c(1.5, 0.5, 0), yaxs = "i", yaxt = "n")
 axis(2, at = 0:4, round(exp(c(-10, 1:4))))
-for(i in 1:length(gam_mods)) {
+# for(i in 1:length(gam_mods)) {
+for(i in 1:4) {
   m <- gam_mods[[i]]
   p <- polyfunc(m$pdat1)
   polygon(p$x, p$y, col = ptcols[i], border = NA)
   lines(fit ~ pv, data = m$pdat1, col = cols[i], lwd = 1.5, lty = 1)
 }
-legend("topleft", c(mcap, "All 4", "No GlobCover"), lty = 1, lwd = 1.5,
+# legend("topleft", c(mcap, "All 4", "No GlobCover"), lty = 1, lwd = 1.5,
+#        col = cols, bty = "n", xpd = NA)#, title = "Fit")
+legend("topleft", mcap, lty = 1, lwd = 1.5,
        col = cols, bty = "n", xpd = NA)#, title = "Fit")
 dev.off()
 
@@ -515,13 +518,16 @@ par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2))
 plot(xl, yl2, pch = "", ylab = "% bias", xlab = "% cropland", xaxs = "i",
      mgp = c(1.5, 0.5, 0), yaxs = "i", yaxt = "n")
 axis(2, at = 0:4, round(exp(c(-10, 1:4))))
-for(i in 1:length(gam_mods)) {
+#for(i in 1:length(gam_mods)) {
+for(i in 1:4) {
   m <- gam_mods[[i]]
   p <- polyfunc(m$pdat2)
   polygon(p$x, p$y, col = ptcols[i], border = NA)
   lines(fit ~ pv, data = m$pdat2, col = cols[i], lwd = 1.5, lty = 1)
 }
-legend("topleft", c(mcap, "All 4", "No GlobCover"), lty = 1, lwd = 1.5,
+# legend("topleft", c(mcap, "All 4", "No GlobCover"), lty = 1, lwd = 1.5,
+#        col = cols, bty = "n", xpd = NA)#, title = "Fit")
+legend("topleft", mcap, lty = 1, lwd = 1.5,
        col = cols, bty = "n", xpd = NA)#, title = "Fit")
 dev.off()
 
