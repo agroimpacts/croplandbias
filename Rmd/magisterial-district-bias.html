@@ -109,7 +109,7 @@ img {
 <span class="kw">library</span>(nlme)
 <span class="kw">library</span>(mgcv)
 <span class="kw">library</span>(ape)
-<span class="co"># library(fitdistrplus)</span>
+<span class="kw">library</span>(fitdistrplus)
 
 <span class="co"># Paths</span>
 p_root &lt;-<span class="st"> </span><span class="kw">proj_root</span>(<span class="st">&quot;SAcropland&quot;</span>)
@@ -552,12 +552,10 @@ polyfunc &lt;-<span class="st"> </span>function(pdat) {
 </div>
 <div id="gam-plots" class="section level3">
 <h3><span class="header-section-number">2.3.2</span> GAM plots</h3>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;% bias)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;% cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>,
-     <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
-
-
-<span class="kw">round</span>(<span class="kw">log</span>(<span class="kw">seq</span>(<span class="dv">1</span>, <span class="dv">90</span>, <span class="dv">10</span>)), <span class="dv">2</span>)
-<span class="kw">exp</span>(<span class="kw">seq</span>(<span class="dv">0</span>, <span class="fl">4.5</span>, <span class="fl">0.5</span>))
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># plot(xl, yl2, pch = &quot;&quot;, ylab = &quot;% bias)&quot;, xlab = &quot;% cropland&quot;, xaxs = &quot;i&quot;,</span>
+<span class="co">#      yaxs = &quot;i&quot;, yaxt = &quot;n&quot;)</span>
+<span class="co"># round(log(seq(1, 90, 10)), 2)</span>
+<span class="co"># exp(seq(0, 4.5, 0.5))</span>
 
 ptcols &lt;-<span class="st"> </span><span class="kw">sapply</span>(cols, function(x) <span class="kw">makeTransparent</span>(x, <span class="dv">80</span>))  <span class="co"># CI colors</span>
 lw &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">2</span>, <span class="dv">4</span>), <span class="dv">3</span>, <span class="dv">3</span>)
@@ -565,31 +563,39 @@ yl1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</
 yl2 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="kw">round</span>(<span class="kw">max</span>(<span class="kw">sapply</span>(gam_mods, function(x) <span class="kw">max</span>(x$pdat2$fit))), <span class="dv">1</span>))
 <span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_mu0.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="dv">7</span>)
 <span class="kw">par</span>(<span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>))
-<span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;% bias&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;% cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>,
-     <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
+<span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Mean Absolute Error (%)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;% Cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
+     <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
 <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="dv">0</span>:<span class="dv">4</span>, <span class="kw">round</span>(<span class="kw">exp</span>(<span class="kw">c</span>(-<span class="dv">10</span>, <span class="dv">1</span>:<span class="dv">4</span>))))
-for(i in <span class="dv">1</span>:<span class="kw">length</span>(gam_mods)) {
+<span class="co"># for(i in 1:length(gam_mods)) {</span>
+for(i in <span class="dv">1</span>:<span class="dv">4</span>) {
   m &lt;-<span class="st"> </span>gam_mods[[i]]
   p &lt;-<span class="st"> </span><span class="kw">polyfunc</span>(m$pdat1)
   <span class="kw">polygon</span>(p$x, p$y, <span class="dt">col =</span> ptcols[i], <span class="dt">border =</span> <span class="ot">NA</span>)
   <span class="kw">lines</span>(fit ~<span class="st"> </span>pv, <span class="dt">data =</span> m$pdat1, <span class="dt">col =</span> cols[i], <span class="dt">lwd =</span> <span class="fl">1.5</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 }
-<span class="kw">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="kw">c</span>(mcap, <span class="st">&quot;All 4&quot;</span>, <span class="st">&quot;No GlobCover&quot;</span>), <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span>,
+<span class="co"># legend(&quot;topleft&quot;, c(mcap, &quot;All 4&quot;, &quot;No GlobCover&quot;), lty = 1, lwd = 1.5,</span>
+<span class="co">#        col = cols, bty = &quot;n&quot;, xpd = NA)#, title = &quot;Fit&quot;)</span>
+<span class="kw">legend</span>(<span class="st">&quot;topleft&quot;</span>, mcap, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span>,
        <span class="dt">col =</span> cols, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xpd =</span> <span class="ot">NA</span>)<span class="co">#, title = &quot;Fit&quot;)</span>
 <span class="kw">dev.off</span>()
 
 <span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_med0.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="dv">7</span>)
 <span class="kw">par</span>(<span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>))
-<span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;% bias&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;% cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>,
-     <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
+<span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Mean Absolute Error (%)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;% Cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
+     <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
 <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="dv">0</span>:<span class="dv">4</span>, <span class="kw">round</span>(<span class="kw">exp</span>(<span class="kw">c</span>(-<span class="dv">10</span>, <span class="dv">1</span>:<span class="dv">4</span>))))
-for(i in <span class="dv">1</span>:<span class="kw">length</span>(gam_mods)) {
+<span class="co">#for(i in 1:length(gam_mods)) {</span>
+for(i in <span class="dv">1</span>:<span class="dv">4</span>) {
   m &lt;-<span class="st"> </span>gam_mods[[i]]
   p &lt;-<span class="st"> </span><span class="kw">polyfunc</span>(m$pdat2)
   <span class="kw">polygon</span>(p$x, p$y, <span class="dt">col =</span> ptcols[i], <span class="dt">border =</span> <span class="ot">NA</span>)
   <span class="kw">lines</span>(fit ~<span class="st"> </span>pv, <span class="dt">data =</span> m$pdat2, <span class="dt">col =</span> cols[i], <span class="dt">lwd =</span> <span class="fl">1.5</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 }
-<span class="kw">legend</span>(<span class="st">&quot;topleft&quot;</span>, <span class="kw">c</span>(mcap, <span class="st">&quot;All 4&quot;</span>, <span class="st">&quot;No GlobCover&quot;</span>), <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span>,
+<span class="co"># legend(&quot;topleft&quot;, c(mcap, &quot;All 4&quot;, &quot;No GlobCover&quot;), lty = 1, lwd = 1.5,</span>
+<span class="co">#        col = cols, bty = &quot;n&quot;, xpd = NA)#, title = &quot;Fit&quot;)</span>
+<span class="kw">legend</span>(<span class="st">&quot;topleft&quot;</span>, mcap, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span>,
        <span class="dt">col =</span> cols, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xpd =</span> <span class="ot">NA</span>)<span class="co">#, title = &quot;Fit&quot;)</span>
 <span class="kw">dev.off</span>()
 

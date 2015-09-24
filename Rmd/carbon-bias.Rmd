@@ -401,8 +401,8 @@ totc_out <- rbind(t(sapply(totc_cntry, function(x) x[, 1])),
 pnms <- c("Forest", "Secondary", "Shrubland", "Grassland", "Sparse")
 knms <- rep(mcap, 2)
 totc_out <- cbind.data.frame(knms, round(unname(totc_out), 2))
-colnames(totc_out) <- c("map", pnms)
-totc_out <- cbind(region = c(rep("Country", 4), rep("Agricultural", 4)), 
+colnames(totc_out) <- c("Map", pnms)
+totc_out <- cbind(Region = c(rep("Country", 4), rep("Agricultural", 4)), 
                   totc_out)
 caption <- paste("Percent differences in total carbon stock estimates", 
                  "calculated from the reference maps and from each of the four",
@@ -603,11 +603,11 @@ mtext(side = 3, text = "Vegetation mean", line = 0)
 axis(1, at = 1:6, labels = c(1, fact))
 axis(2, at = yax, labels = rep("", length(yax)), las = 2)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 1.5)
-mtext(side = 2, text = "% bias", outer = TRUE, line = 2)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 2)
 par(xpd = NA)
 x <- grconvertX(0.7, from = "ndc", to = "user")
 y <- grconvertY(0.075, from = "ndc", to = "user")
-legend(x = x, y = y, legend = c("actual bias", "absolute bias"), lty = c(2, 1), 
+legend(x = x, y = y, legend = c("Bias", "MAE"), lty = c(2, 1), 
        lwd = 2, bty = "n", cex = 1.2)
 x <- grconvertX(0.1, from = "ndc", to = "user")
 y <- grconvertY(0.11, from = "ndc", to = "user")
@@ -642,7 +642,7 @@ xl <- c(-0.5, 18)
 yl <- c(-60, 70)
 shd <- c(4.5, 10.5, 16.5)
 
-pdf(full_path(p_fig, "carbon_veg_scale3.pdf"), height = 7, width = 7)
+pdf(full_path(p_fig, "carbon_veg_scale.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -666,14 +666,14 @@ for(i in 1:length(lev_vec)) {
 axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
 axis(2, at = yax, labels = yax, las = 2)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
-mtext(side = 2, text = "% bias", outer = TRUE, line = 1)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
 legend(x = 12.4, y = -40, legend = lcnms, pch = 15, col = cols, adj = 0,
        pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
 legend(x = 11.9, y = -40, legend = rep("", 4), pch = 15, adj = 0, 
        col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
        cex = 0.8)
-text(x = 12.7, y = -42, labels = "Absolute", srt = 45, adj = c(0, 0), cex = 0.8)
-text(x = 12.2, y = -42, labels = "Actual", srt = 45, adj = c(0, 0), cex = 0.8)
+text(x = 12.7, y = -42, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
+text(x = 12.2, y = -42, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
 legend(x = 12.1, y = 65, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
        pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
 dev.off()
@@ -686,17 +686,20 @@ dev.off()
 # Statistics from non-croplands areas included in means, for supplementals
 # mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
 # mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mu0s <- copy(rbind(cbind(Bias = "Actual", mu0), 
-                   cbind(Bias = "Absolute", mu0a)))
-for(i in 1:length(LC)) mu0s[V2 == LC[i], V2 := pnms[i]]
-for(i in 1:length(snms)) mu0s[V1 == snms[i], V1 := mcap[i]]
+mu0s <- copy(rbind(cbind(Metric = "Bias", mu0), 
+                   cbind(Metric = "MAE", mu0a)))
 setnames(mu0s, c("V1", "V2", lev_vec), 
          c("Map", "Cover", paste(c(1, fact), "km")))
-caption <- paste("Mean actual and absolute biases for each of the cropland", 
+setkeyv(mu0s, c("Map", "Cover"))
+for(i in 1:length(LC)) mu0s[Cover == LC[i], Cover := pnms[i]]
+setkey(mu0s, "Map")
+for(i in 1:length(snms)) mu0s[Map == snms[i], Map := mcap[i]]
+
+caption <- paste("Biases and mean absolute errors for each of the cropland", 
                  "maps across aggregation scales and each possible landcover", 
                  "type sharing the pixel with cropland. Means were calculated",
                  "across the entire country.")
-mu0s_xtab <- xtable(mu0s, digits = 1, caption = caption)
+mu0s_xtab <- xtable(mu0s[order(Metric, Cover)], digits = 1, caption = caption)
 print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex", 
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
@@ -704,19 +707,23 @@ print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex",
 # Statistics from non-croplands areas included in means, for supplementals
 # mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
 # mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-mus <- copy(rbind(cbind(Bias = "Actual", mu), 
-                  cbind(Bias = "Absolute", mua)))
-for(i in 1:length(LC)) mus[V2 == LC[i], V2 := pnms[i]]
-for(i in 1:length(snms)) mus[V1 == snms[i], V1 := mcap[i]]
+mus <- copy(rbind(cbind(Metric = "Bias", mu), 
+                  cbind(Metric = "MAE", mua)))
 setnames(mus, c("V1", "V2", lev_vec), 
          c("Map", "Cover", paste(c(1, fact), "km")))
-caption <- paste("Mean actual and absolute biases for each of the cropland", 
+setkeyv(mus, c("Map", "Cover"))
+for(i in 1:length(LC)) mus[Cover == LC[i], Cover := pnms[i]]
+setkey(mus, "Map")
+for(i in 1:length(snms)) mus[Map == snms[i], Map := mcap[i]]
+
+caption <- paste("Biases and mean absolute errors for each of the cropland", 
                  "maps across aggregation scales and each possible landcover", 
-                 "type sharing the pixel with cropland. Means were calculated",
+                 "type sharing the pixel with cropland. Metrics were calculated",
                  "across the union of agricultural areas", 
                  "(cropland $>$0.05\\%) identified by the reference map and", 
                  "the cropland map to which it was being compared")
-mus_xtab <- xtable::xtable(mus, digits = 1, caption = caption)
+mus_xtab <- xtable::xtable(mus[order(Metric, Cover)], digits = 1, 
+                           caption = caption)
 print(mus_xtab, type = "latex", 
       file = "paper/figures/C-bias-mean-cropland-SA.tex", 
       tabular.environment = "longtable", floating = FALSE, 

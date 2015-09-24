@@ -141,6 +141,8 @@ img {
 <h1><span class="header-section-number">2</span> Data</h1>
 <p>Use SA provinces with GTI to create the amount of agricultural land estimates per province, akin to provincial statistics used by Ramankutty et al (2008). Note: they mentioned SA has 11 administrative units they used, but the publications they cited <a href="http://www.statssa.gov.za/publications/DiscussLandAccounts/DiscussLandAccounts.pdf">here</a> has just 9 provinces, so maybe they mistakenly counted Lesotho and Swaziland?</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(SAcropland)
+<span class="kw">library</span>(xtable)
+<span class="kw">library</span>(RColorBrewer)
 p_root &lt;-<span class="st"> </span><span class="kw">full_path</span>(<span class="kw">proj_root</span>(<span class="st">&quot;SAcropland&quot;</span>), <span class="st">&quot;SAcropland&quot;</span>)
 p_fig &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;paper/figures/&quot;</span>)
 p_data &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;external/ext_data/&quot;</span>)
@@ -392,12 +394,14 @@ yld &lt;-<span class="st"> </span><span class="kw">fread</span>(<span class="kw"
 <span class="co"># Transform magisterial districts, remove Prince Edward Islands</span>
 md &lt;-<span class="st"> </span><span class="kw">spTransform</span>(gadm, <span class="dt">CRSobj =</span> sa.shp@proj4string)
 md &lt;-<span class="st"> </span>md[md$ID_2 !=<span class="st"> </span><span class="dv">313</span>, ]
-<span class="co"># round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))</span>
 md@data &lt;-<span class="st"> </span>md@data[, <span class="kw">c</span>(<span class="st">&quot;PID&quot;</span>, <span class="st">&quot;ID_2&quot;</span>, <span class="st">&quot;NAME_1&quot;</span>, <span class="st">&quot;NAME_2&quot;</span>)]  <span class="co"># trim down columns</span>
 <span class="co"># fix a few names that occur more than once to make unique for merging properly</span>
 md@data[md$ID_2 ==<span class="st"> </span><span class="dv">43</span>, <span class="st">&quot;NAME_2&quot;</span>] &lt;-<span class="st"> &quot;MiddelburgEC&quot;</span>
 md@data[md$ID_2 ==<span class="st"> </span><span class="dv">143</span>, <span class="st">&quot;NAME_2&quot;</span>] &lt;-<span class="st"> &quot;RichmondKZ&quot;</span>
 md@data[md$ID_2 ==<span class="st"> </span><span class="dv">86</span>, <span class="st">&quot;NAME_2&quot;</span>] &lt;-<span class="st"> &quot;HeidelbergG&quot;</span>
+
+<span class="co"># mean MD area</span>
+<span class="kw">round</span>(<span class="kw">mean</span>(rgeos::<span class="kw">gArea</span>(md, <span class="dt">byid =</span> <span class="ot">TRUE</span>) /<span class="st"> </span><span class="dv">1000000</span>))  <span class="co"># 3445 km square</span>
 
 <span class="co"># check names in two datasets</span>
 <span class="co"># match(md@data$NAME_2, yld$district)</span>
@@ -784,7 +788,22 @@ p_diff3 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ili
 <span class="co"># yield differences</span>
 list1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg, function(x) x[<span class="dv">1</span>])
 list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg, function(x) x[-<span class="dv">1</span>])
-y_diff1 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 1 </span>
+y_diff1 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 1</span>
+
+<span class="co"># check grids (output in QGIS and examine for sensible results--they are)</span>
+<span class="co"># for(i in lev) {</span>
+<span class="co">#   writeRaster(y_diff1$globmu[[i]]$gti, </span>
+<span class="co">#               file = full_path(p_data, paste0(&quot;test/globdiff&quot;, i, &quot;.tif&quot;)))</span>
+<span class="co"># }</span>
+<span class="co"># for(i in lev) {</span>
+<span class="co">#   writeRaster(list1[[i]]$gti, </span>
+<span class="co">#               file = full_path(p_data, paste0(&quot;test/gtiyldtst&quot;, i, &quot;.tif&quot;)))</span>
+<span class="co"># }</span>
+<span class="co"># for(i in lev) {</span>
+<span class="co">#   writeRaster(list2[[i]]$globmu, </span>
+<span class="co">#               file = full_path(p_data, paste0(&quot;test/globyld2tst&quot;, i, &quot;.tif&quot;)))</span>
+<span class="co"># }</span>
+
 <span class="co"># type 2 (non-zero)</span>
 list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg3, function(x) x[-<span class="dv">1</span>]) <span class="co"># cyld_agg for a, b/c correct</span>
 y_diff2 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 2</span>
@@ -854,7 +873,7 @@ rng &lt;-<span class="st"> </span><span class="kw">lapply</span>(statsl, functio
 fnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">paste0</span>(<span class="st">&quot;prod_bias_map_&quot;</span>, <span class="dv">1</span>:<span class="dv">3</span>, <span class="st">&quot;.pdf&quot;</span>), 
           <span class="kw">paste0</span>(<span class="st">&quot;yld_bias_map_&quot;</span>, <span class="dv">1</span>:<span class="dv">2</span>, <span class="st">&quot;.pdf&quot;</span>))  <span class="co"># output names</span>
 <span class="co"># legtext &lt;- c(rep(&quot;tons&quot;, 3), rep(&quot;tons/ha&quot;, 2))</span>
-legtext &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;%&quot;</span>, <span class="dv">5</span>)
+legtext &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;% Difference&quot;</span>, <span class="dv">5</span>)
 cx &lt;-<span class="st"> </span><span class="fl">1.4</span>
 lcol &lt;-<span class="st"> &quot;black&quot;</span>
 mcap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA-LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;GeoWiki&quot;</span>)
@@ -893,8 +912,11 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(statsl)) {
   <span class="co"># if(i &gt;= 4) brks &lt;- round(brks, 1)</span>
   <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;figure&quot;</span>, i, <span class="st">&quot;of&quot;</span>, <span class="kw">length</span>(statsl)))
   brks &lt;-<span class="st"> </span>brksl[[i]]
-  cols &lt;-<span class="st"> </span><span class="kw">colorRampPalette</span>(<span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;grey80&quot;</span>, <span class="st">&quot;blue4&quot;</span>))(<span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>)
-  cols[<span class="kw">c</span>(<span class="dv">1</span>, <span class="kw">length</span>(cols))] &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;darkred&quot;</span>, <span class="st">&quot;purple3&quot;</span>)
+  cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rev</span>(<span class="kw">brewer.pal</span>(<span class="kw">length</span>(brks) /<span class="st"> </span><span class="dv">2</span>, <span class="st">&quot;Reds&quot;</span>)[-<span class="dv">1</span>]), <span class="st">&quot;grey80&quot;</span>, 
+          <span class="kw">brewer.pal</span>(<span class="kw">length</span>(brks) /<span class="st"> </span><span class="dv">2</span>, <span class="st">&quot;Blues&quot;</span>)[-<span class="dv">1</span>])
+  brklen &lt;-<span class="st"> </span><span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>
+  <span class="co">#cols &lt;- colorRampPalette(c(&quot;red&quot;, &quot;grey80&quot;, &quot;blue4&quot;))(length(brks) - 1)</span>
+  <span class="co">#cols[c(1, length(cols))] &lt;- c(&quot;darkred&quot;, &quot;purple3&quot;)</span>
   <span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, fnms[i]), <span class="dt">height =</span> <span class="dv">6</span>, <span class="dt">width =</span> <span class="dv">7</span>)
   <span class="kw">par</span>(<span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">0</span>))
   for(j in <span class="dv">1</span>:<span class="kw">length</span>(snms)) {
@@ -904,18 +926,18 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(statsl)) {
       <span class="kw">print</span>(lev[k])
       <span class="kw">plot</span>(sa.shp, <span class="dt">lty =</span> <span class="dv">0</span>)
       <span class="kw">plot</span>(rl[[snms[j]]][[lev[k]]], <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> cols, 
-           <span class="dt">breaks =</span> brks, <span class="dt">legend =</span> <span class="ot">FALSE</span>)
+                <span class="dt">breaks =</span> brks, <span class="dt">legend =</span> <span class="ot">FALSE</span>)
       if(k ==<span class="st"> </span><span class="dv">1</span>) <span class="kw">mtext</span>(mcap[j], <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">line =</span> <span class="dv">1</span>, <span class="dt">cex =</span> cx)
       if(j ==<span class="st"> </span><span class="dv">1</span>) <span class="kw">mtext</span>(lev2[k], <span class="dt">side =</span> <span class="dv">3</span>, <span class="dt">line =</span> <span class="dv">0</span>, <span class="dt">cex =</span> cx)
     }
   }
   <span class="kw">flex_legend</span>(<span class="dt">ncuts =</span> <span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>, <span class="dt">legend.text =</span> legtext[i], 
-              <span class="dt">legend.vals =</span> brks, <span class="dt">longdims =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.8</span>), 
-              <span class="dt">shortdims =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.01</span>), 
+              <span class="dt">legend.vals =</span> brks, <span class="dt">longdims =</span> <span class="kw">c</span>(<span class="fl">0.15</span>, <span class="fl">0.8</span>), 
+              <span class="dt">shortdims =</span> <span class="kw">c</span>(<span class="fl">0.07</span>, <span class="fl">0.01</span>), 
               <span class="dt">colvec =</span> cols, <span class="co">#(length(brks) - 1), </span>
               <span class="dt">srt =</span> <span class="kw">c</span>(<span class="dv">270</span>, <span class="dv">0</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>, <span class="dt">textside =</span> <span class="st">&quot;bottom&quot;</span>, 
-              <span class="dt">legend.pos =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">5</span>), <span class="dt">leg.adj =</span> <span class="kw">list</span>(<span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>), <span class="kw">c</span>(<span class="dv">0</span>, -<span class="fl">0.5</span>)), 
-              <span class="dt">cex.val =</span> cx -<span class="st"> </span><span class="fl">0.4</span>, <span class="dt">textcol =</span> lcol, <span class="dt">bordercol =</span> lcol)
+              <span class="dt">legend.pos =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">5</span>), <span class="dt">leg.adj =</span> <span class="kw">list</span>(<span class="kw">c</span>(<span class="fl">0.25</span>, <span class="dv">0</span>), <span class="kw">c</span>(<span class="dv">0</span>, -<span class="fl">0.5</span>)),
+              <span class="dt">cex.val =</span> cx, <span class="dt">textcol =</span> lcol, <span class="dt">bordercol =</span> lcol)
   <span class="kw">dev.off</span>()
 }  
 
@@ -1067,32 +1089,32 @@ for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="s
 <div id="bias-plots" class="section level3">
 <h3><span class="header-section-number">3.3.1</span> Bias plots</h3>
 <pre class="sourceCode r"><code class="sourceCode r">alph &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">225</span>, <span class="dv">40</span>)
-<span class="co">#Ccols &lt;- brewer.pal(n = 7, name = &quot;Greys&quot;)</span>
-<span class="co"># LC2 &lt;- c(LC[-grep(&quot;second|grass&quot;, LC)], &quot;all&quot;)</span>
-<span class="co"># xax &lt;- seq(0, 7, 6 / (length(yax) - 2)); length(xax)</span>
 x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>, <span class="dv">12</span>, <span class="dv">15</span>)
 w &lt;-<span class="st"> </span><span class="dv">3</span> /<span class="st"> </span><span class="dv">8</span>
 xo &lt;-<span class="st"> </span>(<span class="kw">cumsum</span>(<span class="kw">rep</span>(w, <span class="dv">8</span>)) -<span class="st"> </span>w /<span class="st"> </span><span class="dv">2</span>)[-<span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">8</span>)]
-<span class="co">#x + xo[j] + o[k]</span>
 o &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, w)
 xa &lt;-<span class="st"> </span><span class="kw">sapply</span>(x, function(x) x +<span class="st"> </span>xo)
-cx &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>, <span class="fl">1.25</span>, <span class="dv">1</span>, <span class="dv">1</span>)
+cx &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">1.25</span>, <span class="dv">1</span>)
 g1 &lt;-<span class="st"> &quot;grey90&quot;</span>
 
 <span class="co"># mul &lt;- c(&quot;p1mu&quot;, &quot;p2mu&quot;, &quot;p3mu&quot;, &quot;y1mu&quot;, &quot;y2mu&quot;)</span>
-mul &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p2mu&quot;</span>, <span class="st">&quot;p3mu&quot;</span>, <span class="st">&quot;y1mu&quot;</span>, <span class="st">&quot;y2mu&quot;</span>)
+<span class="co"># mul &lt;- c(&quot;p2mu&quot;, &quot;p3mu&quot;, &quot;y1mu&quot;, &quot;y2mu&quot;)</span>
+mul &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p1mu&quot;</span>, <span class="st">&quot;y1mu&quot;</span>)
 <span class="co">#mal &lt;- c(&quot;p1ma&quot;, &quot;p2ma&quot;, &quot;p3ma&quot;, &quot;y1ma&quot;, &quot;y2ma&quot;)</span>
-mal &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p2ma&quot;</span>, <span class="st">&quot;p3ma&quot;</span>, <span class="st">&quot;y1ma&quot;</span>, <span class="st">&quot;y2ma&quot;</span>)
+<span class="co"># mal &lt;- c(&quot;p2ma&quot;, &quot;p3ma&quot;, &quot;y1ma&quot;, &quot;y2ma&quot;)</span>
+mal &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p1ma&quot;</span>, <span class="st">&quot;y1ma&quot;</span>)
 malmul &lt;-<span class="st"> </span><span class="kw">list</span>(mal, mul)
 <span class="co">#pyl &lt;- c(&quot;mup&quot;, &quot;mup&quot;, &quot;mup&quot;, &quot;muy&quot;, &quot;muy&quot;)</span>
-pyl &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mup&quot;</span>, <span class="st">&quot;mup&quot;</span>, <span class="st">&quot;muy&quot;</span>, <span class="st">&quot;muy&quot;</span>)
+<span class="co"># pyl &lt;- c(&quot;mup&quot;, &quot;mup&quot;, &quot;muy&quot;, &quot;muy&quot;)</span>
+pyl &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mup&quot;</span>, <span class="st">&quot;muy&quot;</span>)
 
 xl &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="fl">0.5</span>, <span class="dv">18</span>)
 yl &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">70</span>, <span class="dv">80</span>)
 shd &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">4.5</span>, <span class="fl">10.5</span>, <span class="fl">16.5</span>)
 cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;orange3&quot;</span>, <span class="st">&quot;green4&quot;</span>, <span class="st">&quot;blue&quot;</span>)
 lcnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;Geowiki&quot;</span>)
-pchs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;*&quot;</span>, <span class="st">&quot;+&quot;</span>, <span class="st">&quot;o&quot;</span>, <span class="st">&quot;x&quot;</span>, <span class="st">&quot;-&quot;</span>)
+<span class="co"># pchs &lt;- c(&quot;*&quot;, &quot;+&quot;, &quot;o&quot;, &quot;x&quot;, &quot;-&quot;)</span>
+pchs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;+&quot;</span>, <span class="st">&quot;o&quot;</span>)
 
 <span class="co">#yl &lt;- range(mu[, 3:8, with = FALSE], mua[, 3:8, with = FALSE])</span>
 <span class="co">#yl &lt;- round(yl / 10) * 10</span>
@@ -1130,17 +1152,18 @@ for(ii in <span class="dv">1</span>:<span class="kw">length</span>(lev)) {
 <span class="kw">axis</span>(<span class="dv">1</span>, <span class="dt">at =</span> <span class="kw">seq</span>(<span class="fl">1.5</span>, <span class="fl">18.5</span>, <span class="dv">3</span>), <span class="dt">labels =</span> <span class="kw">c</span>(<span class="dv">1</span>, fact))
 <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> yax, <span class="dt">labels =</span> yax, <span class="dt">las =</span> <span class="dv">2</span>)
 <span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">text =</span> <span class="st">&quot;Resolution (km)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="fl">0.5</span>)
-<span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">text =</span> <span class="st">&quot;% bias&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="dv">1</span>)
+<span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">text =</span> <span class="st">&quot;Bias/MAE (%)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="dv">1</span>)
 <span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.4</span>, <span class="dt">y =</span> -<span class="dv">40</span>, <span class="dt">legend =</span> lcnms, <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">col =</span> cols, <span class="dt">adj =</span> <span class="dv">0</span>,
        <span class="dt">pt.cex =</span> <span class="fl">1.5</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">x.intersp =</span> <span class="fl">0.5</span>)
 <span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">11.9</span>, <span class="dt">y =</span> -<span class="dv">40</span>, <span class="dt">legend =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="dv">4</span>), <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">adj =</span> <span class="dv">0</span>, 
        <span class="dt">col =</span> <span class="kw">makeTransparent</span>(cols, <span class="dt">alpha =</span> alph[<span class="dv">2</span>]), <span class="dt">pt.cex =</span> <span class="fl">1.5</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, 
        <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Absolute&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex=</span> <span class="fl">0.8</span>)
-<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.2</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Actual&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">65</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Prod I&quot;</span>, <span class="st">&quot;Prod II&quot;</span>, <span class="st">&quot;Yield 1&quot;</span>, <span class="st">&quot;Yield 2&quot;</span>),        <span class="dt">pch =</span> pchs, <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="fl">2.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">dev.off</span>()
+<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;MAE&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex=</span> <span class="fl">0.8</span>)
+<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.2</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Bias&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
+<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">65</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Production&quot;</span>, <span class="st">&quot;Yield&quot;</span>), <span class="dt">pch =</span> pchs, 
+       <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">1.5</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
 
+<span class="kw">dev.off</span>()
 
 <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(lev), function(ii) {
   lv &lt;-<span class="st"> </span>lev[ii]
@@ -1153,7 +1176,43 @@ for(ii in <span class="dv">1</span>:<span class="kw">length</span>(lev)) {
       })
     })
   })
-})</code></pre>
+})
+
+<span class="kw">do.call</span>(cbind, <span class="kw">lapply</span>(lev, function(x) {
+  <span class="kw">rbind</span>(<span class="kw">cbind.data.frame</span>(<span class="st">&quot;Map&quot;</span> =<span class="st"> </span>y1mu[ol ==<span class="st"> </span>x, il], 
+                         <span class="st">&quot;v&quot;</span> =<span class="st"> </span><span class="kw">round</span>(y1mu[ol ==<span class="st"> </span>x, bias] /<span class="st"> </span>muy[x] *<span class="st"> </span><span class="dv">100</span>, <span class="dv">1</span>)),
+        <span class="kw">cbind.data.frame</span>(<span class="st">&quot;Map&quot;</span> =<span class="st"> </span>p1mu[ol ==<span class="st"> </span>x, il], 
+                         <span class="st">&quot;v&quot;</span> =<span class="st"> </span><span class="kw">round</span>(p1mu[ol ==<span class="st"> </span>x, bias] /<span class="st"> </span>mup[x] *<span class="st"> </span><span class="dv">100</span>, <span class="dv">1</span>)))
+}))
+
+
+vnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">&quot;Yield&quot;</span>, <span class="kw">length</span>(snms)), <span class="kw">rep</span>(<span class="st">&quot;Production&quot;</span>, <span class="kw">length</span>(snms)))
+aa &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>)
+out_tab &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="dv">2</span>, function(x) {
+  out &lt;-<span class="st"> </span><span class="kw">do.call</span>(cbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(lev), function(ii) {
+    lv &lt;-<span class="st"> </span>lev[ii]  
+    mm &lt;-<span class="st"> </span>malmul[<span class="dv">2</span>:<span class="dv">1</span>][[x]] 
+    v &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="kw">length</span>(mm):<span class="dv">1</span>, function(j) {
+      v2 &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(snms), function(i) {
+        nm &lt;-<span class="st"> </span>snms[i]
+        <span class="kw">round</span>(<span class="kw">get</span>(mm[j])[ol ==<span class="st"> </span>lv &amp;<span class="st"> </span>il ==<span class="st"> </span>nm,  bias] /<span class="st"> </span><span class="kw">get</span>(pyl[j])[lv] *<span class="st"> </span><span class="dv">100</span>,<span class="dv">1</span>)
+      }))
+      <span class="kw">rownames</span>(v2) &lt;-<span class="st"> </span>snms
+      v2
+    }))
+  }))
+  out &lt;-<span class="st"> </span><span class="kw">cbind.data.frame</span>(aa[x], mcap, <span class="st">&quot;Variable&quot;</span> =<span class="st"> </span>vnms, <span class="kw">unname</span>(out))
+  <span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Metric&quot;</span>, <span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Variable&quot;</span>, <span class="kw">paste</span>(<span class="kw">c</span>(<span class="dv">1</span>, fact), <span class="st">&quot;km&quot;</span>))
+  out
+}))  
+
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (MAE) in disaggregated maize&quot;</span>,                  <span class="st">&quot;yield and production (calculated from disaggregated yield&quot;</span>,                    <span class="st">&quot;and harvested area estimates)&quot;</span>, 
+                 <span class="st">&quot;maps. Bias and MAE were normalized to their&quot;</span>, 
+                 <span class="st">&quot;respective mean values calculated from reference maps.&quot;</span>)    
+out_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(out_tab, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(out_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/yldprod-bias.tex&quot;</span>, 
+      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
 </div>
@@ -1244,7 +1303,9 @@ ygaps &lt;-<span class="st"> </span><span class="kw">cbind.data.frame</span>(sce
                           <span class="kw">rbind</span>(ygap_bias, ygap_bias2, ygap_bias3))
 ygap_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(ygaps, <span class="dt">digits =</span> <span class="dv">1</span>)
 <span class="kw">print</span>(ygap_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
-      <span class="dt">file =</span> <span class="st">&quot;paper/figures/ygap-spat-bias.tex&quot;</span>)</code></pre>
+      <span class="dt">file =</span> <span class="st">&quot;paper/figures/ygap-spat-bias.tex&quot;</span>)
+
+<span class="kw">save</span>(<span class="dt">list =</span> <span class="kw">ls</span>(), <span class="dt">file =</span> <span class="kw">full_path</span>(p_data, <span class="st">&quot;yield-bias.rda&quot;</span>))</code></pre>
 <p><a href="#top">Back to top</a></p>
 <p>The actual impact of the spatial bias is fairly low, being largely cancelled out by biases in other direction in other areas. This illustrates the advantage of a statistically constrained approach to crop area estimates.</p>
 </div>

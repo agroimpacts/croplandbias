@@ -47,7 +47,7 @@
   \centering
      \includegraphics[width = 16cm]{figures/biases_1-100km.pdf} 
 %     \vspace{-3cm}
-      \caption{Mean biases for each of the landcover maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate mean actual bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute bias.  The black numbers in each plot area present the overall means of actual and absolute bias for each sensor-scale combination (actual/absolute). }
+      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute error.  The black numbers in each plot area present the overall means of bias/MAE for each sensor-scale combination. }
       \label{fig:default}
 \end{figure}
 
@@ -62,7 +62,7 @@
   \centering
      \includegraphics[width = 12cm]{figures/biases_1km.pdf} 
 %     \vspace{-3cm}
-      \caption{Mean biases for each of the landcover maps at 1 km resolution, as a function of cropland density. Colored lines (color-coded to map product name) show the mean bias at each level of cropland density, calculated in bins spanning 5\% (e.g. 0-5\% cropland cover, 5-10\%, etc.). Box plots show the variability of bias in each bin (whiskers = 2.5 and 97.5 percentiles, box the inter-quartile, and grey bar in box the median). Actual biases are presented in the top row, and absolute biases in the bottom row.}
+      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps at 1 km resolution, as a function of cropland density. Colored lines (color-coded to map product name) show the bias/MAE at each level of cropland density, calculated in bins spanning 5\% (e.g. 0-5\% cropland cover, 5-10\%, etc.). Box plots show the variability of bias in each bin (whiskers = 2.5 and 97.5 percentiles, box the inter-quartile, and grey bar in box the median). Biases are presented in the top row, and MAEs in the bottom row. Statistics are calculated from pooled map errors calculated from differences between the 2007 reference map and each cropland map, and the 2011 reference map and each cropland map.}
       \label{fig:default}
 \end{figure}
 
@@ -74,13 +74,13 @@
       \label{fig:default}
 \end{figure}
 
-%\FloatBarrier
+\FloatBarrier
 \section*{Carbon bias}
 \begin{figure}[ht]
   \centering
      \includegraphics[width = 12cm]{figures/carbon_bias_map.pdf} 
 %     \vspace{-3cm}
-      \caption{Spatial patterns of mean bias (across four different possible cover types adjacent to cropland) in carbon stock estimates. }
+      \caption{Spatial patterns of error (averaged across four different possible cover types adjacent to cropland) in carbon stock estimates. }
       \label{fig:default}
 \end{figure}
 
@@ -96,21 +96,21 @@
 \begin{figure}[ht]
   \centering
      \includegraphics[width = 12cm]{figures/cropland_adj_bias_map2.pdf} 
-      \caption{Biases in cropland maps adjusted using provincial level cropland area estimates.}
+      \caption{Errors in cropland maps adjusted using provincial cropland area statistics.}
       \label{fig:default}
 \end{figure}
 
 \begin{figure}[ht]
   \centering
      \includegraphics[width = 12cm]{figures/yld_bias_map_2.pdf} 
-      \caption{Biases in disaggregated maize yield estimates.}
+      \caption{Errors (normalized to the reference-derived country mean) in disaggregated maize yield estimates.}
       \label{fig:default}
 \end{figure}
 
 \begin{figure}[ht]
   \centering
      \includegraphics[width = 12cm]{figures/prod_bias_map_2.pdf} 
-      \caption{Biases in production estimates calculated from disaggregated maize yield and harvested area estimates.}
+      \caption{Errors (normalized to reference-derived country mean) production estimates calculated from disaggregated maize yield and harvested area estimates.}
       \label{fig:default}
 \end{figure}
 

@@ -18,6 +18,7 @@ output:
 library(raster)
 library(lmisc)
 library(R.utils)
+library(RColorBrewer)
 
 # Paths
 p_root <- proj_root("SAcropland")
@@ -58,11 +59,13 @@ names(disagg) <- snms
 ## Plot of selected rasters and levels 
 ```{r, eval = FALSE}
 # Plotting colors
-cols <- colorRampPalette(c("red", "grey80", "blue4"))
+# cols <- colorRampPalette(c("red", "grey80", "blue4"))
 brks <- c(-100.1, -75, -50, -25, -10, -5, -1, 1, 5, 10, 25, 50, 75, 100.1)
+cols <- c(rev(brewer.pal(length(brks) / 2, "Reds")[-1]), "grey80", 
+          brewer.pal(length(brks) / 2, "Blues")[-1])
 brklen <- length(brks) - 1
-cols <- cols(brklen)
-cols[c(1, length(cols))] <- c("darkred", "purple3")
+# cols <- cols(brklen)
+# cols[c(1, length(cols))] <- c("darkred", "purple3")
 legtext <- "% Difference"
 cx <- 1.4
 lcol <- "black"
@@ -84,7 +87,7 @@ for(i in 1:length(snms)) {
 flex_legend(ncuts = brklen, legend.text = legtext, 
             legend.vals = round(brks), longdims = c(0.2, 0.8), 
             shortdims = c(0.05, 0.01), colvec = cols, srt = c(270, 0), 
-            horiz = TRUE, textside = "bottom", legend.pos = c(4, 5), 
+            horiz = TRUE, textside = "bottom", legend.pos = c(4, 7), 
             leg.adj = list(c(0.2, 0.35), c(0.5, -0.5)), cex.val = cx, 
             textcol = lcol, bordercol = lcol)
 dev.off()
@@ -159,12 +162,12 @@ for(bt in 1:2) {
       }
     }
     lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = 3)
-    if(i == 1) mtext(ifelse(bt == 1, "% bias", "% bias (absolute)"), side = 2, 
-                     line = 2.2, cex = 0.8)
+    if(i == 1) mtext(ifelse(bt == 1, "Bias (%)", "Mean absolute error (%)"), 
+                     side = 2, line = 2.2, cex = 0.8)
     if(bt == 1) mtext(lcnms[i], side = 3, line = 0, col = cols[i])
   }
 }
-mtext("% cropland", side = 1, outer = TRUE, line = -1, cex = 0.8)
+mtext("% Cropland", side = 1, outer = TRUE, line = -1, cex = 0.8)
 dev.off()
 ```
 
@@ -190,7 +193,7 @@ pdf(full_path(p_fig, "biases_1-100km.pdf"), width = 7.5, height = 7)
 l <- layout(m3)
 # layout.show(l)
 # i <- 1; j <- 1
-par(mar = c(0.5, 0, 1, 0.3), oma = c(5, 4, 2, 2))
+par(mar = c(0.5, 0, 1, 0.3), oma = c(5, 5, 2, 2))
 for(i in 1:length(snms)) {
   highcounter <- rep(0, length(lev))
   for(j in 1:length(lev)) {
@@ -217,7 +220,7 @@ for(i in 1:length(snms)) {
     text(5, pp$yl2[2] - 14, labels = paste(muv, collapse = " / "), cex = 1.1, 
          col = "grey10")
     if(j == 1) axis(2, at = yl, labels = yl, las = 2, mgp = c(1, 0.6, 0))
-    if(j == 1) mtext(lcnms[i], side = 2, line = 2.8, cex = 1, col = cols[i])
+    if(j == 1) mtext(lcnms[i], side = 2, line = 3, cex = 1, col = cols[i])
     if(i == 1) mtext(levnms[j], side = 3, line = -0.4, cex = 1.2)
     axis(1, at = c(1, 5, 10, 15, 20), labels = rep("", 5), mgp = c(1, 1, 0), 
          tcl = -0.7, lwd.ticks = 1.2, pos = pp$yl2[1])
@@ -229,12 +232,12 @@ for(i in 1:length(snms)) {
     }
   }
 }
-mtext("% bias", side = 2, line = 2.1, cex = 0.8, outer = TRUE, adj = 0.5)
-mtext("% cropland", side = 1, outer = TRUE, line = 1.5, cex = 0.8)
+mtext("% Bias/MAE", side = 2, line = 2, cex = 0.8, outer = TRUE, adj = 0.5)
+mtext("% Cropland", side = 1, outer = TRUE, line = 1.5, cex = 0.8)
 par(xpd = NA)
 x <- grconvertX(0.75, from = "ndc", to = "user")
 y <- grconvertY(0.07, from = "ndc", to = "user")
-legend(x = x, y = y, legend = c("actual bias", "absolute bias"), lty = lt, 
+legend(x = x, y = y, legend = c("Bias", "Mean absolute error"), lty = lt, 
        lwd = ylwd, bty = "n", cex = 1.2)
 dev.off()
 
@@ -299,9 +302,6 @@ stats2011
 ```
 
 <a href="#top">Back to top</a>
-
-
-
 
 
 ```{r, eval=FALSE, echo=FALSE}

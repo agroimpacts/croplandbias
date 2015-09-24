@@ -50,6 +50,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 ```{r, eval=FALSE}
 library(SAcropland)
 library(xtable)
+library(RColorBrewer)
 p_root <- full_path(proj_root("SAcropland"), "SAcropland")
 p_fig <- full_path(p_root, "paper/figures/")
 p_data <- full_path(p_root, "external/ext_data/")
@@ -797,7 +798,7 @@ rng <- lapply(statsl, function(x) {
 fnms <- c(paste0("prod_bias_map_", 1:3, ".pdf"), 
           paste0("yld_bias_map_", 1:2, ".pdf"))  # output names
 # legtext <- c(rep("tons", 3), rep("tons/ha", 2))
-legtext <- rep("%", 5)
+legtext <- rep("% Difference", 5)
 cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
@@ -836,8 +837,11 @@ for(i in 1:length(statsl)) {
   # if(i >= 4) brks <- round(brks, 1)
   print(paste("figure", i, "of", length(statsl)))
   brks <- brksl[[i]]
-  cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
-  cols[c(1, length(cols))] <- c("darkred", "purple3")
+  cols <- c(rev(brewer.pal(length(brks) / 2, "Reds")[-1]), "grey80", 
+          brewer.pal(length(brks) / 2, "Blues")[-1])
+  brklen <- length(brks) - 1
+  #cols <- colorRampPalette(c("red", "grey80", "blue4"))(length(brks) - 1)
+  #cols[c(1, length(cols))] <- c("darkred", "purple3")
   pdf(full_path(p_fig, fnms[i]), height = 6, width = 7)
   par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(5, 5, 2, 0))
   for(j in 1:length(snms)) {
@@ -847,18 +851,18 @@ for(i in 1:length(statsl)) {
       print(lev[k])
       plot(sa.shp, lty = 0)
       plot(rl[[snms[j]]][[lev[k]]], add = TRUE, col = cols, 
-           breaks = brks, legend = FALSE)
+                breaks = brks, legend = FALSE)
       if(k == 1) mtext(mcap[j], side = 2, line = 1, cex = cx)
       if(j == 1) mtext(lev2[k], side = 3, line = 0, cex = cx)
     }
   }
   flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i], 
-              legend.vals = brks, longdims = c(0.2, 0.8), 
-              shortdims = c(0.1, 0.01), 
+              legend.vals = brks, longdims = c(0.15, 0.8), 
+              shortdims = c(0.07, 0.01), 
               colvec = cols, #(length(brks) - 1), 
               srt = c(270, 0), horiz = TRUE, textside = "bottom", 
-              legend.pos = c(4, 5), leg.adj = list(c(0.1, 0.3), c(0, -0.5)), 
-              cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
+              legend.pos = c(4, 5), leg.adj = list(c(0.25, 0), c(0, -0.5)),
+              cex.val = cx, textcol = lcol, bordercol = lcol)
   dev.off()
 }  
 
@@ -1019,16 +1023,11 @@ for(chk in list(c("modmu", "f25"), c("geow", "f10"), c("sa30", "f50"),
 ### Bias plots
 ```{r, eval=FALSE}
 alph <- c(225, 40)
-#Ccols <- brewer.pal(n = 7, name = "Greys")
-# LC2 <- c(LC[-grep("second|grass", LC)], "all")
-# xax <- seq(0, 7, 6 / (length(yax) - 2)); length(xax)
 x <- c(0, 3, 6, 9, 12, 15)
 w <- 3 / 8
 xo <- (cumsum(rep(w, 8)) - w / 2)[-c(2, 4, 6, 8)]
-#x + xo[j] + o[k]
 o <- c(0, w)
 xa <- sapply(x, function(x) x + xo)
-# cx <- c(2, 1.25, 1, 1)
 cx <- c(1.25, 1)
 g1 <- "grey90"
 
@@ -1087,15 +1086,14 @@ for(ii in 1:length(lev)) {
 axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
 axis(2, at = yax, labels = yax, las = 2)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
-mtext(side = 2, text = "% bias", outer = TRUE, line = 1)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
 legend(x = 12.4, y = -40, legend = lcnms, pch = 15, col = cols, adj = 0,
        pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
 legend(x = 11.9, y = -40, legend = rep("", 4), pch = 15, adj = 0, 
        col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
        cex = 0.8)
-text(x = 12.7, y = -42, labels = "Absolute", srt = 45, adj = c(0, 0), cex= 0.8)
-text(x = 12.2, y = -42, labels = "Actual", srt = 45, adj = c(0, 0), cex = 0.8)
-# legend(x = 12.1, y = 65, legend = c("Prod I", "Prod II", "Yield 1", "Yield 2"),        pch = pchs, pt.cex = c(2.5, 1.5, 1.5, 1.5), bty = "n", cex = 0.8)
+text(x = 12.7, y = -42, labels = "MAE", srt = 45, adj = c(0, 0), cex= 0.8)
+text(x = 12.2, y = -42, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
 legend(x = 12.1, y = 65, legend = c("Production", "Yield"), pch = pchs, 
        pt.cex = c(1.5, 1.5), bty = "n", cex = 0.8)
 
@@ -1123,7 +1121,7 @@ do.call(cbind, lapply(lev, function(x) {
 
 
 vnms <- c(rep("Yield", length(snms)), rep("Production", length(snms)))
-aa <- c("Actual", "Absolute")
+aa <- c("Bias", "MAE")
 out_tab <- do.call(rbind, lapply(1:2, function(x) {
   out <- do.call(cbind, lapply(1:length(lev), function(ii) {
     lv <- lev[ii]  
@@ -1138,16 +1136,13 @@ out_tab <- do.call(rbind, lapply(1:2, function(x) {
     }))
   }))
   out <- cbind.data.frame(aa[x], mcap, "Variable" = vnms, unname(out))
-  colnames(out) <- c("Bias", "Map", "Variable", paste(c(1, fact), "km"))
+  colnames(out) <- c("Metric", "Map", "Variable", paste(c(1, fact), "km"))
   out
 }))  
 
-caption <- paste("Mean actual and absolute biases for yield and", 
-                 "production estimates disaggregated from magisterial", 
-                 "district level farm census data onto adjusted cropland", 
-                 "maps. Biases were calculated as percent differences", 
-                 "relative to the mean value calculated from the reference", 
-                 "map.")    
+caption <- paste("Biases and mean absolute errors (MAE) in disaggregated maize",                  "yield and production (calculated from disaggregated yield",                    "and harvested area estimates)", 
+                 "maps. Bias and MAE were normalized to their", 
+                 "respective mean values calculated from reference maps.")    
 out_xtab <- xtable(out_tab, digits = 1, caption = caption)
 print(out_xtab, type = "latex", file = "paper/figures/yldprod-bias.tex", 
       tabular.environment = "longtable", floating = FALSE, 
@@ -1247,6 +1242,7 @@ ygap_xtab <- xtable::xtable(ygaps, digits = 1)
 print(ygap_xtab, type = "latex", 
       file = "paper/figures/ygap-spat-bias.tex")
 
+save(list = ls(), file = full_path(p_data, "yield-bias.rda"))
 ```
 <a href="#top">Back to top</a>
 

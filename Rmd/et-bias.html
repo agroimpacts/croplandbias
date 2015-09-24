@@ -108,6 +108,7 @@ img {
 <h2><span class="header-section-number">2.1</span> Prepare datasets</h2>
 <p>Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(SAcropland)
+<span class="kw">library</span>(RColorBrewer)
 p_root &lt;-<span class="st"> </span><span class="kw">full_path</span>(<span class="kw">proj_root</span>(<span class="st">&quot;SAcropland&quot;</span>), <span class="st">&quot;SAcropland&quot;</span>)
 p_fig &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;paper/figures/&quot;</span>)
 p_data &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;external/ext_data/&quot;</span>)
@@ -193,11 +194,11 @@ tst &lt;-<span class="st"> </span>etba[[<span class="dv">1</span>]] *<span class
 etba &lt;-<span class="st"> </span><span class="kw">lapply</span>(etba, function(x) x *<span class="st"> </span>ndays)
 <span class="co"># plot(etba[[1]][[1]])</span>
 
-<span class="co"># year indices</span>
+<span class="co"># date indices</span>
 yrs &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;*.*_&quot;</span>, <span class="st">&quot;&quot;</span>, lnames)
 mos &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;_.*&quot;</span>, <span class="st">&quot;&quot;</span>, lnames)
-yi &lt;-<span class="st"> </span><span class="kw">t</span>(<span class="kw">sapply</span>(<span class="kw">unique</span>(yrs), function(x) <span class="kw">range</span>(<span class="kw">which</span>(yrs ==<span class="st"> </span>x))))
-mi &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">unique</span>(mos), function(x) <span class="kw">which</span>(mos ==<span class="st"> </span>x))</code></pre>
+yi &lt;-<span class="st"> </span><span class="kw">t</span>(<span class="kw">sapply</span>(<span class="kw">unique</span>(yrs), function(x) <span class="kw">range</span>(<span class="kw">which</span>(yrs ==<span class="st"> </span>x))))  <span class="co"># year index</span>
+mi &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">unique</span>(mos), function(x) <span class="kw">which</span>(mos ==<span class="st"> </span>x))  <span class="co"># month index</span></code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
 <div id="process-et-time-series" class="section level2">
@@ -337,8 +338,10 @@ disaggl &lt;-<span class="st"> </span>function(rl, <span class="dt">lev =</span>
 }
 
 <span class="co"># reshape in list</span>
-l2dag &lt;-<span class="st"> </span><span class="kw">list</span>(amu_diff, mumax_diff, mumin_diff, gs3_diff, gsmx_diff)
-<span class="kw">names</span>(l2dag) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mu&quot;</span>, <span class="st">&quot;mumx&quot;</span>, <span class="st">&quot;mumn&quot;</span>, <span class="st">&quot;gs&quot;</span>, <span class="st">&quot;gspk&quot;</span>)
+<span class="co"># l2dag &lt;- list(amu_diff, mumax_diff, mumin_diff, gs3_diff, gsmx_diff)</span>
+<span class="co"># names(l2dag) &lt;- c(&quot;mu&quot;, &quot;mumx&quot;, &quot;mumn&quot;, &quot;gs&quot;, &quot;gspk&quot;)</span>
+l2dag &lt;-<span class="st"> </span><span class="kw">list</span>(amu_diff, mumax_diff, mumin_diff, gs3_diff)
+<span class="kw">names</span>(l2dag) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mu&quot;</span>, <span class="st">&quot;mumx&quot;</span>, <span class="st">&quot;mumn&quot;</span>, <span class="st">&quot;gs&quot;</span>)
 l2dag &lt;-<span class="st"> </span><span class="kw">lapply</span>(l2dag, disaggl)
 
 <span class="co"># disaggregate</span>
@@ -369,12 +372,13 @@ rng &lt;-<span class="st"> </span><span class="kw">do.call</span>(cbind, <span c
 rngdt &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="kw">t</span>(rng))
 rng &lt;-<span class="st"> </span><span class="kw">unname</span>(<span class="kw">unlist</span>(rngdt[, <span class="kw">lapply</span>(.SD, function(x) x[<span class="kw">which.max</span>(<span class="kw">abs</span>(x))])]))
 
-fnm &lt;-<span class="st"> &quot;et_bias_map.pdf&quot;</span>
-legtext &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;%&quot;</span>, <span class="dv">5</span>)
+fnm &lt;-<span class="st"> &quot;et_bias_map4.pdf&quot;</span>
+legtext &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;% Difference&quot;</span>, <span class="dv">5</span>)
 cx &lt;-<span class="st"> </span><span class="fl">1.4</span>
 lcol &lt;-<span class="st"> &quot;black&quot;</span>
 mcap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA-LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;GeoWiki&quot;</span>)
-ecap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Annual mean&quot;</span>, <span class="st">&quot;TS max&quot;</span>, <span class="st">&quot;TS min&quot;</span>, <span class="st">&quot;Peak 3&quot;</span>, <span class="st">&quot;Peak&quot;</span>)
+<span class="co"># ecap &lt;- c(&quot;Annual mean&quot;, &quot;TS max&quot;, &quot;TS min&quot;, &quot;Peak 3&quot;, &quot;Peak&quot;)</span>
+ecap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Annual mean&quot;</span>, <span class="st">&quot;TS max&quot;</span>, <span class="st">&quot;TS min&quot;</span>, <span class="st">&quot;Peak&quot;</span>)
 
 rnder &lt;-<span class="st"> </span>function(x) {
   dig &lt;-<span class="st"> </span><span class="kw">nchar</span>(<span class="kw">max</span>(<span class="kw">round</span>(x)))
@@ -383,16 +387,22 @@ rnder &lt;-<span class="st"> </span>function(x) {
   <span class="kw">round</span>(<span class="kw">c</span>(<span class="kw">floor</span>(x[<span class="dv">1</span>] /<span class="st"> </span>rnd), <span class="kw">ceiling</span>(x[<span class="dv">2</span>] /<span class="st"> </span>rnd))) *<span class="st"> </span>rnd 
 }
 
-brks &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">seq</span>(<span class="kw">floor</span>(rng[<span class="dv">1</span>]), -<span class="dv">5</span>, <span class="dt">by =</span> <span class="dv">5</span>), -<span class="dv">1</span>, <span class="dv">1</span>, <span class="kw">seq</span>(<span class="dv">5</span>, <span class="kw">ceiling</span>(rng[<span class="dv">4</span>]), <span class="dv">5</span>))
-cols &lt;-<span class="st"> </span><span class="kw">colorRampPalette</span>(<span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;grey80&quot;</span>, <span class="st">&quot;blue4&quot;</span>))(<span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>)
-cols[<span class="kw">c</span>(<span class="dv">1</span>, <span class="kw">length</span>(cols))] &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;darkred&quot;</span>, <span class="st">&quot;purple3&quot;</span>)
+
+<span class="co"># For Supplementals</span>
+<span class="co"># brks &lt;- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))</span>
+brks &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">25</span>, -<span class="dv">15</span>, -<span class="dv">10</span>, -<span class="dv">5</span>, -<span class="dv">3</span>, -<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">25</span>)
+<span class="co"># cvec &lt;- c(&quot;red&quot;, &quot;orange&quot;, &quot;grey80&quot;, &quot;green&quot;, &quot;blue4&quot;)</span>
+<span class="co"># cols &lt;- colorRampPalette(cvec)(length(brks) - 1)</span>
+<span class="co"># cols[c(1, length(cols))] &lt;- c(&quot;darkred&quot;, &quot;purple3&quot;)</span>
+cols &lt;-<span class="st"> </span><span class="kw">brewer.pal</span>(<span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>, <span class="dt">name =</span> <span class="st">&quot;RdBu&quot;</span>)
+cols[<span class="dv">6</span>] &lt;-<span class="st"> &quot;grey80&quot;</span>
 <span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, fnm), <span class="dt">height =</span> <span class="dv">6</span>, <span class="dt">width =</span> <span class="dv">7</span>)
-<span class="kw">par</span>(<span class="dt">mfcol =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">5</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">0</span>))
+<span class="kw">par</span>(<span class="dt">mfcol =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">0</span>))
 for(j in <span class="dv">1</span>:<span class="kw">length</span>(l2dagd)) {
   <span class="kw">print</span>(<span class="kw">names</span>(l2dagd)[j])
   for(k in <span class="dv">1</span>:<span class="kw">length</span>(snms)) {
     rl &lt;-<span class="st"> </span>l2dagd[[j]][[k]]$f25
-    <span class="kw">print</span>(snms[k])
+    <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, snms[k]))
     <span class="kw">plot</span>(sa.shp, <span class="dt">lty =</span> <span class="dv">0</span>)
     <span class="kw">image</span>(rl, <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> cols, <span class="dt">breaks =</span> brks, <span class="dt">legend =</span> <span class="ot">FALSE</span>)
     if(j ==<span class="st"> </span><span class="dv">1</span>) <span class="kw">mtext</span>(mcap[k], <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">line =</span> <span class="dv">1</span>, <span class="dt">cex =</span> cx)
@@ -404,7 +414,30 @@ for(j in <span class="dv">1</span>:<span class="kw">length</span>(l2dagd)) {
             <span class="dt">shortdims =</span> <span class="kw">c</span>(<span class="fl">0.06</span>, <span class="fl">0.01</span>), 
             <span class="dt">colvec =</span> cols, <span class="co">#(length(brks) - 1), </span>
             <span class="dt">srt =</span> <span class="kw">c</span>(<span class="dv">270</span>, <span class="dv">0</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>, <span class="dt">textside =</span> <span class="st">&quot;bottom&quot;</span>, 
-            <span class="dt">legend.pos =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">5</span>), <span class="dt">leg.adj =</span> <span class="kw">list</span>(<span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>), <span class="kw">c</span>(-<span class="dv">1</span>, -<span class="fl">0.5</span>)), 
+            <span class="dt">legend.pos =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>), <span class="dt">leg.adj =</span> <span class="kw">list</span>(<span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>), <span class="kw">c</span>(-<span class="fl">0.25</span>, -<span class="fl">0.5</span>)), 
+            <span class="dt">cex.val =</span> cx -<span class="st"> </span><span class="fl">0.4</span>, <span class="dt">textcol =</span> lcol, <span class="dt">bordercol =</span> lcol)
+<span class="kw">dev.off</span>()
+
+
+fnm &lt;-<span class="st"> &quot;et_bias_map.pdf&quot;</span>
+<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, fnm), <span class="dt">height =</span> <span class="dv">6</span>, <span class="dt">width =</span> <span class="dv">7</span>)
+<span class="kw">par</span>(<span class="dt">mfcol =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>))
+for(j in <span class="dv">1</span>) {
+  <span class="kw">print</span>(<span class="kw">names</span>(l2dagd)[j])
+  for(k in <span class="dv">1</span>:<span class="kw">length</span>(snms)) {
+    rl &lt;-<span class="st"> </span>l2dagd[[j]][[k]]$f25
+    <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, snms[k]))
+    <span class="kw">plot</span>(sa.shp, <span class="dt">lty =</span> <span class="dv">0</span>)
+    <span class="kw">image</span>(rl, <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> cols, <span class="dt">breaks =</span> brks, <span class="dt">legend =</span> <span class="ot">FALSE</span>)
+    <span class="kw">mtext</span>(mcap[k], <span class="dt">side =</span> <span class="dv">3</span>, <span class="dt">line =</span> -<span class="dv">1</span>, <span class="dt">cex =</span> cx)
+  }
+}
+<span class="kw">flex_legend</span>(<span class="dt">ncuts =</span> <span class="kw">length</span>(brks) -<span class="st"> </span><span class="dv">1</span>, <span class="dt">legend.text =</span> legtext[i], 
+            <span class="dt">legend.vals =</span> brks, <span class="dt">longdims =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">0.8</span>), 
+            <span class="dt">shortdims =</span> <span class="kw">c</span>(<span class="fl">0.07</span>, <span class="fl">0.01</span>), 
+            <span class="dt">colvec =</span> cols, <span class="co">#(length(brks) - 1), </span>
+            <span class="dt">srt =</span> <span class="kw">c</span>(<span class="dv">270</span>, <span class="dv">0</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>, <span class="dt">textside =</span> <span class="st">&quot;bottom&quot;</span>, 
+            <span class="dt">legend.pos =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>), <span class="dt">leg.adj =</span> <span class="kw">list</span>(<span class="kw">c</span>(<span class="fl">0.3</span>, <span class="fl">0.3</span>), <span class="kw">c</span>(-<span class="fl">0.25</span>, -<span class="fl">0.75</span>)), 
             <span class="dt">cex.val =</span> cx -<span class="st"> </span><span class="fl">0.4</span>, <span class="dt">textcol =</span> lcol, <span class="dt">bordercol =</span> lcol)
 <span class="kw">dev.off</span>()</code></pre>
 <p><a href="#top">Back to top</a></p>
@@ -475,20 +508,33 @@ mua &lt;-<span class="st"> </span><span class="kw">lapply</span>(bstats, functio
 <span class="co"># reshape</span>
 mus &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(<span class="kw">names</span>(mu), function(x) <span class="kw">cbind</span>(x, mu[[x]])))
 mus[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NULL</span>]
-<span class="kw">setnames</span>(mus, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;ETvar&quot;</span>, <span class="st">&quot;dataset&quot;</span>))
-<span class="kw">setkeyv</span>(mus, <span class="kw">c</span>(<span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;ETvar&quot;</span>))
+<span class="kw">setnames</span>(mus, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Bias&quot;</span>))
+<span class="kw">setkeyv</span>(mus, <span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Variable&quot;</span>))
 muas &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(<span class="kw">names</span>(mua), function(x) <span class="kw">cbind</span>(x, mua[[x]])))
 muas[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NULL</span>]
-<span class="kw">setnames</span>(muas, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;ETvar&quot;</span>, <span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;absbias&quot;</span>))
-<span class="kw">setkeyv</span>(muas, <span class="kw">c</span>(<span class="st">&quot;dataset&quot;</span>, <span class="st">&quot;ETvar&quot;</span>))
+<span class="kw">setnames</span>(muas, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Abs Bias&quot;</span>))
+<span class="kw">setkeyv</span>(muas, <span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Variable&quot;</span>))
 mutab &lt;-<span class="st"> </span>mus[muas]
 mutab[, <span class="kw">lapply</span>(.SD, function(x) <span class="kw">max</span>(<span class="kw">abs</span>(x))), .SDcols =<span class="st"> </span><span class="dv">3</span>:<span class="dv">4</span>]
+<span class="kw">setkey</span>(mutab, <span class="st">&quot;Variable&quot;</span>)
+vnmr &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Annual Mean&quot;</span>, <span class="st">&quot;29-year Max&quot;</span>, <span class="st">&quot;29-year Min&quot;</span>, <span class="st">&quot;Peak&quot;</span>)
+for(i in <span class="dv">1</span>:<span class="kw">length</span>(vnms)) mutab[Variable ==<span class="st"> </span>vnms[i], Variable :<span class="er">=</span><span class="st"> </span>vnmr[i]]
+<span class="kw">setkey</span>(mutab, <span class="st">&quot;Map&quot;</span>)
+for(i in <span class="dv">1</span>:<span class="kw">length</span>(snms)) mutab[Map ==<span class="st"> </span>snms[i], Map :<span class="er">=</span><span class="st"> </span>mcap[i]]
+mutab[<span class="kw">order</span>(-<span class="kw">rank</span>(Map))]
 
-mutab_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mutab, <span class="dt">digits =</span> <span class="dv">1</span>)
-<span class="kw">print</span>(mutab_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
-      <span class="dt">file =</span> <span class="st">&quot;paper/figures/et-bias.tex&quot;</span>)</code></pre>
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (as </span><span class="ch">\\</span><span class="st">%) for&quot;</span>,              
+                 <span class="st">&quot;evapotranspiration variables derived from a 29-year time&quot;</span>,
+                 <span class="st">&quot;series calculated by the VIC model, including the average&quot;</span>, 
+                 <span class="st">&quot;total ET for the&quot;</span>, 
+                 <span class="st">&quot;3 months of the year when ET is highest, the annual mean&quot;</span>, 
+                 <span class="st">&quot;and the minimum and maximum annual ETs in the time series.&quot;</span>)
+mutab_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mutab, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(mutab_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/et-bias.tex&quot;</span>,
+      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)</code></pre>
 <p><a href="#top">Back to top</a></p>
-<p>The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.43%, so not much here.</p>
+<p>The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.25%, so not much here.</p>
 </div>
 <div id="bias-in-relation-to-rainfall" class="section level3">
 <h3><span class="header-section-number">2.5.2</span> Bias in relation to rainfall</h3>
@@ -502,7 +548,7 @@ presa &lt;-<span class="st"> </span><span class="kw">crop</span>(pre, <span clas
 presa &lt;-<span class="st"> </span><span class="kw">projectRaster</span>(presa, mask25k)  <span class="co"># project to Albers</span>
 presa &lt;-<span class="st"> </span><span class="kw">mask</span>(presa, awgts$f25, <span class="dt">maskvalue =</span> <span class="dv">0</span>)  <span class="co"># mask</span>
 
-<span class="kw">plot</span>(presa)
+<span class="kw">plot</span>(presa, <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1000</span>, <span class="dv">100</span>), <span class="dt">col =</span> <span class="kw">topo.colors</span>(<span class="dv">9</span>))
 <span class="kw">plot</span>(<span class="kw">abs</span>(l2dag$mu$globmu$f25))
 <span class="kw">plot</span>(presa, <span class="kw">abs</span>(l2dag$mu$globmu$f25))</code></pre>
 </div>

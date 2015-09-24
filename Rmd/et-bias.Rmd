@@ -289,7 +289,7 @@ rngdt <- data.table(t(rng))
 rng <- unname(unlist(rngdt[, lapply(.SD, function(x) x[which.max(abs(x))])]))
 
 fnm <- "et_bias_map4.pdf"
-legtext <- rep("%", 5)
+legtext <- rep("% Difference", 5)
 cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
@@ -330,7 +330,7 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i],
             shortdims = c(0.06, 0.01), 
             colvec = cols, #(length(brks) - 1), 
             srt = c(270, 0), horiz = TRUE, textside = "bottom", 
-            legend.pos = c(4, 5), leg.adj = list(c(0.1, 0.3), c(-1, -0.5)), 
+            legend.pos = c(4, 4), leg.adj = list(c(0.1, 0.3), c(-0.25, -0.5)), 
             cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
 dev.off()
 
@@ -353,7 +353,7 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i],
             shortdims = c(0.07, 0.01), 
             colvec = cols, #(length(brks) - 1), 
             srt = c(270, 0), horiz = TRUE, textside = "bottom", 
-            legend.pos = c(4, 5), leg.adj = list(c(0.3, 0.3), c(-1, -0.75)), 
+            legend.pos = c(4, 4), leg.adj = list(c(0.3, 0.3), c(-0.25, -0.75)), 
             cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
 dev.off()
 
@@ -440,7 +440,7 @@ setkey(mutab, "Map")
 for(i in 1:length(snms)) mutab[Map == snms[i], Map := mcap[i]]
 mutab[order(-rank(Map))]
 
-caption <- paste("Mean actual and absolute biases (as \\%) for",              
+caption <- paste("Biases and mean absolute errors (as \\%) for",              
                  "evapotranspiration variables derived from a 29-year time",
                  "series calculated by the VIC model, including the average", 
                  "total ET for the", 
