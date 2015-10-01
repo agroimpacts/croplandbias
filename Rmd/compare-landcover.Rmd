@@ -50,6 +50,25 @@ names(gti) <- c("g2007", "g2011")
 ```
 <a href="#top">Back to top</a>
 
+### Apply NA masks
+```{r, eval = FALSE}
+sumna <- function(x) sum(x, na.rm = FALSE)
+namask <- calc(stack(stack(gti), stack(lclist)), sumna)
+namask[namask >= 0] <- 1
+namask2 <- !is.na(namask)  # set NAs to zero
+# cellStats(namask2, sum)
+namask[namask == 0] <- NA
+# cellStats(namask, sum)
+writeRaster(namask, filename = full_path(p_data, "namask.tif"), 
+            overwrite = TRUE)
+
+# mask out all joint NAs
+gti <- lapply(gti, function(x) mask(x, namask))
+lclist <- lapply(lclist, function(x) mask(x, namask))
+
+```
+
+
 ## Calculate differences at different levels of aggregation
 This steps draws on functions I wrote to calculate the actual and absolute differences between a given "master" grid and lists of other grids. This comparison is done at multiple aggregations, ranging from 1-600 km resolution cropland averages. The lists have two levels of nesting, here the upper provides the resolution, the inner provides the different landcover datasets. 
 
@@ -57,6 +76,8 @@ This steps draws on functions I wrote to calculate the actual and absolute diffe
 # Aggregate rasters
 fact <- c(5, 10, 25, 50, 100)
 #fact <- 25
+
+area_wgts <- aggregate_rast_list(fact, list(namask2), fun = sum)  # cells/pixel
 lc_agg <- aggregate_rast_list(fact, lclist)   # landcover rasters 
 gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
 
@@ -94,14 +115,8 @@ writeRaster(b, filename = full_path(p_data, "lc_bias_25km.tif"))
 <a href="#top">Back to top</a>
 
 ## Bias as function of cropcover
-### First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
+### Weighting rasters based on number of non-NA cells in each aggregated pixel, and then "bin" rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc) 
 ```{r, eval = FALSE}
-# NA mask and weights
-namask <- !is.na(gti[[1]])
-area_wgts <- aggregate_rast_list(fact, list(namask), fun = sum)
-namask[namask == 0] <- NA
-writeRaster(namask, filename = full_path(p_data, "namask.tif"), 
-            overwrite = TRUE)
 
 # cropland cover bins
 binv <- seq(0, 100, 5)
@@ -139,6 +154,7 @@ rm(dlist_act, dlist_abs)  # remove original to make space
 Note: this uses an older and slower version of the code. Subsequent analyses use the faster version based on data.tables.  
 ```{r, eval = FALSE}
 dang <- Sys.time()
+# i <- dlists[[1]]; x <- names(i)[1]; y <- lev_vec[5]; j <- 14; z <- 1; k <- 1
 dstats_all <- lapply(dlists, function(i) {
   print("processing 1 of 2 main bias lists")
   dstats <- lapply(names(i), function(x) {
@@ -161,17 +177,17 @@ dstats_all <- lapply(dlists, function(i) {
           d3f <- d3[!is.na(d3[, 2]), ]
         }))
         if(nrow(d2) > (length(i[[x]][[y]]) * 10)) {
-        qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, 
-                                    weight.opts = list("weights" = d2[, 3])))
+          qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, 
+                                      weight.opts = list("weights" = d2[, 3])))
         } else if((nrow(d2) > 0) & (nrow(d2) < length(i[[x]][[y]]) * 20)) {
-          qs <- c(rep(NA, 6), Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], 
-                                              na.rm = FALSE))
+          qs <- c(nrow(d2), rep(NA, 5), 
+                  Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], na.rm = FALSE))
         } else {
           qs <- rep(NA, 7)
         }
       }))
       cbind(binv[-1], d1)
-      })
+    })
     named_out(l1, lev_vec)
   })
   named_out(dstats, names(i))
@@ -201,7 +217,7 @@ dstats_gti <- lapply(lev_vec, function(x) {
         qs <- c(nrow(oof), box_stats(oof[, 2], weighted = TRUE, 
                                      weight.opts = list("weights" = oof[, 3])))
       } else if((nrow(oof) > 0) & (nrow(oof) < 10)) {
-        qs <- c(rep(NA, 6), 
+        qs <- c(nrow(oof), rep(NA, 5),  
                 Hmisc::wtd.mean(oof[, 2], weights = oof[, 3], na.rm = FALSE))
       } else {
         qs <- rep(NA, 7)
@@ -216,8 +232,202 @@ save(dstats_gti, file = full_path(p_data, "bias_stats_gti.rda"))
 
 Checks: compared number of non-NA cells coming out of each GTI version at each level of aggregation (fine); compared cell counts between previous committed version and this one (difference exists, but due to fact that gtimu is no longer considered; checked that previous versions of difference rasters and reshapes of them were referencing the correct GTI-landcover bias rasters (i.e. to make sure rasters weren't incorrectly indexed: all fine)); box_stats with weighted quantile option compared to previous commit where wtd.quantile was used separately (fine). Compared results from original roughed out version of approach for calculating bias statistics with results from new outputs list (using geowiki at 20 km aggregation as the comparison)
 
+## 2011 differences
+Whole country and agricultural areas only
+```{r, eval = FALSE}
+load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 
+# Subset difference grids, for 2011
+snms <- c("sa30", "globmu", "modmu", "geow")
+lc_pct_diff <- lapply(dlist_act[snms], function(x) {
+  sapply(x, function(y) list(y$g2011))
+})
 
+# construct agricultural area union mask
+lev <- names(lc_pct_diff[[1]])
+lcu <- lapply(lev, function(x) {
+  print(paste(".", x))
+  lcb <- lapply(snms, function(y) {
+    print(paste("...", y))
+    gti_gt0 <- Which(gti_agg[[x]][[1]] > 0)
+    lc_gt0 <- Which(lc_agg[[x]][[y]] > 0)
+    all_gt0 <- gti_gt0 + lc_gt0
+    all_gt0[all_gt0 > 0] <- 1
+    all_gt0
+  })
+  named_out(lcb, snms)
+})
+names(lcu) <- lev
+
+bins <- lapply(gti_bins, function(x) x$g2011)
+awgts <- lapply(area_wgts, function(x) x[[1]])
+
+# calculate means for 2011
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+a <- bias_stats_list(bins, awgts, lcu, lc_pct_diff, wm, "mu", "bias", TRUE)
+b <- bias_stats_list(bins, awgts, lcu, lc_pct_diff, wma, "mua", "bias", TRUE)
+mu_dt <- rbind(a, b)
+mu <- extract_stat(lev, snms, "all", "mu", "bias", mu_dt)  # ag area means
+mua <- extract_stat(lev, snms, "all", "mua", "bias", mu_dt)  # ag area abs mean
+mu_nm <- extract_stat(lev, snms, "all", "mu.nm", "bias", mu_dt)  # country mean
+mua_nm <- extract_stat(lev, snms, "all", "mua.nm", "bias", mu_dt)  # country abs
+# across bin mean and abs mean
+mu_bin <- mu_dt[!like(bin, "all") & bvals == "mu", mean(bias), by = .(ol, il)]
+setnames(mu_bin, "V1", "bias")
+mua_bin <- mu_dt[!like(bin, "all") & bvals == "mua", mean(bias), by = .(ol, il)]
+setnames(mua_bin, "V1", "bias")
+# mu_dt[il == "sa30" & bin != "all" & ol == "f1" & bvals == "mua", mean(bias)]
+
+# check
+# Older variant of code from compare-landcover.Rmd to evaluate whether newer DT
+# version is finding correct results
+bv <- "mua"
+for(chk in list(c("modmu", "f25"), c("geow", "f10"), c("sa30", "f50"), 
+                c("globmu", "f1"))) {
+  x <- chk[1] 
+  y <- chk[2] 
+  print(paste(".", x, "..", y))
+  rs <- lcu[[y]][[x]] 
+  rs[rs == 0] <- NA
+  l3 <- abs(lc_pct_diff[[x]][[y]])
+  o <- rs * l3
+  w <- awgts[[y]][[1]] * rs
+  wmu <- weighted.mean(getValues(o), getValues(w), na.rm = TRUE)
+  print(b[ol == y & il == x & bvals == bv & bin == "all", bias] ==
+          round(wmu, 2))
+}  # check
+
+svec <- c("mu_nm", "mua_nm", "mu", "mua", "mu_bin", "mua_bin")
+aa <- c(rep("Country", 2), rep("Agricultural", 2), rep("Density independent", 2))
+bb <- c("Bias", "MAE", "Bias", "MAE", "Bias", "MAE")
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+
+lcf_out11 <- do.call(rbind, lapply(1:length(svec), function(i) {
+  ao <- do.call(rbind, lapply(snms, function(x) {
+    ai <- sapply(lev, function(y) {
+      get(svec[i])[ol == y & il == x, bias]
+    })
+    named_out(ai, paste(c(1, fact), "km"))
+  }))
+  #cbind.data.frame("Region" = aa[i], "Map" = mcap, a)
+  cbind.data.frame(Region = aa[i], Metric = bb[i], "Map" = mcap, ao)
+}))
+
+caption <- paste("Biases and mean absolute errors (MAE) in cropland maps",
+                 "relative to the 2011 reference map for each aggregation scale",
+                 "calculated over the entire country, for the union of",
+                 "agricultural regions (cropland $>$ 0), and as density", 
+                 "independent means, wherein the mean bias/MAE values",
+                 "for each of 20 cropland cover classes",
+                 "(representing 5\\% increments of cover 0\\% to 100\\% defined",
+                 "by the reference map) were calculated and then averaged.")
+lcfout_xtab <- xtable(lcf_out11, digits = 1, caption = caption)
+print(lcfout_xtab, type = "latex", file = "paper/figures/cropland2011-bias.tex", 
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
+
+# do.call(rbind, lapply(snms, function(i) {
+#   mu_dt[!like(bin, "all") & ol == "f1" & il == i & bvals == "mu.nm", N]  
+# }))
+mubias_2011 <- mu_dt
+save(lcf_out11, mubias_2011, file = full_path(p_data, "lcf_out2011.rda"))
+
+```
+
+## 2007 differences
+Whole country and agricultural areas only
+```{r, eval = FALSE}
+# Subset difference grids, for 2011
+snms <- c("sa30", "globmu", "modmu", "geow")
+lc_pct_diff <- lapply(dlist_act[snms], function(x) {
+  sapply(x, function(y) list(y$g2007))
+})
+
+# construct agricultural area union mask
+lev <- names(lc_list[[1]])
+lcu <- lapply(lev, function(x) {
+  print(paste(".", x))
+  lcb <- lapply(snms, function(y) {
+    print(paste("...", y))
+    gti_gt0 <- Which(gti_agg[[x]][[1]] > 0)
+    lc_gt0 <- Which(lc_agg[[x]][[y]] > 0)
+    all_gt0 <- gti_gt0 + lc_gt0
+    all_gt0[all_gt0 > 0] <- 1
+    all_gt0
+  })
+  named_out(lcb, snms)
+})
+names(lcu) <- lev
+
+bins <- lapply(gti_bins, function(x) x$g2007)
+awgts <- lapply(area_wgts, function(x) x[[1]])
+
+# calculate means for 2007
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+a <- bias_stats_list(bins, awgts, lcu, lc_pct_diff, wm, "mu", "bias", TRUE)
+b <- bias_stats_list(bins, awgts, lcu, lc_pct_diff, wma, "mua", "bias", TRUE)
+mu_dt <- rbind(a, b)
+mu <- extract_stat(lev, snms, "all", "mu", "bias", mu_dt)
+mua <- extract_stat(lev, snms, "all", "mua", "bias", mu_dt)
+mu_nm <- extract_stat(lev, snms, "all", "mu.nm", "bias", mu_dt)
+mua_nm <- extract_stat(lev, snms, "all", "mua.nm", "bias", mu_dt)
+# across bin mean and abs mean
+mu_bin <- mu_dt[!like(bin, "all") & bvals == "mu", mean(bias), by = .(ol, il)]
+setnames(mu_bin, "V1", "bias")
+mua_bin <- mu_dt[!like(bin, "all") & bvals == "mua", mean(bias), by = .(ol, il)]
+setnames(mua_bin, "V1", "bias")
+
+# check
+# Older variant of code from compare-landcover.Rmd to evaluate whether newer DT
+# version is finding correct results
+bv <- "mua"
+for(chk in list(c("modmu", "f25"), c("geow", "f10"), c("sa30", "f50"), 
+                c("globmu", "f1"))) {
+  x <- chk[1] 
+  y <- chk[2] 
+  print(paste(".", x, "..", y))
+  rs <- lcu[[y]][[x]] 
+  rs[rs == 0] <- NA
+  l3 <- abs(lc_pct_diff[[x]][[y]])
+  o <- rs * l3
+  w <- awgts[[y]][[1]] * rs
+  wmu <- weighted.mean(getValues(o), getValues(w), na.rm = TRUE)
+  print(b[ol == y & il == x & bvals == bv & bin == "all", bias] ==
+          round(wmu, 2))
+}  # check
+
+svec <- c("mu_nm", "mua_nm", "mu", "mua", "mu_bin", "mua_bin")
+aa <- c(rep("Country", 2), rep("Agricultural", 2), rep("Density independent", 2))
+bb <- c("Bias", "MAE", "Bias", "MAE", "Bias", "MAE")
+mcap <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+
+lcf_out07 <- do.call(rbind, lapply(1:length(svec), function(i) {
+  ao <- do.call(rbind, lapply(snms, function(x) {
+    ai <- sapply(lev, function(y) {
+      get(svec[i])[ol == y & il == x, bias]
+    })
+    named_out(ai, paste(c(1, fact), "km"))
+  }))
+  #cbind.data.frame("Region" = aa[i], "Map" = mcap, a)
+  cbind.data.frame(Region = aa[i], Metric = bb[i], "Map" = mcap, ao)
+}))
+
+caption <- paste("Biases and mean absolute errors (MAE) in cropland maps",
+                 "relative to the 2007 reference map for each aggregation scale",
+                 "calculated over the entire country, for the union of",
+                 "agricultural regions, and as density", 
+                 "independent means, wherein the mean bias/MAE values",
+                 "for each of 20 cropland cover classes",
+                 "(representing 5\\% increments of cover 0\\% to 100\\% defined",
+                 "by the reference map) were calculated and then averaged.")
+lcfout_xtab <- xtable(lcf_out07, digits = 1, caption = caption)
+print(lcfout_xtab, type = "latex", file = "paper/figures/cropland2007-bias.tex", 
+      tabular.environment = "longtable", floating = FALSE, 
+      caption.placement = "top", include.rownames = FALSE)
+
+```
 
 
 

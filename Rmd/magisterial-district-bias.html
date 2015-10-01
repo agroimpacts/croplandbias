@@ -110,6 +110,7 @@ img {
 <span class="kw">library</span>(mgcv)
 <span class="kw">library</span>(ape)
 <span class="kw">library</span>(fitdistrplus)
+<span class="kw">library</span>(SAcropland)
 
 <span class="co"># Paths</span>
 p_root &lt;-<span class="st"> </span><span class="kw">proj_root</span>(<span class="st">&quot;SAcropland&quot;</span>)
@@ -125,6 +126,9 @@ p_data2 &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, 
 paths &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_data, <span class="kw">dir</span>(p_data, <span class="kw">paste0</span>(<span class="st">&quot;cover*.*11sum_mask.tif$&quot;</span>)))
 gti &lt;-<span class="st"> </span><span class="kw">raster</span>(paths)  <span class="co"># gti 2011</span>
 gti@crs &lt;-<span class="st"> </span>sa.shp@proj4string
+namask &lt;-<span class="st"> </span><span class="kw">raster</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;namask.tif&quot;</span>))  <span class="co"># NA mask</span>
+gti &lt;-<span class="st"> </span><span class="kw">mask</span>(gti, namask)  <span class="co"># apply mask to GTI</span>
+<span class="co"># cellStats(!is.na(gti), sum)</span>
 
 <span class="co"># Transform magisterial districts, remove Prince Edward Islands</span>
 md &lt;-<span class="st"> </span><span class="kw">spTransform</span>(gadm, <span class="dt">CRSobj =</span> sa.shp@proj4string)
@@ -154,8 +158,9 @@ gti_mu0 &lt;-<span class="st"> </span><span class="kw">t</span>(<span class="kw"
   <span class="kw">c</span>(<span class="kw">length</span>(x), <span class="kw">length</span>(<span class="kw">which</span>(<span class="kw">is.na</span>(x))), <span class="kw">round</span>(<span class="kw">mean</span>(x[x &gt;<span class="st"> </span><span class="dv">0</span>], <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">1</span>))
 }))
 
-<span class="co"># how many contribute when non-cropland removed</span>
+<span class="co"># how many contribute when non-cropland removed, and which are non-zero</span>
 nonzero &lt;-<span class="st"> </span><span class="kw">sapply</span>(gti_md, function(x) <span class="kw">length</span>(x[!<span class="kw">is.na</span>(x) &amp;<span class="st"> </span>(x &gt;<span class="st"> </span><span class="dv">0</span>)]))
+whichnonzero &lt;-<span class="st"> </span><span class="kw">sapply</span>(gti_md, function(x) <span class="kw">which</span>(!<span class="kw">is.na</span>(x) &amp;<span class="st"> </span>(x &gt;<span class="st"> </span><span class="dv">0</span>)))
 
 <span class="co"># median</span>
 gti_median &lt;-<span class="st"> </span><span class="kw">t</span>(<span class="kw">sapply</span>(gti_md, function(x) {
@@ -175,6 +180,7 @@ gti_median0 &lt;-<span class="st"> </span><span class="kw">t</span>(<span class=
 <span class="co"># Absolute biases at 1 km</span>
 snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
 dlist_abs1km &lt;-<span class="st"> </span><span class="kw">stack</span>(<span class="kw">lapply</span>(dlist_abs[snms], function(x) x$f1$g2011))
+<span class="co"># cellStats(!is.na(dlist_abs1km), sum)</span>
 dlist_abs1km@crs &lt;-<span class="st"> </span>sa.shp@proj4string
 dlist_abs1km_md &lt;-<span class="st"> </span><span class="kw">extract</span>(<span class="dt">x =</span> dlist_abs1km, <span class="dt">y =</span> md, <span class="dt">progress =</span> <span class="st">&quot;text&quot;</span>)
 <span class="kw">save</span>(dlist_abs1km_md, <span class="dt">file =</span> <span class="st">&quot;external/ext_data/dlist_abs1km_md.rda&quot;</span>)
@@ -208,10 +214,20 @@ dlist_mu &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span 
 })))
 
 <span class="co"># mean no zero</span>
-dlist_mu0 &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span class="kw">t</span>(<span class="kw">sapply</span>(dlist_abs1km_md, function(x) {
-  tab &lt;-<span class="st"> </span><span class="kw">round</span>(x)
-  <span class="kw">round</span>(<span class="kw">apply</span>(tab, <span class="dv">2</span>, function(x) <span class="kw">mean</span>(x[x &gt;<span class="st"> </span><span class="dv">0</span>], <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)), <span class="dv">1</span>)
+<span class="co"># dlist_mu0 &lt;- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {</span>
+<span class="co">#   tab &lt;- round(x)</span>
+<span class="co">#   round(apply(tab, 2, function(x) mean(x[x &gt; 0], na.rm = TRUE)), 1)</span>
+<span class="co"># })))</span>
+dlist_mu0 &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span class="kw">t</span>(<span class="kw">sapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(dlist_abs1km_md), function(x) {
+  tab &lt;-<span class="st"> </span><span class="kw">round</span>(dlist_abs1km_md[[x]])
+  sel &lt;-<span class="st"> </span>whichnonzero[[x]]  <span class="co"># select out reference cropland pixels only</span>
+  <span class="kw">round</span>(<span class="kw">apply</span>(tab, <span class="dv">2</span>, function(x) <span class="kw">mean</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)), <span class="dv">1</span>)
 })))
+
+<span class="co"># plot(dlist_mu0[, 2], dlist_mu02[, 2])</span>
+<span class="co"># i &lt;- 2</span>
+<span class="co"># plot(gti_mu0[, 3], dlist_mu02[, i])</span>
+<span class="co"># plot(gti_mu0[, 3], dlist_mu0[, i])</span>
 
 <span class="co"># median</span>
 dlist_median &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span class="kw">t</span>(<span class="kw">sapply</span>(dlist_abs1km_md, function(x) {
@@ -219,10 +235,16 @@ dlist_median &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <s
 })))
 <span class="kw">colnames</span>(dlist_median) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;nas&quot;</span>, snms)
 
-dlist_median0 &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span class="kw">t</span>(<span class="kw">sapply</span>(dlist_abs1km_md, function(x) {
-  tab &lt;-<span class="st"> </span><span class="kw">round</span>(x)
-  <span class="kw">round</span>(<span class="kw">apply</span>(tab, <span class="dv">2</span>, function(x) <span class="kw">median</span>(x[x &gt;<span class="st"> </span><span class="dv">0</span>], <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)), <span class="dv">1</span>)
+<span class="co"># dlist_median0 &lt;- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {</span>
+<span class="co">#   tab &lt;- round(x)</span>
+<span class="co">#   round(apply(tab, 2, function(x) median(x[x &gt; 0], na.rm = TRUE)), 1)</span>
+<span class="co"># })))</span>
+dlist_median0 &lt;-<span class="st"> </span><span class="kw">cbind</span>(nas, <span class="kw">t</span>(<span class="kw">sapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(dlist_abs1km_md), function(x) {
+  tab &lt;-<span class="st"> </span><span class="kw">round</span>(dlist_abs1km_md[[x]])
+  sel &lt;-<span class="st"> </span>whichnonzero[[x]]  <span class="co"># select out reference cropland pixels only</span>
+  <span class="kw">round</span>(<span class="kw">apply</span>(tab, <span class="dv">2</span>, function(x) <span class="kw">median</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)), <span class="dv">1</span>)
 })))
+
 
 <span class="co"># bind function</span>
 bind_stats &lt;-<span class="st"> </span>function(x, y, <span class="dt">coords =</span> xy, 
@@ -430,8 +452,10 @@ dgls_exp &lt;-<span class="st"> </span><span class="kw">update</span>(dgls, <spa
 <p>First check fit of model family, and whether assumptions of normally distributed errors are met.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># stats.stackexchange.com/questions/99425/distribution-for-percentage-data</span>
 <span class="co"># quartz()</span>
-dat &lt;-<span class="st"> </span>mu0[, <span class="st">&quot;sa30&quot;</span>]
+<span class="co"># dat &lt;- mu0[, &quot;sa30&quot;]</span>
+dat &lt;-<span class="st"> </span>mu[, <span class="st">&quot;sa30&quot;</span>]
 dat &lt;-<span class="st"> </span>dat[!<span class="kw">is.na</span>(dat)]
+dat[dat ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span>dat[dat ==<span class="st"> </span><span class="dv">0</span>] +<span class="st"> </span><span class="fl">0.1</span>
 <span class="kw">descdist</span>(dat, <span class="dt">discrete =</span> <span class="ot">FALSE</span>)  <span class="co"># check potential distributions</span>
 
 <span class="co"># Check what distributions work best on data (non-cropland removed)</span>
@@ -439,19 +463,21 @@ dists &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&
 fit_distrs &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(x) {
   dat &lt;-<span class="st"> </span>mu0[, x]
   dat &lt;-<span class="st"> </span>dat[!<span class="kw">is.na</span>(dat)] /<span class="st"> </span><span class="dv">100</span>
+  dat[dat ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span>dat[dat ==<span class="st"> </span><span class="dv">0</span>] +<span class="st"> </span><span class="fl">0.1</span>
   fits &lt;-<span class="st"> </span><span class="kw">lapply</span>(dists, function(x) <span class="kw">fitdist</span>(dat, x))
   <span class="kw">names</span>(fits) &lt;-<span class="st"> </span>dists
   fits
 })
 <span class="kw">names</span>(fit_distrs) &lt;-<span class="st"> </span>snms
-<span class="kw">lapply</span>(fit_distrs, function(x) <span class="kw">sort</span>(<span class="kw">sapply</span>(x, function(y) y$aic)))
-<span class="kw">plot</span>(fit_distrs[[<span class="dv">1</span>]]$lnorm)  <span class="co"># lognorm shows up as best fit</span>
+<span class="co"># lapply(fit_distrs, function(x) sort(sapply(x, function(y) y$aic)))</span>
+<span class="kw">plot</span>(fit_distrs[[<span class="dv">2</span>]]$lnorm)  <span class="co"># lognorm shows up as best fit</span>
 
 <span class="co"># Matters more on residuals from model fit, however. </span>
 <span class="co"># dataset</span>
-<span class="co"># dat &lt;- proc_df(x = mu0, nm = snms[4])  # interactively change response  </span>
-dat &lt;-<span class="st"> </span><span class="kw">proc_df</span>(<span class="dt">x =</span> med0, <span class="dt">nm =</span> snms[<span class="dv">1</span>])  <span class="co"># and input data</span>
+dat &lt;-<span class="st"> </span><span class="kw">proc_df</span>(<span class="dt">x =</span> mu, <span class="dt">nm =</span> snms[<span class="dv">4</span>])  <span class="co"># interactively change response  </span>
+<span class="co"># dat &lt;- proc_df(x = med0, nm = snms[1])  # and input data</span>
 dat &lt;-<span class="st"> </span>dat[!<span class="kw">is.na</span>(dat$pv), ]
+dat[, <span class="dv">4</span>] &lt;-<span class="st"> </span>dat[, <span class="dv">4</span>] +<span class="st"> </span><span class="fl">0.1</span>  <span class="co"># add 1 to allow for log transform</span>
 
 <span class="co"># GAM assuming Gaussian</span>
 dgam &lt;-<span class="st"> </span><span class="kw">gam</span>(dv ~<span class="st"> </span><span class="kw">poly</span>(pv, <span class="dv">2</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat, 
@@ -473,7 +499,7 @@ dgam2 &lt;-<span class="st"> </span><span class="kw">gam</span>(dv ~<span class=
 
 <span class="co"># GAM w/Gamma</span>
 dgam3 &lt;-<span class="st"> </span><span class="kw">gam</span>(dv ~<span class="st"> </span><span class="kw">poly</span>(pv, <span class="dv">2</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat, 
-            <span class="dt">family =</span> <span class="kw">Gamma</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>)
+            <span class="dt">family =</span> <span class="kw">Gamma</span>(<span class="dt">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>)
 <span class="kw">summary</span>(dgam3)
 <span class="kw">AIC</span>(dgam3)  <span class="co"># bizarre large AIC</span>
 <span class="kw">gam.check</span>(dgam3)  <span class="co"># crazy deviance residuals</span>
@@ -492,8 +518,9 @@ dgam4 &lt;-<span class="st"> </span><span class="kw">gam</span>(<span class="kw"
 <span class="co"># pred &lt;- predict(dgam4, newdata = newdat, type = &quot;response&quot;, se.fit = TRUE)</span>
 
 <span class="co"># above, with smooth fit instead of quadratic</span>
-dgam4b &lt;-<span class="st"> </span><span class="kw">gam</span>(<span class="kw">log</span>(dv) ~<span class="st"> </span><span class="kw">s</span>(pv, <span class="dt">k =</span> <span class="dv">3</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat, 
-             <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>)
+dgam4b &lt;-<span class="st"> </span><span class="kw">gam</span>(<span class="kw">log</span>(dv +<span class="st"> </span><span class="fl">0.0001</span>) ~<span class="st"> </span><span class="kw">s</span>(pv, <span class="dt">k =</span> <span class="dv">3</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat,
+              <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>)
+<span class="kw">plot</span>(dat$pv, dat$dv)
 <span class="kw">summary</span>(dgam4b)
 <span class="kw">AIC</span>(dgam4b)
 <span class="kw">gam.check</span>(dgam4)
@@ -535,8 +562,10 @@ polyfunc &lt;-<span class="st"> </span>function(pdat) {
 <pre class="sourceCode r"><code class="sourceCode r">gam_mods &lt;-<span class="st"> </span><span class="kw">lapply</span>(nms, function(i) {
   dat1 &lt;-<span class="st"> </span><span class="kw">proc_df</span>(<span class="dt">x =</span> mu0, <span class="dt">nm =</span> i)
   dat1 &lt;-<span class="st"> </span>dat1[!<span class="kw">is.na</span>(dat1$pv), ]
-  dat2 &lt;-<span class="st"> </span><span class="kw">proc_df</span>(<span class="dt">x =</span> med0, <span class="dt">nm =</span> i)
+  dat1$dv &lt;-<span class="st"> </span>dat1$dv +<span class="st"> </span><span class="fl">0.1</span>  <span class="co"># adding 0.1 to allow log transform</span>
+  dat2 &lt;-<span class="st"> </span><span class="kw">proc_df</span>(<span class="dt">x =</span> mu, <span class="dt">nm =</span> i)
   dat2 &lt;-<span class="st"> </span>dat2[!<span class="kw">is.na</span>(dat2$pv), ]
+  dat2$dv &lt;-<span class="st"> </span>dat2$dv +<span class="st"> </span><span class="fl">0.1</span>  <span class="co"># adding 0.1 to allow log transform</span>
   dgam1 &lt;-<span class="st"> </span><span class="kw">gam</span>(<span class="kw">log</span>(dv) ~<span class="st"> </span><span class="kw">poly</span>(pv, <span class="dv">2</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat1, 
                <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>)
   dgam2 &lt;-<span class="st"> </span><span class="kw">gam</span>(<span class="kw">log</span>(dv) ~<span class="st"> </span><span class="kw">poly</span>(pv, <span class="dv">2</span>) +<span class="st"> </span><span class="kw">s</span>(x, y), <span class="dt">weights =</span> w, <span class="dt">data =</span> dat2, 
@@ -545,6 +574,8 @@ polyfunc &lt;-<span class="st"> </span>function(pdat) {
                  <span class="kw">data.frame</span>(<span class="dt">pv =</span> <span class="dv">0</span>:<span class="dv">100</span>, <span class="st">&quot;x&quot;</span> =<span class="st"> </span><span class="kw">mean</span>(dat1$x), <span class="st">&quot;y&quot;</span> =<span class="st"> </span><span class="kw">mean</span>(dat1$y)))
   pdat1 &lt;-<span class="st"> </span><span class="kw">predfunc</span>(dgam1, newdat)
   pdat2 &lt;-<span class="st"> </span><span class="kw">predfunc</span>(dgam2, newdat)
+  <span class="co"># pdat1 &lt;- termfunc(dgam1, newdat)</span>
+  <span class="co"># pdat2 &lt;- termfunc(dgam2, newdat)</span>
   <span class="kw">return</span>(<span class="kw">list</span>(<span class="st">&quot;mumod&quot;</span> =<span class="st"> </span>dgam1, <span class="st">&quot;medmod&quot;</span> =<span class="st"> </span>dgam2, <span class="st">&quot;pdat1&quot;</span> =<span class="st"> </span>pdat1, 
               <span class="st">&quot;pdat2&quot;</span> =<span class="st"> </span>pdat2,  <span class="st">&quot;data1&quot;</span> =<span class="st"> </span>dat1, <span class="st">&quot;data2&quot;</span> =<span class="st"> </span>dat2))  
 })</code></pre>
@@ -559,11 +590,11 @@ polyfunc &lt;-<span class="st"> </span>function(pdat) {
 
 ptcols &lt;-<span class="st"> </span><span class="kw">sapply</span>(cols, function(x) <span class="kw">makeTransparent</span>(x, <span class="dv">80</span>))  <span class="co"># CI colors</span>
 lw &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">2</span>, <span class="dv">4</span>), <span class="dv">3</span>, <span class="dv">3</span>)
-yl1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="kw">round</span>(<span class="kw">max</span>(<span class="kw">sapply</span>(gam_mods, function(x) <span class="kw">max</span>(x$pdat1$fit))), <span class="dv">1</span>))
-yl2 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="kw">round</span>(<span class="kw">max</span>(<span class="kw">sapply</span>(gam_mods, function(x) <span class="kw">max</span>(x$pdat2$fit))), <span class="dv">1</span>))
-<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_mu0.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="dv">7</span>)
+yl1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="kw">round</span>(<span class="kw">max</span>(<span class="kw">sapply</span>(gam_mods, function(x) <span class="kw">max</span>(x$pdat1$fit) *<span class="st"> </span><span class="fl">1.1</span>)), <span class="dv">1</span>))
+yl2 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="kw">round</span>(<span class="kw">max</span>(<span class="kw">sapply</span>(gam_mods, function(x) <span class="kw">max</span>(x$pdat2$fit) *<span class="st"> </span><span class="fl">1.1</span>)), <span class="dv">1</span>))
+<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_mu0.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="fl">4.5</span>)
 <span class="kw">par</span>(<span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>))
-<span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Mean Absolute Error (%)&quot;</span>, 
+<span class="kw">plot</span>(xl, yl1, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Mean Absolute Error (%)&quot;</span>, 
      <span class="dt">xlab =</span> <span class="st">&quot;% Cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)
 <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="dv">0</span>:<span class="dv">4</span>, <span class="kw">round</span>(<span class="kw">exp</span>(<span class="kw">c</span>(-<span class="dv">10</span>, <span class="dv">1</span>:<span class="dv">4</span>))))
@@ -580,8 +611,8 @@ for(i in <span class="dv">1</span>:<span class="dv">4</span>) {
        <span class="dt">col =</span> cols, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xpd =</span> <span class="ot">NA</span>)<span class="co">#, title = &quot;Fit&quot;)</span>
 <span class="kw">dev.off</span>()
 
-<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_med0.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="dv">7</span>)
-<span class="kw">par</span>(<span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>))
+<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;biases_md_lnorm_gam_mu.pdf&quot;</span>), <span class="dt">width =</span> <span class="dv">7</span>, <span class="dt">height =</span> <span class="fl">4.5</span>)
+<span class="kw">par</span>(<span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>))
 <span class="kw">plot</span>(xl, yl2, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Mean Absolute Error (%)&quot;</span>, 
      <span class="dt">xlab =</span> <span class="st">&quot;% Cropland&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="fl">1.5</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)

@@ -148,6 +148,7 @@ p_fig &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <s
 p_data &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;external/ext_data/&quot;</span>)
 p_data2 &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <span class="st">&quot;data/&quot;</span>)
 <span class="co">#p_carb &lt;- full_path(p_root, &quot;SAcropland/external/ext_data/carbon/&quot;)</span>
+<span class="co"># load(full_path(p_data, &quot;yield-bias.rda&quot;))</span>
 
 <span class="co"># SA provinces</span>
 prov &lt;-<span class="st"> </span><span class="kw">readOGR</span>(<span class="st">&quot;external/ext_data/provinces.sqlite&quot;</span>, <span class="dt">layer =</span> <span class="st">&quot;provinces&quot;</span>)
@@ -159,11 +160,15 @@ prov[prov$id_1 ==<span class="st"> </span><span class="dv">10</span>, <span clas
 <span class="kw">load</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;d_grid_act.rda&quot;</span>))  <span class="co"># actual diffence grids</span>
 paths &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_data, <span class="kw">dir</span>(p_data, <span class="kw">paste0</span>(<span class="st">&quot;cover*.*11sum_mask.tif$&quot;</span>)))
 gti &lt;-<span class="st"> </span><span class="kw">raster</span>(paths) /<span class="st"> </span><span class="dv">100</span>  <span class="co"># gti 2011</span>
+namask &lt;-<span class="st"> </span><span class="kw">raster</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;namask.tif&quot;</span>))  <span class="co"># NA mask</span>
+gti &lt;-<span class="st"> </span><span class="kw">mask</span>(gti, namask)  <span class="co"># apply mask to GTI</span>
+<span class="co"># cellStats(!is.na(gti), sum)</span>
 
 <span class="co"># Reconstruct original landcover estimates</span>
 snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
 dlist_1km &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_act[snms], function(x) x$f1$g2011)
 lc_list &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_1km, function(x) gti -<span class="st"> </span>x /<span class="st"> </span><span class="dv">100</span>) 
+<span class="co"># cellStats(!is.na(lc_list$sa30), sum)</span>
 
 <span class="co"># plot(lc_list[[1]])</span>
 <span class="co"># plot(gti)</span>
@@ -172,10 +177,10 @@ lc_list &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_1km, 
 
 <span class="co"># Create namask to remove all NA areas across datasets</span>
 sumna &lt;-<span class="st"> </span>function(x) <span class="kw">sum</span>(x, <span class="dt">na.rm =</span> <span class="ot">FALSE</span>)
-namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(gti, <span class="kw">stack</span>(lc_list)), sumna)
-namask[namask &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+<span class="co"># namask &lt;- calc(stack(stack(gti), stack(lclist)), sumna)</span>
+<span class="co"># namask[namask &gt;= 0] &lt;- 1</span>
 namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
-<span class="co"># cellStats(is.na(gti), sum); cellStats(namask2, sum)</span>
+<span class="co"># cellStats(!is.na(gti), sum); cellStats(namask2, sum)</span>
 fact &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">100</span>)</code></pre>
 </div>
 <div id="analyses" class="section level1">
@@ -316,6 +321,16 @@ lc_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>
 gtic &lt;-<span class="st"> </span><span class="kw">crop</span>(gti, lc_adj$sa30)
 gti_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(<span class="st">&quot;gti&quot;</span> =<span class="st"> </span>gtic))  <span class="co"># GTI rasters</span>
 
+<span class="co"># set up masks and weights for assessing output bias and absolute errors</span>
+namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(gtic, lc_agg$f1), sumna)
+<span class="co"># cellStats(!is.na(gtic), sum); cellStats(!is.na(lc_agg$f1$sa30), sum)</span>
+namask[namask &gt;=<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
+<span class="co"># cellStats(!is.na(namask), sum); cellStats(namask2, sum)</span>
+fact &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">100</span>)
+awgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask2), <span class="dt">fun =</span> sum)
+awgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(awgts, function(x) x[[<span class="dv">1</span>]])  <span class="co"># unlist on inner loop</span>
+
 <span class="co"># compare extents to make sure no offsets - look at in QGIS</span>
 <span class="co"># writeRaster(gti_agg$f1$gti, filename = &quot;external/ext_data/test/gti_crop.tif&quot;)</span>
 <span class="co"># writeRaster(lc_agg$f1$sa30, filename = &quot;external/ext_data/test/sa30_crop.tif&quot;)</span>
@@ -323,9 +338,9 @@ gti_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span
 
 <span class="co"># tst &lt;- gti_agg$f5$gti - lc_agg$f5$sa30</span>
 <span class="co"># plot(tst * 100)</span>
-
 <span class="co">#pct_diff &lt;- function(x, y) (x - y) / x * 100</span>
 
+<span class="co"># calculate differences between adjusted fraction and reference</span>
 cf_pct_diff &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(x) {
   dif &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">names</span>(lc_agg), function(y) {
     d &lt;-<span class="st"> </span>gti_agg[[y]][[<span class="dv">1</span>]] -<span class="st"> </span>lc_agg[[y]][[x]]
@@ -334,10 +349,103 @@ cf_pct_diff &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, f
 })
 <span class="kw">names</span>(cf_pct_diff) &lt;-<span class="st"> </span>snms
 
-<span class="co"># disaggregate for plotting</span>
-namaskc &lt;-<span class="st"> </span><span class="kw">crop</span>(namask, gtic)
+<span class="co"># same, but as percent</span>
+cf_pct_diff2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(x) {
+  dif &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">names</span>(lc_agg), function(y) {
+    d &lt;-<span class="st"> </span>(gti_agg[[y]][[<span class="dv">1</span>]] -<span class="st"> </span>lc_agg[[y]][[x]]) *<span class="st"> </span><span class="dv">100</span>
+  })
+  <span class="kw">named_out</span>(dif, <span class="kw">names</span>(lc_agg))
+})
+<span class="kw">names</span>(cf_pct_diff2) &lt;-<span class="st"> </span>snms
+
+<span class="co"># cropland cover bins, for looking at error as a function of cover, based on </span>
+<span class="co"># original extent of gti data, for ease</span>
+binv &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="fl">0.05</span>)
+bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg, function(x) {
+  <span class="kw">cut</span>(x$gti, <span class="dt">breaks =</span> binv, <span class="dt">include.lowest =</span> <span class="ot">TRUE</span>)
+})
+
+<span class="co"># snms &lt;- names(p_diff1)</span>
+<span class="co"># lcnu &lt;- lapply(lev, function(x) {</span>
+<span class="co">#   lcb &lt;- lapply(snms, function(y) {</span>
+<span class="co">#     all_gt0 &lt;- !is.na(bins[[x]])</span>
+<span class="co">#     all_gt0</span>
+<span class="co">#   })</span>
+<span class="co">#   named_out(lcb, snms)</span>
+<span class="co"># })</span>
+<span class="co"># names(lcnu) &lt;- lev</span>
 lev &lt;-<span class="st"> </span><span class="kw">names</span>(cf_pct_diff[[<span class="dv">1</span>]])
-disagg &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, cf_pct_diff, <span class="kw">crop</span>(namask, gtic))
+snms &lt;-<span class="st"> </span><span class="kw">names</span>(p_diff1)
+lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(x) {
+  lcb &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
+    gti_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(gti_agg[[x]][[<span class="dv">1</span>]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    lc_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(lc_agg[[x]][[y]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    all_gt0 &lt;-<span class="st"> </span>gti_gt0 +<span class="st"> </span>lc_gt0
+    all_gt0[all_gt0 &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+    all_gt0
+  })
+  <span class="kw">named_out</span>(lcb, snms)
+})
+<span class="kw">names</span>(lcu) &lt;-<span class="st"> </span>lev
+
+<span class="co"># calculate means</span>
+wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
+wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, cf_pct_diff2, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, cf_pct_diff2, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+<span class="co"># b &lt;- bias_stats_list(bins, awgts, lcnu, cf_pct_diff2, wma, &quot;mua&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># b[ol == &quot;f1&quot; &amp; il == &quot;modmu&quot; &amp; bin == &quot;all&quot;]</span>
+
+<span class="co"># check</span>
+<span class="co"># Older variant of code from compare-landcover.Rmd to evaluate whether newer DT</span>
+<span class="co"># version is finding correct results</span>
+bv &lt;-<span class="st"> &quot;mua&quot;</span>
+for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;f25&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;geow&quot;</span>, <span class="st">&quot;f10&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;f50&quot;</span>), 
+                <span class="kw">c</span>(<span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;f1&quot;</span>))) {
+  x &lt;-<span class="st"> </span>chk[<span class="dv">1</span>] 
+  y &lt;-<span class="st"> </span>chk[<span class="dv">2</span>] 
+  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x, <span class="st">&quot;..&quot;</span>, y))
+  rs &lt;-<span class="st"> </span>lcu[[y]][[x]] 
+  rs[rs ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  l3 &lt;-<span class="st"> </span><span class="kw">abs</span>(cf_pct_diff2[[x]][[y]])
+  o &lt;-<span class="st"> </span>rs *<span class="st"> </span>l3
+  w &lt;-<span class="st"> </span>awgts[[y]][[<span class="dv">1</span>]] *<span class="st"> </span>rs
+  wmu &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(<span class="kw">getValues</span>(o), <span class="kw">getValues</span>(w), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+  <span class="kw">print</span>(b[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x &amp;<span class="st"> </span>bvals ==<span class="st"> </span>bv &amp;<span class="st"> </span>bin ==<span class="st"> &quot;all&quot;</span>, bias] ==
+<span class="st">          </span><span class="kw">round</span>(wmu, <span class="dv">2</span>))
+}  <span class="co"># check</span>
+
+lcfmua &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, b)
+lcfmua_nm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua.nm&quot;</span>, <span class="st">&quot;bias&quot;</span>, b) 
+<span class="co"># b[ol == &quot;f10&quot; &amp; il == &quot;globmu&quot; &amp; bin == &quot;all&quot;]</span>
+
+svec &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mua.nm&quot;</span>, <span class="st">&quot;mua&quot;</span>)
+aa &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Country&quot;</span>, <span class="st">&quot;Agricultural&quot;</span>)
+mcap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA-LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;GeoWiki&quot;</span>)
+
+lcf_out &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(svec), function(i) {
+  a &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(snms, function(x) {
+    aa &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(y) {
+      b[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x &amp;<span class="st"> </span>bin ==<span class="st"> &quot;all&quot;</span> &amp;<span class="st"> </span>bvals ==<span class="st"> </span>svec[i], bias]
+    })
+    <span class="kw">named_out</span>(aa, <span class="kw">paste</span>(<span class="kw">c</span>(<span class="dv">1</span>, fact), <span class="st">&quot;km&quot;</span>))
+  }))
+  <span class="kw">cbind.data.frame</span>(<span class="st">&quot;Region&quot;</span> =<span class="st"> </span>aa[i], <span class="st">&quot;Map&quot;</span> =<span class="st"> </span>mcap, a)
+}))
+
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Mean absolute errors (MAE) in statistically constrained&quot;</span>, 
+                 <span class="st">&quot;cropland maps, calculated over the entire country, and for&quot;</span>, 
+                 <span class="st">&quot;the union of agricultural regions (cropland $&gt;$ 0) defined &quot;</span>, 
+                 <span class="st">&quot;by the reference and corresponding adjusted cropland&quot;</span>,
+                 <span class="st">&quot;maps&quot;</span>)    
+lcfout_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(lcf_out, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(lcfout_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/cropadj-mae.tex&quot;</span>, 
+      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)
+
+<span class="co"># disaggregate for plotting</span>
+<span class="co"># namaskc &lt;- crop(namask, gtic)</span>
+disagg &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, cf_pct_diff, namask)
 
 stats &lt;-<span class="st"> </span><span class="kw">lapply</span>(disagg, function(x) {
   <span class="kw">sapply</span>(x, function(y) {
@@ -558,9 +666,9 @@ crop_ayr &lt;-<span class="st"> </span><span class="kw">lapply</span>(crop_ay, f
 
 <span class="co"># redo NA mask because of some slight shifts</span>
 namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(<span class="kw">lapply</span>(crop_ayr, function(x) x$fa)), sumna)
-namask[namask &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+namask[namask &gt;=<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
 namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
-<span class="co"># cellStats(is.na(gti), sum); cellStats(namask2, sum)</span>
+<span class="co"># cellStats(!is.na(gti), sum); cellStats(namask2, sum)</span>
 awgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask2), <span class="dt">fun =</span> sum)
 awgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(awgts, function(x) x[[<span class="dv">1</span>]])  <span class="co"># unlist on inner loop</span>
 <span class="co"># sumna &lt;- function(x, na.rm = na.rm) sum(x, na.rm = na.rm)</span>
@@ -608,22 +716,22 @@ monfmz &lt;-<span class="st"> </span><span class="kw">brick</span>(monf, <span c
 <span class="co"># not implausible that someone would do a direct aggregation of these yield </span>
 <span class="co"># values, without weighting by crop distribution, so this incorrect variant </span>
 <span class="co"># would be: </span>
-cyld_agg2 &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, cyld_agg$f1, mean) <span class="co"># incorrect yld agg</span>
+<span class="co"># cyld_agg2 &lt;- aggregate_rast_list(fact, cyld_agg$f1, mean) # incorrect yld agg</span>
 
 <span class="co"># third variant - aggregate and remove zeros</span>
 <span class="co"># first define a function that removes zero yield areas when calculating mean </span>
 <span class="co"># yield--this will allow for aggregation of yields only in those areas having </span>
 <span class="co"># maize, according to Monfreda et al methods</span>
-nzmean &lt;-<span class="st"> </span>function(x, na.rm) {
-  x &lt;-<span class="st"> </span>x[(x &gt;<span class="st"> </span><span class="dv">0</span>) &amp;<span class="st"> </span>!<span class="kw">is.na</span>(x)]
-  if(<span class="kw">length</span>(x) ==<span class="st"> </span><span class="dv">0</span>) {
-    m &lt;-<span class="st"> </span><span class="dv">0</span>
-  } else if(<span class="kw">length</span>(x) &gt;<span class="st"> </span><span class="dv">0</span>) {
-    m &lt;-<span class="st"> </span><span class="kw">mean</span>(x, <span class="dt">na.rm =</span> na.rm)
-  }
-  <span class="kw">return</span>(m)
-}
-cyld_agg3 &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, cyld_agg$f1, nzmean) <span class="co"># no zero agg</span>
+<span class="co"># nzmean &lt;- function(x, na.rm) {</span>
+<span class="co">#   x &lt;- x[(x &gt; 0) &amp; !is.na(x)]</span>
+<span class="co">#   if(length(x) == 0) {</span>
+<span class="co">#     m &lt;- 0</span>
+<span class="co">#   } else if(length(x) &gt; 0) {</span>
+<span class="co">#     m &lt;- mean(x, na.rm = na.rm)</span>
+<span class="co">#   }</span>
+<span class="co">#   return(m)</span>
+<span class="co"># }</span>
+<span class="co"># cyld_agg3 &lt;- aggregate_rast_list(fact, cyld_agg$f1, nzmean) # no zero agg</span>
 
 <span class="co"># plot(cyld_agg$f25$modmu - cyld_agg2$f25$modmu)</span>
 <span class="co"># plot(cyld_agg$f25$modmu - cyld_agg3$f25$modmu)</span>
@@ -650,32 +758,32 @@ tareas &lt;-<span class="st"> </span><span class="kw">lapply</span>(awgts, funct
 <span class="co"># (sum(a) * 100) / (sum(ta) * 100)</span>
 <span class="co"># mean(a) * (sum(ta) * 100)</span>
 
-yat &lt;-<span class="st"> </span><span class="kw">list</span>(cyld_agg, cyld_agg2, cyld_agg3)
-## check values
-<span class="co"># check yields</span>
-for(i in lev[-<span class="dv">1</span>]) {
-  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;factor&quot;</span>, i))
-  for(j in asnms) {
-    <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, j))
-    for(k in <span class="dv">1</span>:<span class="dv">3</span>) {
-      <span class="co">#ck &lt;- cellStats(cyld_agg$f1$gti, nzmean)</span>
-      <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...... type&quot;</span>, k, <span class="st">&quot;agg&quot;</span>))
-      ck &lt;-<span class="st"> </span>crop_ay[[j]][, <span class="kw">wm</span>(mzyld, fa)]  <span class="co"># weighted by fraction</span>
-      ck2 &lt;-<span class="st"> </span>crop_ay$gti[, <span class="kw">wm</span>(mzyld, fa)]  <span class="co"># weighted by fraction</span>
-      w &lt;-<span class="st"> </span><span class="kw">values</span>(carea_agg[[i]][[j]])  <span class="co"># aggregated crop fraction</span>
-      x &lt;-<span class="st"> </span><span class="kw">values</span>(yat[[k]][[i]][[j]])  <span class="co"># yield values</span>
-      ind &lt;-<span class="st"> </span><span class="kw">which</span>(x &gt;<span class="st"> </span><span class="dv">0</span>)  <span class="co"># which are non-zero</span>
-      x &lt;-<span class="st"> </span>x[ind]  <span class="co"># select non zeros</span>
-      w &lt;-<span class="st"> </span>w[ind]  <span class="co"># select non-zeros</span>
-      <span class="co">#w &lt;- w / max(w)</span>
-      v &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(x, w)
-      d &lt;-<span class="st"> </span><span class="kw">round</span>((ck -<span class="st"> </span>v) /<span class="st"> </span>ck, <span class="dv">2</span>)
-      d2 &lt;-<span class="st"> </span><span class="kw">round</span>((ck2 -<span class="st"> </span>v) /<span class="st"> </span>ck2, <span class="dv">2</span>)
-      <span class="kw">print</span>(<span class="kw">c</span>(d, d2))
-    }
-  }  <span class="co"># type 1 and type 3 aggregations consistent between datasets, across scales</span>
-}
-<span class="kw">rm</span>(yat)
+<span class="co"># yat &lt;- list(cyld_agg, cyld_agg2, cyld_agg3)</span>
+<span class="co"># ## check values</span>
+<span class="co"># # check yields</span>
+<span class="co"># for(i in lev[-1]) {</span>
+<span class="co">#   print(paste(&quot;factor&quot;, i))</span>
+<span class="co">#   for(j in asnms) {</span>
+<span class="co">#     print(paste(&quot;...&quot;, j))</span>
+<span class="co">#     for(k in 1:3) {</span>
+<span class="co">#       #ck &lt;- cellStats(cyld_agg$f1$gti, nzmean)</span>
+<span class="co">#       print(paste(&quot;...... type&quot;, k, &quot;agg&quot;))</span>
+<span class="co">#       ck &lt;- crop_ay[[j]][, wm(mzyld, fa)]  # weighted by fraction</span>
+<span class="co">#       ck2 &lt;- crop_ay$gti[, wm(mzyld, fa)]  # weighted by fraction</span>
+<span class="co">#       w &lt;- values(carea_agg[[i]][[j]])  # aggregated crop fraction</span>
+<span class="co">#       x &lt;- values(yat[[k]][[i]][[j]])  # yield values</span>
+<span class="co">#       ind &lt;- which(x &gt; 0)  # which are non-zero</span>
+<span class="co">#       x &lt;- x[ind]  # select non zeros</span>
+<span class="co">#       w &lt;- w[ind]  # select non-zeros</span>
+<span class="co">#       #w &lt;- w / max(w)</span>
+<span class="co">#       v &lt;- weighted.mean(x, w)</span>
+<span class="co">#       d &lt;- round((ck - v) / ck, 2)</span>
+<span class="co">#       d2 &lt;- round((ck2 - v) / ck2, 2)</span>
+<span class="co">#       print(c(d, d2))</span>
+<span class="co">#     }</span>
+<span class="co">#   }  # type 1 and type 3 aggregations consistent between datasets, across scales</span>
+<span class="co"># }</span>
+<span class="co"># rm(yat)</span>
 
 <span class="co"># check aggregated maize fractions</span>
 for(i in lev) {
@@ -700,13 +808,13 @@ cpagg1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
 <span class="kw">names</span>(cpagg1) &lt;-<span class="st"> </span><span class="kw">names</span>(agg_res)
 
 <span class="co"># with 0-removed yield aggregation (type 3 yield aggregation)</span>
-cpagg3 &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(cyld_agg3), function(x) {
-  p &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(cyld_agg3[[x]]), function(y) {
-    (tareas[[x]] *<span class="st"> </span>carea_agg[[x]][[y]]) *<span class="st"> </span>cyld_agg3[[x]][[y]]
-  })
-  <span class="kw">named_out</span>(p, asnms)
-})
-<span class="kw">names</span>(cpagg3) &lt;-<span class="st"> </span><span class="kw">names</span>(agg_res)
+<span class="co"># cpagg3 &lt;- lapply(1:length(cyld_agg3), function(x) {</span>
+<span class="co">#   p &lt;- lapply(1:length(cyld_agg3[[x]]), function(y) {</span>
+<span class="co">#     (tareas[[x]] * carea_agg[[x]][[y]]) * cyld_agg3[[x]][[y]]</span>
+<span class="co">#   })</span>
+<span class="co">#   named_out(p, asnms)</span>
+<span class="co"># })</span>
+<span class="co"># names(cpagg3) &lt;- names(agg_res)</span>
 
 <span class="co"># Type B (formerly II) aggregation: crop production differences when aggregated</span>
 <span class="co"># from 1 km calculate production at 1 km</span>
@@ -717,14 +825,17 @@ cprod &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="
 cpaggII &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, cprod, <span class="st">&quot;sum&quot;</span>) <span class="co"># aggregate production</span>
 
 <span class="co"># check production estimates for consistency</span>
-pat &lt;-<span class="st"> </span><span class="kw">list</span>(cpagg1, cpagg3, cpaggII)
-ptype &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;3&quot;</span>, <span class="st">&quot;II&quot;</span>)
+<span class="co"># pat &lt;- list(cpagg1, cpagg3, cpaggII)</span>
+<span class="co"># ptype &lt;- c(&quot;1&quot;, &quot;3&quot;, &quot;II&quot;)</span>
+pat &lt;-<span class="st"> </span><span class="kw">list</span>(cpagg1, cpaggII)
+ptype &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;II&quot;</span>)
+
 <span class="co"># check production estimates</span>
 for(i in lev[-<span class="dv">1</span>]) {
   <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;factor&quot;</span>, i))
   for(j in asnms) {
     <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, j))
-    for(k in <span class="dv">1</span>:<span class="dv">3</span>) {
+    for(k in <span class="dv">1</span>:<span class="kw">length</span>(ptype)) {
       <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...... type&quot;</span>, ptype[k], <span class="st">&quot;agg&quot;</span>))
       ck &lt;-<span class="st"> </span><span class="kw">cellStats</span>(cprod[[j]], sum)  <span class="co"># weighted by fraction</span>
       ck2 &lt;-<span class="st"> </span><span class="kw">cellStats</span>(cprod$gti, sum) <span class="co"># weighted by fraction</span>
@@ -741,9 +852,10 @@ for(i in lev[-<span class="dv">1</span>]) {
 
 <span class="co"># Mean production in producing cells at different levels of aggregation</span>
 mup &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(i) {
-  msk &lt;-<span class="st"> </span>cpaggII[[i]]$gti &gt;<span class="st"> </span><span class="dv">0</span>
+  msk &lt;-<span class="st"> </span>cpagg1[[i]]$gti &gt;<span class="st"> </span><span class="dv">0</span>
+  <span class="co">#msk &lt;- cpaggII[[i]]$gti &gt; 0</span>
   msk[msk ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
-  cpmsk &lt;-<span class="st"> </span>msk *<span class="st"> </span>cpaggII[[i]]$gti
+  cpmsk &lt;-<span class="st"> </span>msk *<span class="st"> </span>cpagg1[[i]]$gti
   <span class="kw">cellStats</span>(cpmsk, mean)
 })
 <span class="co"># sapply(lev, function(i) {</span>
@@ -762,7 +874,7 @@ muy &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(i
   w &lt;-<span class="st"> </span>w[ind]  <span class="co"># select non-zeros</span>
   v &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(x, w, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>, )
   v
-})
+})  <span class="co"># yields across scales and datasets all 3.4-3.5 kg/ha</span>
 
 <span class="co"># calculate differences between them</span>
 <span class="co"># check first that cpagg1 and II are equivalent, make cpaggII master</span>
@@ -776,13 +888,13 @@ for(i in lev) {
 
 <span class="co"># Production differences</span>
 ilist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">names</span>(cpagg1[[<span class="dv">1</span>]])[-<span class="dv">1</span>], <span class="kw">names</span>(cpagg1), <span class="st">&quot;gti&quot;</span>)
-list1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpaggII, function(x) x[[<span class="dv">1</span>]])
+list1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpagg1, function(x) x[<span class="dv">1</span>])
 list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpagg1, function(x) x[-<span class="dv">1</span>])
 p_diff1 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 1 agg</span>
-list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpagg3, function(x) x[-<span class="dv">1</span>])
-p_diff2 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 3 agg</span>
-list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cpaggII, function(x) x[-<span class="dv">1</span>])
-p_diff3 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type II agg</span>
+<span class="co"># list2 &lt;- lapply(cpagg3, function(x) x[-1])</span>
+<span class="co"># p_diff2 &lt;- rast_list_math(ilist, list1, list2, expr = &quot;a - b&quot;)  # type 3 agg</span>
+<span class="co"># list2 &lt;- lapply(cpaggII, function(x) x[-1])</span>
+<span class="co"># p_diff3 &lt;- rast_list_math(ilist, list1, list2, expr = &quot;a - b&quot;)  # type II agg</span>
 <span class="co"># pmu &lt;- as.data.table.raster(cpagg3$f1$globmu)[layer &gt; 0, mean(layer)]</span>
 
 <span class="co"># yield differences</span>
@@ -805,13 +917,12 @@ y_diff1 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ili
 <span class="co"># }</span>
 
 <span class="co"># type 2 (non-zero)</span>
-list2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(cyld_agg3, function(x) x[-<span class="dv">1</span>]) <span class="co"># cyld_agg for a, b/c correct</span>
-y_diff2 &lt;-<span class="st"> </span><span class="kw">rast_list_math</span>(ilist, list1, list2, <span class="dt">expr =</span> <span class="st">&quot;a - b&quot;</span>)  <span class="co"># type 2</span>
+<span class="co"># list2 &lt;- lapply(cyld_agg3, function(x) x[-1]) # cyld_agg for a, b/c correct</span>
+<span class="co"># y_diff2 &lt;- rast_list_math(ilist, list1, list2, expr = &quot;a - b&quot;)  # type 2</span>
 
 <span class="co"># convert them to percent differences relative to mean pixel-wise production</span>
 <span class="co"># here only for map plotting.</span>
-<span class="co"># plot(y_diff2$sa30$f25$gti)</span>
-pdiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">list</span>(p_diff1, p_diff2, p_diff3), function(x) {
+pdiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">list</span>(p_diff1), function(x) {
   l1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
     l2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(z) {
       x[[y]][[z]]$gti /<span class="st"> </span>mup[z] *<span class="st"> </span><span class="dv">100</span>
@@ -820,9 +931,11 @@ pdiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
   })  
   <span class="kw">named_out</span>(l1, snms)
 })
-<span class="kw">names</span>(pdiffs) &lt;-<span class="st"> </span><span class="kw">paste0</span>(<span class="st">&quot;pd&quot;</span>, <span class="dv">1</span>:<span class="dv">3</span>)
+<span class="co"># names(pdiffs) &lt;- paste0(&quot;pd&quot;, 1:3)</span>
+<span class="kw">names</span>(pdiffs) &lt;-<span class="st"> &quot;pd1&quot;</span>
 
-ydiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">list</span>(y_diff1, y_diff2), function(x) {
+<span class="co"># ydiffs &lt;- lapply(list(y_diff1, y_diff2), function(x) {</span>
+ydiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">list</span>(y_diff1), function(x) {
   l1 &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
     l2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(z) {
       x[[y]][[z]]$gti /<span class="st"> </span>muy[z] *<span class="st"> </span><span class="dv">100</span>
@@ -831,15 +944,16 @@ ydiffs &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
   })  
   <span class="kw">named_out</span>(l1, snms)
 })
-<span class="kw">names</span>(ydiffs) &lt;-<span class="st"> </span><span class="kw">paste0</span>(<span class="st">&quot;yd&quot;</span>, <span class="dv">1</span>:<span class="dv">2</span>)
+<span class="co"># names(ydiffs) &lt;- paste0(&quot;yd&quot;, 1:2)</span>
+<span class="kw">names</span>(ydiffs) &lt;-<span class="st"> &quot;yd1&quot;</span>
 
 <span class="co"># disaggregate for plotting</span>
-lev &lt;-<span class="st"> </span><span class="kw">names</span>(y_diff2[[<span class="dv">1</span>]])
+lev &lt;-<span class="st"> </span><span class="kw">names</span>(y_diff1[[<span class="dv">1</span>]])
 p_diff1d &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, pdiffs$pd1, namask)
-p_diff2d &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, pdiffs$pd2, namask)
-p_diff3d &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, pdiffs$pd3, namask)
+<span class="co"># p_diff2d &lt;- disaggregate_rast_list(snms, lev, pdiffs$pd2, namask)</span>
+<span class="co"># p_diff3d &lt;- disaggregate_rast_list(snms, lev, pdiffs$pd3, namask)</span>
 y_diff1d &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, ydiffs$yd1, namask)
-y_diff2d &lt;-<span class="st"> </span><span class="kw">disaggregate_rast_list</span>(snms, lev, ydiffs$yd2, namask)
+<span class="co"># y_diff2d &lt;- disaggregate_rast_list(snms, lev, ydiffs$yd2, namask)</span>
 
 <span class="co"># stats for plotting</span>
 dstats &lt;-<span class="st"> </span>function(dlist) {
@@ -850,10 +964,10 @@ dstats &lt;-<span class="st"> </span>function(dlist) {
   })
 }
 stats_pd1 &lt;-<span class="st"> </span><span class="kw">dstats</span>(p_diff1d)
-stats_pd2 &lt;-<span class="st"> </span><span class="kw">dstats</span>(p_diff2d)
-stats_pd3 &lt;-<span class="st"> </span><span class="kw">dstats</span>(p_diff3d)
+<span class="co"># stats_pd2 &lt;- dstats(p_diff2d)</span>
+<span class="co"># stats_pd3 &lt;- dstats(p_diff3d)</span>
 stats_yd1 &lt;-<span class="st"> </span><span class="kw">dstats</span>(y_diff1d)
-stats_yd2 &lt;-<span class="st"> </span><span class="kw">dstats</span>(y_diff2d)
+<span class="co"># stats_yd2 &lt;- dstats(y_diff2d)</span>
 <span class="co"># cbind(stats_yd1$geow[, 4], stats_yd2$geow[, 4])</span></code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
@@ -870,8 +984,9 @@ rng &lt;-<span class="st"> </span><span class="kw">lapply</span>(statsl, functio
   <span class="kw">c</span>(olims[<span class="dv">1</span>], ilims, olims[<span class="dv">2</span>])
 })
 
-fnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">paste0</span>(<span class="st">&quot;prod_bias_map_&quot;</span>, <span class="dv">1</span>:<span class="dv">3</span>, <span class="st">&quot;.pdf&quot;</span>), 
-          <span class="kw">paste0</span>(<span class="st">&quot;yld_bias_map_&quot;</span>, <span class="dv">1</span>:<span class="dv">2</span>, <span class="st">&quot;.pdf&quot;</span>))  <span class="co"># output names</span>
+<span class="co"># fnms &lt;- c(paste0(&quot;prod_bias_map_&quot;, 1:3, &quot;.pdf&quot;), </span>
+<span class="co">#           paste0(&quot;yld_bias_map_&quot;, 1:2, &quot;.pdf&quot;))  # output names</span>
+fnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;prod_bias_map_1.pdf&quot;</span>, <span class="st">&quot;yld_bias_map_1.pdf&quot;</span>)  <span class="co"># output names</span>
 <span class="co"># legtext &lt;- c(rep(&quot;tons&quot;, 3), rep(&quot;tons/ha&quot;, 2))</span>
 legtext &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;% Difference&quot;</span>, <span class="dv">5</span>)
 cx &lt;-<span class="st"> </span><span class="fl">1.4</span>
@@ -943,7 +1058,7 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(statsl)) {
 
 lev &lt;-<span class="st"> </span><span class="kw">names</span>(p_diff1d[[<span class="dv">1</span>]])  <span class="co"># reset levs</span></code></pre>
 <p><a href="#top">Back to top</a></p>
-<p>From the above it is clear that the nature in which aggregation of yields are done has some impact on both yield and production estimates. There are three types of yield aggregation that can be done:</p>
+<p>From the above it is clear that the nature in which aggregation of yields are done has some impact on both yield and production estimates. There are three types of yield aggregation that can be done (most commented out now after initial checking):</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>Type 1</strong>: weighted mean averaging, with the weights provided by crop fractions. This produces correct country-level average yields (&lt;1-2% different) across scales and between datasets, provided that the averaging is weighted by the cropland fractions that were aggregated to the level from which the country-level yield estimate is being calculated</p></li>
 <li><p><strong>Type 2</strong>: Straight averaging, which results in diluted country-level yield estimates. Incorrect, and should be obvious that this wouldn’t be done, so we haven’t pursued it here.</p></li>
@@ -964,6 +1079,7 @@ lev &lt;-<span class="st"> </span><span class="kw">names</span>(p_diff1d[[<span 
 <li><strong><em>Note: investigate this by look at correlation between rainfall and yield bias patterns.</em></strong></li>
 </ul></li>
 </ul>
+<p>Only Types 1 and A are included in further investigation. The other variants are left as accuracy checks.</p>
 </div>
 </div>
 <div id="bias-statistics" class="section level2">
@@ -978,12 +1094,12 @@ lev &lt;-<span class="st"> </span><span class="kw">names</span>(y_diff1[[<span c
 
 <span class="co"># first check aggregation to make yield aggregation variants have common area,</span>
 <span class="co"># so that just one lc_union is needed</span>
-for(i in lev) {
-  for(j in snms) {
-    <span class="kw">print</span>(<span class="kw">cellStats</span>(cyld_agg[[i]][[j]] &gt;<span class="st"> </span><span class="dv">0</span> &amp;<span class="st"> </span>cyld_agg3[[i]][[j]] ==<span class="st"> </span><span class="dv">0</span>, sum))
-    <span class="co">#print(cellStats(carea_agg[[i]][[j]] &gt; 0 &amp; cyld_agg[[i]][[j]] == 0, sum))</span>
-  }
-}  <span class="co"># all zeros</span>
+<span class="co"># for(i in lev) {</span>
+<span class="co">#   for(j in snms) {</span>
+<span class="co">#     print(cellStats(cyld_agg[[i]][[j]] &gt; 0 &amp; cyld_agg3[[i]][[j]] == 0, sum))</span>
+<span class="co">#     #print(cellStats(carea_agg[[i]][[j]] &gt; 0 &amp; cyld_agg[[i]][[j]] == 0, sum))</span>
+<span class="co">#   }</span>
+<span class="co"># }  # all zeros</span>
 
 snms &lt;-<span class="st"> </span><span class="kw">names</span>(p_diff1)
 lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(x) {
@@ -997,7 +1113,7 @@ lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(x
   <span class="kw">named_out</span>(lcb, snms)
 })
 <span class="kw">names</span>(lcu) &lt;-<span class="st"> </span>lev
-<span class="co"># plot(lc_union$f50$modmu)</span>
+<span class="co"># plot(lcu$f50$modmu)</span>
 <span class="co"># plot(gti_agg$f50$gti)</span>
 
 <span class="co"># cropland cover bins, for looking at error as a function of cover</span>
@@ -1036,41 +1152,41 @@ a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, aw
 b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff1, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
 d &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff1, sum, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">FALSE</span>)
 pd1_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b, d)
-a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff2, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
-b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff2, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
-d &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff2, sum, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">FALSE</span>)
-pd2_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b, d)
-a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff3, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
-b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff3, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
-d &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, p_diff3, sum, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">FALSE</span>)
-pd3_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b, d)
+<span class="co"># a &lt;- bias_stats_list(bins, awgts, lcu, p_diff2, wm, &quot;mu&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># b &lt;- bias_stats_list(bins, awgts, lcu, p_diff2, wma, &quot;mua&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># d &lt;- bias_stats_list(bins, awgts, lcu, p_diff2, sum, &quot;sum&quot;, &quot;bias&quot;, FALSE)</span>
+<span class="co"># pd2_st &lt;- rbind(a, b, d)</span>
+<span class="co"># a &lt;- bias_stats_list(bins, awgts, lcu, p_diff3, wm, &quot;mu&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># b &lt;- bias_stats_list(bins, awgts, lcu, p_diff3, wma, &quot;mua&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># d &lt;- bias_stats_list(bins, awgts, lcu, p_diff3, sum, &quot;sum&quot;, &quot;bias&quot;, FALSE)</span>
+<span class="co"># pd3_st &lt;- rbind(a, b, d)</span>
 a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, y_diff1, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
 b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, y_diff1, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
 yd1_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
-a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, y_diff2, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
-b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, y_diff2, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)      
-yd2_st &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+<span class="co"># a &lt;- bias_stats_list(bins, awgts, lcu, y_diff2, wm, &quot;mu&quot;, &quot;bias&quot;, TRUE)</span>
+<span class="co"># b &lt;- bias_stats_list(bins, awgts, lcu, y_diff2, wma, &quot;mua&quot;, &quot;bias&quot;, TRUE)    </span>
+<span class="co"># yd2_st &lt;- rbind(a, b)</span>
 
 <span class="co"># Output statistics</span>
 p1mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># identical to p3</span>
 p1ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># ident to p3</span>
-p1sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd1_st)  <span class="co"># ident to p3</span>
-p2mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
-p2ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
-p2sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd2_st)
-p3mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd3_st)
-p3ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd3_st)
-p3sm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;sum&quot;</span>, <span class="st">&quot;bias&quot;</span>, pd3_st)
+<span class="co"># p1sm &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;sum&quot;, &quot;bias&quot;, pd1_st)  # ident to p3</span>
+<span class="co"># p2mu &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mu&quot;, &quot;bias&quot;, pd2_st)</span>
+<span class="co"># p2ma &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mua&quot;, &quot;bias&quot;, pd2_st)</span>
+<span class="co"># p2sm &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;sum&quot;, &quot;bias&quot;, pd2_st)</span>
+<span class="co"># p3mu &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mu&quot;, &quot;bias&quot;, pd3_st)</span>
+<span class="co"># p3ma &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mua&quot;, &quot;bias&quot;, pd3_st)</span>
+<span class="co"># p3sm &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;sum&quot;, &quot;bias&quot;, pd3_st)</span>
 y1mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, yd1_st)
 y1ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, yd1_st)
-y2mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, yd2_st)
-y2ma &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, yd2_st)
+<span class="co"># y2mu &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mu&quot;, &quot;bias&quot;, yd2_st)</span>
+<span class="co"># y2ma &lt;- extract_stat(lev, snms, &quot;all&quot;, &quot;mua&quot;, &quot;bias&quot;, yd2_st)</span>
 
 <span class="co"># Older variant of code from compare-landcover.Rmd to evaluate whether newer DT</span>
 <span class="co"># version is finding correct results</span>
 i &lt;-<span class="st"> </span>y_diff1 <span class="co">#pdiff_3 # p_diff1</span>
 jdt &lt;-<span class="st"> </span>yd1_st <span class="co"># pd3_st # pd1_st</span>
-bv &lt;-<span class="st"> &quot;mu&quot;</span>
+bv &lt;-<span class="st"> &quot;mua&quot;</span> <span class="co"># bv &lt;- &quot;mu&quot;</span>
 for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;f25&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;geow&quot;</span>, <span class="st">&quot;f10&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;f50&quot;</span>), 
                 <span class="kw">c</span>(<span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;f1&quot;</span>))) {
   x &lt;-<span class="st"> </span>chk[<span class="dv">1</span>] 
@@ -1078,7 +1194,8 @@ for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="s
   <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x, <span class="st">&quot;..&quot;</span>, y))
   rs &lt;-<span class="st"> </span>lcu[[y]][[x]] 
   rs[rs ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
-  l3 &lt;-<span class="st"> </span>i[[x]][[y]][[<span class="dv">1</span>]]  
+  l3 &lt;-<span class="st"> </span><span class="kw">abs</span>(i[[x]][[y]][[<span class="dv">1</span>]])
+  <span class="co"># l3 &lt;- i[[x]][[y]][[1]]</span>
   o &lt;-<span class="st"> </span>rs *<span class="st"> </span>l3
   w &lt;-<span class="st"> </span>awgts[[y]][[<span class="dv">1</span>]] *<span class="st"> </span>rs
   wmu &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(<span class="kw">getValues</span>(o), <span class="kw">getValues</span>(w), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
@@ -1206,7 +1323,9 @@ out_tab &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <sp
   out
 }))  
 
-caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (MAE) in disaggregated maize&quot;</span>,                  <span class="st">&quot;yield and production (calculated from disaggregated yield&quot;</span>,                    <span class="st">&quot;and harvested area estimates)&quot;</span>, 
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (MAE) in disaggregated maize&quot;</span>,
+                 <span class="st">&quot;yield and production (calculated from disaggregated yield&quot;</span>,
+                 <span class="st">&quot;and harvested area estimates)&quot;</span>,
                  <span class="st">&quot;maps. Bias and MAE were normalized to their&quot;</span>, 
                  <span class="st">&quot;respective mean values calculated from reference maps.&quot;</span>)    
 out_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(out_tab, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)

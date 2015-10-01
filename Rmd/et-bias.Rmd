@@ -32,12 +32,16 @@ load(full_path(p_data, "MZshapes.Rdata"))  # SA shape
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
+namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
+gti <- mask(gti, namask)  # apply mask to GTI
+# cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
 snms <- c("sa30", "globmu", "modmu", "geow")
 anms <- c("gti", snms)
 dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
 lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
+# cellStats(!is.na(lc_list$sa30), sum)
 
 # check
 # plot(lc_list[[1]])
@@ -51,9 +55,10 @@ lc_agg <- aggregate_rast_list(fact, lc_list)   # landcover rasters
 gti_agg <- aggregate_rast_list(fact, list("gti" = gti))  # GTI rasters
 
 # Create namask to remove all NA areas across datasets
-sumna <- function(x) sum(x, na.rm = FALSE)
-namask <- calc(stack(gti, stack(lc_list)), sumna)
+# sumna <- function(x) sum(x, na.rm = FALSE)
+# namask <- calc(stack(gti, stack(lc_list)), sumna)
 namask2 <- !is.na(namask)  # set NAs to zero
+# cellStats(namask2, sum)
 # # namaskt <- raster(full_path(p_data, "namask.tif")) # load in NA mask
 # # namaskt2 <- !is.na(namaskt)  # set NAs to zero
 # cellStats(is.na(gti), sum); cellStats(namask2, sum); cellStats(namask2t, sum)
@@ -382,9 +387,10 @@ names(lcu) <- lev_vec
 # cropland cover bins, for looking at error as a function of cover
 binv <- seq(0, 1, 0.05)
 bins <- lapply(gti_agg[[2]], function(x) {
-  cut(x$gti, breaks = binv, include.lowest = TRUE)
+  cut(x[[1]], breaks = binv, include.lowest = TRUE)
 })
 names(bins) <- lev_vec
+# bins <- cut(gti_agg$f25$gti, breaks = binv, include.lowest = TRUE)
 
 # weighted mean functions
 wm <- function(x, w) stats::weighted.mean(x, w)

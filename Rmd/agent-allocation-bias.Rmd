@@ -33,11 +33,18 @@ p_data2 <- full_path(p_root, "SAcropland/data/")
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
 gti <- raster(paths[2])  # gti 2011
+namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
+gti <- mask(gti, namask)  # apply mask to GTI
+# cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
 snms <- c("sa30", "globmu", "modmu", "geow")
+dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
 dlist_1km <- stack(lapply(dlist_act[snms], function(x) x$f1$g2011))
-lc_list <- gti - dlist_1km 
+lc_list <- lapply(dlist_1km, function(x) gti - x) 
+# lc_list <- gti - dlist_1km 
+# cellStats(!is.na(lc_list$sa30), sum)
+lc_list <- stack(lc_list)
 
 # magisterial district data cropland statistics (2011, but only to look at for 
 # selection 
@@ -174,10 +181,10 @@ Performed separately and described in the methods.
 
 # Analysis of agent allocation bias
 ```{r, eval = FALSE}
-abias <- data.table(read_excel(full_path(p_data, "abm/agent-bias.xlsx")))
+abias <- data.table(read_excel(full_path(p_data, "abm/agent-bias2.xlsx")))
 abias <- abias[Alg == 1]
 setkey(abias, MD)
-hhs <- data.table(read_excel(full_path(p_data, "abm/agent-bias.xlsx"), 
+hhs <- data.table(read_excel(full_path(p_data, "abm/agent-bias2.xlsx"), 
                              sheet = 2))
 setkey(hhs, MD)
 abias <- abias[hhs]
@@ -199,14 +206,18 @@ noland <- abias[var == "HHs_no_land",
 unalloc <- round(abias[var == "ag_area_unalloc", snms, with = FALSE] / 
   abias[var == "ag_area", snms, with = FALSE] * 100, 2)
 
+# land deficit farmland
+land_def <- round(abias[var == "land_def", snms, with = FALSE] / 
+  abias[var == "ag_area", snms, with = FALSE] * 100, 2)
+
 cexs <- seq(1, 2, 1 / 3)
 # pdf(full_path(p_fig, "agent-bias.pdf"), height = 5, width = 3)
-pdf(full_path(p_fig, "agent-bias.pdf"), height = 3, width = 5)
-cx <- c(0.7, 0.8, 0.6)
+pdf(full_path(p_fig, "agent-bias.pdf"), height = 2.5, width = 5)
+cx <- c(0.9, 1, 0.6)
 # png(full_path(p_fig, "agent-bias.png"), height = 350, width = 700)
 # par(mfrow = c(2, 1), mar = c(0.5, 2.5, 0.5, 1), mgp = c(1, 0.05, 0), 
 #     tcl = -0.2, oma = c(3.5, 0, 0, 0))
-par(mfrow = c(1, 2), mar = c(2, 2, 0.5, 0), mgp = c(0.75, 0.05, 0), 
+par(mfrow = c(1, 3), mar = c(4, 2, 0.5, 0), mgp = c(0.9, 0.1, 0), 
     tcl = -0.2, oma = c(3.5, 0, 0, 0.1))
 scols <- c("red", "orange3", "green4", "blue")
 cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
@@ -215,6 +226,9 @@ plot(unlist(pctbias), unlist(noland), col = cols, cex = cexs, pch = 20,
      cex.lab = cx[2], cex.axis = cx[1])
 plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20, 
      ylab = "% land unallocated", xlab = "% error in cropland area", 
+     cex.lab = cx[2], cex.axis = cx[1])
+plot(unlist(pctbias), unlist(land_def), col = cols, cex = cexs, pch = 20, 
+     ylab = "% land deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
 par(xpd = NA)
 
@@ -232,14 +246,14 @@ for(i in 2:length(yst)) {
          horiz = TRUE, adj = c(4, -5.75),  
          col = scols[i - 1], pt.cex = cexs, bty = "n")#cex = cexs,)
 }
-yst <- seq(0.05, 0.23, 0.18 / 4)
-xy <- cbind(grconvertX(rep(0.515, 5), from = "ndc"), 
+yst <- seq(0.06, 0.24, 0.18 / 4)
+xy <- cbind(grconvertX(rep(0.505, 5), from = "ndc"), 
             grconvertY(yst, from = "ndc"))
 text(x = xy[, 1], y = xy[, 2], labels = c(mcap, "District"), 
      #srt = 90, #pos = 2, 
      #adj = c(-1, 1), 
      pos = 2, col = c(scols, "black"), cex = cx[1])
-xst <- seq(0.545, 0.65, 0.105 / 3)
+xst <- seq(0.53, 0.60, 0.07 / 3)
 xy <- cbind(grconvertX(xst, from = "ndc"), 
             grconvertY(rep(yst[length(yst)], 4), from = "ndc"))
 text(x = xy[, 1], y = xy[, 2], labels = 1:4, pos = 2, cex = cx[1])

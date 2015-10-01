@@ -1,0 +1,24 @@
+October 1, 2015
+
+Changes:
+
+* all datasets
+Fixed NA rm approach in all datasets
+
+* compare-cropland & landcover-bias-plots
+Created new main figure showing bias with scale in cropland data. Added plot for counting bin length per aggregation class. 
+
+* magisterial districts analysis
+Corrected data to select only the MAE pixels co-located with non-zero reference cropland cover. Before it was all non-zero error. Output figures adjusted accordingly, but main shape stays (peak MAE closer to 50 than 60% however)
+
+* carbon analysis
+Re-run with updated NA approach.
+
+* yield/production analysis
+Re-run with updated NA approach.
+
+* ET analysis
+Re-run with updated NA approach.
+
+* ABM analysis
+Updated analysis includes land deficit parameter from new analysis using varying farm size distributions. 

@@ -31,16 +31,19 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 load(full_path(p_data, "d_grid_abs.rda"))  # actual diffence grids
 load(full_path(p_data, "bias_stats.rda"))  # bias statistics
 load(full_path(p_data, "bias_stats_gti.rda"))  # bias statistics
+# cellStats(!is.na(dlist_act$modmu$f1$g2011), sum)
 ```
 
 ## Plots
 Plot maps of biases at different resolutions, for publication output (and display here). To avoid the visual distortion of NA areas filled in by larger levels of aggregation, each aggregated difference must be disaggregated first and then masked before plotting.   
 ```{r, eval = FALSE}
 namask <- raster(full_path(p_data, "namask.tif"))
+# cellStats(namask, sum)
 snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
 lev <- c("f1", "f25", "f50", "f100")  # just show four levels
 
 # disggregate selected rasters at selected levels
+# x <- snms[3]; y <- lev[3]
 disagg <- lapply(snms, function(x) {
   l1 <- lapply(lev, function(y) {
     if(y == "f1") {
@@ -174,6 +177,8 @@ dev.off()
 <a href="#top">Back to top</a>
 
 ## Bias with scale
+
+Note: the mean values presented in the figure here is a straight mean across 5 percentile bins, which gives bias independent of cropland density. Supplementary tables report the bin-weighted biases. 
 ```{r, eval=FALSE}
 #lev <- lev[!lev %in% c("f5", "f300")]
 levnms <- paste(gsub("f", "", lev), "km")
@@ -189,10 +194,13 @@ ylcol <- c("black", "grey", "black", rep("grey", 5), "black")
 lt <- c(5, 1)
 ylwd <- c(1.5, 2)
 
+wm <- function(x, w) stats::weighted.mean(x, w, na.rm = TRUE)
+# wma <- function(x, w) stats::weighted.mean(abs(x), w)
+
 pdf(full_path(p_fig, "biases_1-100km.pdf"), width = 7.5, height = 7)
 l <- layout(m3)
 # layout.show(l)
-# i <- 1; j <- 1
+# i <- 1; j <- 1; bt <- 1
 par(mar = c(0.5, 0, 1, 0.3), oma = c(5, 5, 2, 2))
 for(i in 1:length(snms)) {
   highcounter <- rep(0, length(lev))
@@ -203,12 +211,14 @@ for(i in 1:length(snms)) {
       lines(pp$x, rep(yl[z], 2), lwd = pp$y2lwd, col = ylcol[z])
     }
     muv <- rep(NA, 2)
+    muv2 <- rep(NA, 2)
     for(bt in 1:2) {
       d <- dstats_all[[bt]][[i]][[j]]
       n <- nrow(d)
       lines(1:n, d[, "mu"], pch = 20, col = cols[i], lwd = ylwd[bt], 
             lty = lt[bt])
-      muv[bt] <- round(mean(d[, 8], na.rm = TRUE))
+      muv[bt] <- round(mean(d[, 8], na.rm = TRUE)) # unweighted means
+      muv2[bt] <- round(wm(d[, 8], d[, 2]))  # weighted means
       toohigh <- which(d[, "mu"] > pp$yl2[2])
       if(length(toohigh) > 0) {
         highcounter[j] <- 1
@@ -217,7 +227,9 @@ for(i in 1:length(snms)) {
              col = "grey50", xpd = NA)
       }
     }
-    text(5, pp$yl2[2] - 14, labels = paste(muv, collapse = " / "), cex = 1.1, 
+    text(5, pp$yl2[2] - 5, labels = paste(muv, collapse = " / "), cex = 1.1, 
+         col = "grey10", font = 4)
+    text(5, pp$yl2[2] - 16, labels = paste(muv2, collapse = " / "), cex = 1.1, 
          col = "grey10")
     if(j == 1) axis(2, at = yl, labels = yl, las = 2, mgp = c(1, 0.6, 0))
     if(j == 1) mtext(lcnms[i], side = 2, line = 3, cex = 1, col = cols[i])
@@ -251,6 +263,7 @@ Calculate how much cropland estimates differ between datasets
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
 gti <- lapply(paths, raster)
 names(gti) <- c("g2007", "g2011")
+gti <- lapply(gti, function(x) mask(x, namask))  # apply namask
 snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
 
 # recreate cropland percentages
@@ -302,6 +315,111 @@ stats2011
 ```
 
 <a href="#top">Back to top</a>
+
+# Cropland error and bias plots
+
+In relation to calculation method (across country, agricultural region only, or bin-wise (cropland density classes) mean.
+```{r, eval = FALSE}
+load(full_path(p_data, "lcf_out2011.rda"))
+lcf <- data.table(lcf_out11)
+
+fact <- c(1, 5, 10, 25, 50, 100)
+alph <- c(225, 40)
+x <- c(0, 3, 6, 9, 12, 15)
+w <- 3 / 8
+xo <- (cumsum(rep(w, 8)) - w / 2)[-c(2, 4, 6, 8)]
+o <- c(0, w)
+xa <- sapply(x, function(x) x + xo)
+cx <- c(1.25, 1, 1)
+g1 <- "grey90"
+reg <- c("Country", "Agricultural", "Density independent")
+lcnms <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
+mutype <- c("MAE", "Bias")
+svec <- colnames(lcf)[grep("km", colnames(lcf))]
+xl <- c(-0.5, 18)
+yl <- c(-40, 40)
+shd <- c(4.5, 10.5, 16.5)
+cols <- c("red", "orange3", "green4", "blue")
+colnms <- names(lcf)[4:length(names(lcf))]
+pchs <- c("+", "o", "x")
+yax <- seq(yl[1], yl[2], 5)
+xax <- seq(1, 6, 5 / (length(yax) - 1))
+
+pdf(full_path(p_fig, "cropland_bias_scale.pdf"), height = 7, width = 7)
+par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
+plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
+     ylab = "", xlab = "")#,
+for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
+abline(h = yax, v = NULL, col = "grey80", lty = 1)
+polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
+lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey80")
+# i <- 1; j <- 1; k <- 1
+for(i in 1:length(svec)) {
+  lv <- colnms[i]
+  for(j in 1:length(snms)) {
+    pchs1 <- pchs
+    nm <- lcnms[j]
+    for(k in 1:length(mutype)) {
+      #dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
+      dat <- lcf[Metric == mutype[k] & Map == nm, lv, with = FALSE]
+      pcol <- makeTransparent(cols[j], alpha = alph[k])
+      polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
+      for(z in 1:length(reg)) {
+        lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
+               pch = pchs[z], type = "pt")
+      }
+    }
+  }
+}
+
+axis(1, at = seq(1.5, 18.5, 3), labels = fact)
+axis(2, at = yax, labels = yax, las = 2)
+mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
+legend(x = 12.4, y = -19.9, legend = lcnms, pch = 15, col = cols, adj = 0,
+       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
+legend(x = 11.9, y = -19.9, legend = rep("", 4), pch = 15, adj = 0, 
+       col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
+       cex = 0.8)
+text(x = 12.7, y = -20.5, labels = "MAE", srt = 45, adj = c(0, 0), cex= 0.8)
+text(x = 12.2, y = -20.5, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
+legend(x = 12.1, y = 40, 
+       legend = c("Country", "Agricultural", "Density independent"), pch = pchs, 
+       pt.cex = c(1.5, 1.5), bty = "n", cex = 0.8)
+dev.off()
+
+```
+<a href="#top">Back to top</a>
+
+## Bin density plots
+
+To see how many values contribute to bin-wise means.
+```{r, eval = FALSE}
+
+bin_size <- do.call(rbind, lapply(lev, function(i) {
+  # i <- "f50"
+  st <- mubias_2011[bin != "all" & ol == i & il == "sa30" & bvals == "mu.nm", 
+                    .(bin, N)]
+  st[, bin := as.integer(bin)]  # convert bin to integers
+  setkey(st, bin)  
+  st[data.table(bin = 1:20), N]  # merge to bin key to allow NAs
+}))
+
+pdf(full_path(p_fig, "cropland_bins.pdf"), height = 7, width = 7)
+par(mfrow = c(3, 2), mar = c(2, 2, 2, 2), oma = c(3, 3, 0, 0), 
+    mgp = c(1, 0.25, 0), tcl = -0.1)
+for(i in 1:nrow(bin_size)) {
+  barplot(bin_size[i, ], las = 2, col = "grey70", names.arg = seq(5, 100, 5))
+  # axis(1, at = 1:20, labels = seq(5, 100, 5), las = 2)
+  mtext(side = 3, text = paste(fact[i], "km"))
+}
+mtext(side = 1, text = "% Cropland", outer = TRUE)
+mtext(side = 2, text = "Bin count", outer = TRUE, line = 1)
+dev.off()
+
+
+```
+
 
 
 ```{r, eval=FALSE, echo=FALSE}

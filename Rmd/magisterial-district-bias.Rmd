@@ -20,6 +20,7 @@ library(nlme)
 library(mgcv)
 library(ape)
 library(fitdistrplus)
+library(SAcropland)
 
 # Paths
 p_root <- proj_root("SAcropland")
@@ -35,6 +36,9 @@ load(full_path(p_data, "d_grid_abs.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths)  # gti 2011
 gti@crs <- sa.shp@proj4string
+namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
+gti <- mask(gti, namask)  # apply mask to GTI
+# cellStats(!is.na(gti), sum)
 
 # Transform magisterial districts, remove Prince Edward Islands
 md <- spTransform(gadm, CRSobj = sa.shp@proj4string)
@@ -68,8 +72,9 @@ gti_mu0 <- t(sapply(gti_md, function(x) {
   c(length(x), length(which(is.na(x))), round(mean(x[x > 0], na.rm = TRUE), 1))
 }))
 
-# how many contribute when non-cropland removed
+# how many contribute when non-cropland removed, and which are non-zero
 nonzero <- sapply(gti_md, function(x) length(x[!is.na(x) & (x > 0)]))
+whichnonzero <- sapply(gti_md, function(x) which(!is.na(x) & (x > 0)))
 
 # median
 gti_median <- t(sapply(gti_md, function(x) {
@@ -89,6 +94,7 @@ plot(md[323, ], add = TRUE)
 # Absolute biases at 1 km
 snms <- c("sa30", "globmu", "modmu", "geow")
 dlist_abs1km <- stack(lapply(dlist_abs[snms], function(x) x$f1$g2011))
+# cellStats(!is.na(dlist_abs1km), sum)
 dlist_abs1km@crs <- sa.shp@proj4string
 dlist_abs1km_md <- extract(x = dlist_abs1km, y = md, progress = "text")
 save(dlist_abs1km_md, file = "external/ext_data/dlist_abs1km_md.rda")
@@ -122,10 +128,20 @@ dlist_mu <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
 })))
 
 # mean no zero
-dlist_mu0 <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
-  tab <- round(x)
-  round(apply(tab, 2, function(x) mean(x[x > 0], na.rm = TRUE)), 1)
+# dlist_mu0 <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
+#   tab <- round(x)
+#   round(apply(tab, 2, function(x) mean(x[x > 0], na.rm = TRUE)), 1)
+# })))
+dlist_mu0 <- cbind(nas, t(sapply(1:length(dlist_abs1km_md), function(x) {
+  tab <- round(dlist_abs1km_md[[x]])
+  sel <- whichnonzero[[x]]  # select out reference cropland pixels only
+  round(apply(tab, 2, function(x) mean(x, na.rm = TRUE)), 1)
 })))
+
+# plot(dlist_mu0[, 2], dlist_mu02[, 2])
+# i <- 2
+# plot(gti_mu0[, 3], dlist_mu02[, i])
+# plot(gti_mu0[, 3], dlist_mu0[, i])
 
 # median
 dlist_median <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
@@ -133,10 +149,16 @@ dlist_median <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
 })))
 colnames(dlist_median) <- c("nas", snms)
 
-dlist_median0 <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
-  tab <- round(x)
-  round(apply(tab, 2, function(x) median(x[x > 0], na.rm = TRUE)), 1)
+# dlist_median0 <- cbind(nas, t(sapply(dlist_abs1km_md, function(x) {
+#   tab <- round(x)
+#   round(apply(tab, 2, function(x) median(x[x > 0], na.rm = TRUE)), 1)
+# })))
+dlist_median0 <- cbind(nas, t(sapply(1:length(dlist_abs1km_md), function(x) {
+  tab <- round(dlist_abs1km_md[[x]])
+  sel <- whichnonzero[[x]]  # select out reference cropland pixels only
+  round(apply(tab, 2, function(x) median(x, na.rm = TRUE)), 1)
 })))
+
 
 # bind function
 bind_stats <- function(x, y, coords = xy, 
@@ -355,8 +377,10 @@ First check fit of model family, and whether assumptions of normally distributed
 ```{r, eval=FALSE}
 # stats.stackexchange.com/questions/99425/distribution-for-percentage-data
 # quartz()
-dat <- mu0[, "sa30"]
+# dat <- mu0[, "sa30"]
+dat <- mu[, "sa30"]
 dat <- dat[!is.na(dat)]
+dat[dat == 0] <- dat[dat == 0] + 0.1
 descdist(dat, discrete = FALSE)  # check potential distributions
 
 # Check what distributions work best on data (non-cropland removed)
@@ -364,19 +388,21 @@ dists <- c("norm", "lnorm", "exp", "cauchy", "gamma", "logis", "beta","weibull")
 fit_distrs <- lapply(snms, function(x) {
   dat <- mu0[, x]
   dat <- dat[!is.na(dat)] / 100
+  dat[dat == 0] <- dat[dat == 0] + 0.1
   fits <- lapply(dists, function(x) fitdist(dat, x))
   names(fits) <- dists
   fits
 })
 names(fit_distrs) <- snms
-lapply(fit_distrs, function(x) sort(sapply(x, function(y) y$aic)))
-plot(fit_distrs[[1]]$lnorm)  # lognorm shows up as best fit
+# lapply(fit_distrs, function(x) sort(sapply(x, function(y) y$aic)))
+plot(fit_distrs[[2]]$lnorm)  # lognorm shows up as best fit
 
 # Matters more on residuals from model fit, however. 
 # dataset
-# dat <- proc_df(x = mu0, nm = snms[4])  # interactively change response  
-dat <- proc_df(x = med0, nm = snms[1])  # and input data
+dat <- proc_df(x = mu, nm = snms[4])  # interactively change response  
+# dat <- proc_df(x = med0, nm = snms[1])  # and input data
 dat <- dat[!is.na(dat$pv), ]
+dat[, 4] <- dat[, 4] + 0.1  # add 1 to allow for log transform
 
 # GAM assuming Gaussian
 dgam <- gam(dv ~ poly(pv, 2) + s(x, y), weights = w, data = dat, 
@@ -398,7 +424,7 @@ plot(fitdist(residuals(dgam2), "norm"))
 
 # GAM w/Gamma
 dgam3 <- gam(dv ~ poly(pv, 2) + s(x, y), weights = w, data = dat, 
-            family = Gamma(link = "log"), method = "ML")
+            family = Gamma(link = "identity"), method = "ML")
 summary(dgam3)
 AIC(dgam3)  # bizarre large AIC
 gam.check(dgam3)  # crazy deviance residuals
@@ -417,8 +443,9 @@ plot(fitdist(residuals(dgam4), "norm"))
 # pred <- predict(dgam4, newdata = newdat, type = "response", se.fit = TRUE)
 
 # above, with smooth fit instead of quadratic
-dgam4b <- gam(log(dv) ~ s(pv, k = 3) + s(x, y), weights = w, data = dat, 
-             method = "ML")
+dgam4b <- gam(log(dv + 0.0001) ~ s(pv, k = 3) + s(x, y), weights = w, data = dat,
+              method = "ML")
+plot(dat$pv, dat$dv)
 summary(dgam4b)
 AIC(dgam4b)
 gam.check(dgam4)
@@ -437,7 +464,6 @@ Testing each of the main landcover sets for model shape, the best fit in terms o
 
 Helper functions
 ```{r, eval = FALSE}
-
 predfunc <- function(model, newdat) {
   pred <- predict(model, newdata = newdat, type = "response", se.fit = TRUE)
   pdat <- transform(newdat, fit = pred$fit)
@@ -467,8 +493,10 @@ polyfunc <- function(pdat) {
 gam_mods <- lapply(nms, function(i) {
   dat1 <- proc_df(x = mu0, nm = i)
   dat1 <- dat1[!is.na(dat1$pv), ]
-  dat2 <- proc_df(x = med0, nm = i)
+  dat1$dv <- dat1$dv + 0.1  # adding 0.1 to allow log transform
+  dat2 <- proc_df(x = mu, nm = i)
   dat2 <- dat2[!is.na(dat2$pv), ]
+  dat2$dv <- dat2$dv + 0.1  # adding 0.1 to allow log transform
   dgam1 <- gam(log(dv) ~ poly(pv, 2) + s(x, y), weights = w, data = dat1, 
                method = "ML")
   dgam2 <- gam(log(dv) ~ poly(pv, 2) + s(x, y), weights = w, data = dat2, 
@@ -477,6 +505,8 @@ gam_mods <- lapply(nms, function(i) {
                  data.frame(pv = 0:100, "x" = mean(dat1$x), "y" = mean(dat1$y)))
   pdat1 <- predfunc(dgam1, newdat)
   pdat2 <- predfunc(dgam2, newdat)
+  # pdat1 <- termfunc(dgam1, newdat)
+  # pdat2 <- termfunc(dgam2, newdat)
   return(list("mumod" = dgam1, "medmod" = dgam2, "pdat1" = pdat1, 
               "pdat2" = pdat2,  "data1" = dat1, "data2" = dat2))  
 })
@@ -493,11 +523,11 @@ gam_mods <- lapply(nms, function(i) {
 
 ptcols <- sapply(cols, function(x) makeTransparent(x, 80))  # CI colors
 lw <- c(rep(2, 4), 3, 3)
-yl1 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat1$fit))), 1))
-yl2 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat2$fit))), 1))
-pdf(full_path(p_fig, "biases_md_lnorm_gam_mu0.pdf"), width = 7, height = 7)
+yl1 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat1$fit) * 1.1)), 1))
+yl2 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat2$fit) * 1.1)), 1))
+pdf(full_path(p_fig, "biases_md_lnorm_gam_mu0.pdf"), width = 7, height = 4.5)
 par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2), mgp = c(1.5, 0.5, 0))
-plot(xl, yl2, pch = "", ylab = "Mean Absolute Error (%)", 
+plot(xl, yl1, pch = "", ylab = "Mean Absolute Error (%)", 
      xlab = "% Cropland", xaxs = "i", mgp = c(1.5, 0.5, 0), yaxs = "i", 
      yaxt = "n")
 axis(2, at = 0:4, round(exp(c(-10, 1:4))))
@@ -514,8 +544,8 @@ legend("topleft", mcap, lty = 1, lwd = 1.5,
        col = cols, bty = "n", xpd = NA)#, title = "Fit")
 dev.off()
 
-pdf(full_path(p_fig, "biases_md_lnorm_gam_med0.pdf"), width = 7, height = 7)
-par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2))
+pdf(full_path(p_fig, "biases_md_lnorm_gam_mu.pdf"), width = 7, height = 4.5)
+par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2), mgp = c(1.5, 0.5, 0))
 plot(xl, yl2, pch = "", ylab = "Mean Absolute Error (%)", 
      xlab = "% Cropland", xaxs = "i", mgp = c(1.5, 0.5, 0), yaxs = "i", 
      yaxt = "n")

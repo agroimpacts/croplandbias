@@ -120,12 +120,16 @@ p_et &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_root, <sp
 <span class="kw">load</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;d_grid_act.rda&quot;</span>))  <span class="co"># actual diffence grids</span>
 paths &lt;-<span class="st"> </span><span class="kw">full_path</span>(p_data, <span class="kw">dir</span>(p_data, <span class="kw">paste0</span>(<span class="st">&quot;cover*.*11sum_mask.tif$&quot;</span>)))
 gti &lt;-<span class="st"> </span><span class="kw">raster</span>(paths) /<span class="st"> </span><span class="dv">100</span>  <span class="co"># gti 2011</span>
+namask &lt;-<span class="st"> </span><span class="kw">raster</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;namask.tif&quot;</span>))  <span class="co"># NA mask</span>
+gti &lt;-<span class="st"> </span><span class="kw">mask</span>(gti, namask)  <span class="co"># apply mask to GTI</span>
+<span class="co"># cellStats(!is.na(gti), sum)</span>
 
 <span class="co"># Reconstruct original landcover estimates</span>
 snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
 anms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;gti&quot;</span>, snms)
 dlist_1km &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_act[snms], function(x) x$f1$g2011)
 lc_list &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_1km, function(x) gti -<span class="st"> </span>x /<span class="st"> </span><span class="dv">100</span>) 
+<span class="co"># cellStats(!is.na(lc_list$sa30), sum)</span>
 
 <span class="co"># check</span>
 <span class="co"># plot(lc_list[[1]])</span>
@@ -139,9 +143,10 @@ lc_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>
 gti_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(<span class="st">&quot;gti&quot;</span> =<span class="st"> </span>gti))  <span class="co"># GTI rasters</span>
 
 <span class="co"># Create namask to remove all NA areas across datasets</span>
-sumna &lt;-<span class="st"> </span>function(x) <span class="kw">sum</span>(x, <span class="dt">na.rm =</span> <span class="ot">FALSE</span>)
-namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(gti, <span class="kw">stack</span>(lc_list)), sumna)
+<span class="co"># sumna &lt;- function(x) sum(x, na.rm = FALSE)</span>
+<span class="co"># namask &lt;- calc(stack(gti, stack(lc_list)), sumna)</span>
 namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
+<span class="co"># cellStats(namask2, sum)</span>
 <span class="co"># # namaskt &lt;- raster(full_path(p_data, &quot;namask.tif&quot;)) # load in NA mask</span>
 <span class="co"># # namaskt2 &lt;- !is.na(namaskt)  # set NAs to zero</span>
 <span class="co"># cellStats(is.na(gti), sum); cellStats(namask2, sum); cellStats(namask2t, sum)</span>
@@ -465,9 +470,10 @@ lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev_vec, functi
 <span class="co"># cropland cover bins, for looking at error as a function of cover</span>
 binv &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="fl">0.05</span>)
 bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg[[<span class="dv">2</span>]], function(x) {
-  <span class="kw">cut</span>(x$gti, <span class="dt">breaks =</span> binv, <span class="dt">include.lowest =</span> <span class="ot">TRUE</span>)
+  <span class="kw">cut</span>(x[[<span class="dv">1</span>]], <span class="dt">breaks =</span> binv, <span class="dt">include.lowest =</span> <span class="ot">TRUE</span>)
 })
 <span class="kw">names</span>(bins) &lt;-<span class="st"> </span>lev_vec
+<span class="co"># bins &lt;- cut(gti_agg$f25$gti, breaks = binv, include.lowest = TRUE)</span>
 
 <span class="co"># weighted mean functions</span>
 wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)

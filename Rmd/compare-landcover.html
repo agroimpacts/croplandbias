@@ -87,14 +87,17 @@ img {
 <li><a href="#set-up-paths"><span class="toc-section-number">2.1.1</span> Set up paths</a></li>
 <li><a href="#load-cropland-grids"><span class="toc-section-number">2.1.2</span> Load cropland grids</a></li>
 <li><a href="#sa-landcover-data"><span class="toc-section-number">2.1.3</span> SA landcover data</a></li>
+<li><a href="#apply-na-masks"><span class="toc-section-number">2.1.4</span> Apply NA masks</a></li>
 </ul></li>
 <li><a href="#calculate-differences-at-different-levels-of-aggregation"><span class="toc-section-number">2.2</span> Calculate differences at different levels of aggregation</a></li>
 <li><a href="#bias-as-function-of-cropcover"><span class="toc-section-number">2.3</span> Bias as function of cropcover</a><ul>
-<li><a href="#first-create-na-mask-at-1-km-resolution-then-weighting-raster-based-on-number-of-non-na-cells-in-each-aggregated-pixel-and-then-bin-rasters-where-each-category-represents-a-different-cropland-fractional-cover-range-0-5-5-10-etc"><span class="toc-section-number">2.3.1</span> First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then “bin” rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc)</a></li>
+<li><a href="#weighting-rasters-based-on-number-of-non-na-cells-in-each-aggregated-pixel-and-then-bin-rasters-where-each-category-represents-a-different-cropland-fractional-cover-range-0-5-5-10-etc"><span class="toc-section-number">2.3.1</span> Weighting rasters based on number of non-NA cells in each aggregated pixel, and then “bin” rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc)</a></li>
 <li><a href="#calculate-biases-pooling-modis-and-globcover-across-all-version"><span class="toc-section-number">2.3.2</span> Calculate biases, pooling MODIS and GlobCover across all version</a></li>
 <li><a href="#then-calculate-biases-across-datasets"><span class="toc-section-number">2.3.3</span> Then calculate biases across datasets</a></li>
 </ul></li>
 <li><a href="#differences-between-gti2007-and-2011"><span class="toc-section-number">2.4</span> Differences between gti2007 and 2011</a></li>
+<li><a href="#differences"><span class="toc-section-number">2.5</span> 2011 differences</a></li>
+<li><a href="#differences-1"><span class="toc-section-number">2.6</span> 2007 differences</a></li>
 </ul></li>
 </ul>
 </div>
@@ -137,6 +140,22 @@ gti &lt;-<span class="st"> </span><span class="kw">lapply</span>(paths, raster)
 <span class="kw">names</span>(gti) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;g2007&quot;</span>, <span class="st">&quot;g2011&quot;</span>)</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
+<div id="apply-na-masks" class="section level3">
+<h3><span class="header-section-number">2.1.4</span> Apply NA masks</h3>
+<pre class="sourceCode r"><code class="sourceCode r">sumna &lt;-<span class="st"> </span>function(x) <span class="kw">sum</span>(x, <span class="dt">na.rm =</span> <span class="ot">FALSE</span>)
+namask &lt;-<span class="st"> </span><span class="kw">calc</span>(<span class="kw">stack</span>(<span class="kw">stack</span>(gti), <span class="kw">stack</span>(lclist)), sumna)
+namask[namask &gt;=<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+namask2 &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(namask)  <span class="co"># set NAs to zero</span>
+<span class="co"># cellStats(namask2, sum)</span>
+namask[namask ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+<span class="co"># cellStats(namask, sum)</span>
+<span class="kw">writeRaster</span>(namask, <span class="dt">filename =</span> <span class="kw">full_path</span>(p_data, <span class="st">&quot;namask.tif&quot;</span>), 
+            <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)
+
+<span class="co"># mask out all joint NAs</span>
+gti &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti, function(x) <span class="kw">mask</span>(x, namask))
+lclist &lt;-<span class="st"> </span><span class="kw">lapply</span>(lclist, function(x) <span class="kw">mask</span>(x, namask))</code></pre>
+</div>
 </div>
 <div id="calculate-differences-at-different-levels-of-aggregation" class="section level2">
 <h2><span class="header-section-number">2.2</span> Calculate differences at different levels of aggregation</h2>
@@ -144,6 +163,8 @@ gti &lt;-<span class="st"> </span><span class="kw">lapply</span>(paths, raster)
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Aggregate rasters</span>
 fact &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">100</span>)
 <span class="co">#fact &lt;- 25</span>
+
+area_wgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask2), <span class="dt">fun =</span> sum)  <span class="co"># cells/pixel</span>
 lc_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, lclist)   <span class="co"># landcover rasters </span>
 gti_agg &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, gti)  <span class="co"># GTI rasters</span>
 
@@ -180,16 +201,9 @@ b &lt;-<span class="st"> </span><span class="kw">brick</span>(<span class="kw">s
 </div>
 <div id="bias-as-function-of-cropcover" class="section level2">
 <h2><span class="header-section-number">2.3</span> Bias as function of cropcover</h2>
-<div id="first-create-na-mask-at-1-km-resolution-then-weighting-raster-based-on-number-of-non-na-cells-in-each-aggregated-pixel-and-then-bin-rasters-where-each-category-represents-a-different-cropland-fractional-cover-range-0-5-5-10-etc" class="section level3">
-<h3><span class="header-section-number">2.3.1</span> First create NA mask at 1 km resolution, then weighting raster based on number of non-NA cells in each aggregated pixel, and then “bin” rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc)</h3>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NA mask and weights</span>
-namask &lt;-<span class="st"> </span>!<span class="kw">is.na</span>(gti[[<span class="dv">1</span>]])
-area_wgts &lt;-<span class="st"> </span><span class="kw">aggregate_rast_list</span>(fact, <span class="kw">list</span>(namask), <span class="dt">fun =</span> sum)
-namask[namask ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
-<span class="kw">writeRaster</span>(namask, <span class="dt">filename =</span> <span class="kw">full_path</span>(p_data, <span class="st">&quot;namask.tif&quot;</span>), 
-            <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)
-
-<span class="co"># cropland cover bins</span>
+<div id="weighting-rasters-based-on-number-of-non-na-cells-in-each-aggregated-pixel-and-then-bin-rasters-where-each-category-represents-a-different-cropland-fractional-cover-range-0-5-5-10-etc" class="section level3">
+<h3><span class="header-section-number">2.3.1</span> Weighting rasters based on number of non-NA cells in each aggregated pixel, and then “bin” rasters, where each category represents a different cropland fractional cover range (0-5%, 5-10%, etc)</h3>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># cropland cover bins</span>
 binv &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">100</span>, <span class="dv">5</span>)
 gti_bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg, function(x) {
   <span class="kw">lapply</span>(x, function(y) <span class="kw">cut</span>(y, <span class="dt">breaks =</span> binv, <span class="dt">include.lowest =</span> <span class="ot">TRUE</span>))
@@ -221,6 +235,7 @@ dlists &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class=
 <h3><span class="header-section-number">2.3.3</span> Then calculate biases across datasets</h3>
 <p>Note: this uses an older and slower version of the code. Subsequent analyses use the faster version based on data.tables.</p>
 <pre class="sourceCode r"><code class="sourceCode r">dang &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()
+<span class="co"># i &lt;- dlists[[1]]; x &lt;- names(i)[1]; y &lt;- lev_vec[5]; j &lt;- 14; z &lt;- 1; k &lt;- 1</span>
 dstats_all &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlists, function(i) {
   <span class="kw">print</span>(<span class="st">&quot;processing 1 of 2 main bias lists&quot;</span>)
   dstats &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">names</span>(i), function(x) {
@@ -243,17 +258,17 @@ dstats_all &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlists, 
           d3f &lt;-<span class="st"> </span>d3[!<span class="kw">is.na</span>(d3[, <span class="dv">2</span>]), ]
         }))
         if(<span class="kw">nrow</span>(d2) &gt;<span class="st"> </span>(<span class="kw">length</span>(i[[x]][[y]]) *<span class="st"> </span><span class="dv">10</span>)) {
-        qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(d2), <span class="kw">box_stats</span>(d2[, <span class="dv">2</span>], <span class="dt">weighted =</span> <span class="ot">TRUE</span>, 
-                                    <span class="dt">weight.opts =</span> <span class="kw">list</span>(<span class="st">&quot;weights&quot;</span> =<span class="st"> </span>d2[, <span class="dv">3</span>])))
+          qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(d2), <span class="kw">box_stats</span>(d2[, <span class="dv">2</span>], <span class="dt">weighted =</span> <span class="ot">TRUE</span>, 
+                                      <span class="dt">weight.opts =</span> <span class="kw">list</span>(<span class="st">&quot;weights&quot;</span> =<span class="st"> </span>d2[, <span class="dv">3</span>])))
         } else if((<span class="kw">nrow</span>(d2) &gt;<span class="st"> </span><span class="dv">0</span>) &amp;<span class="st"> </span>(<span class="kw">nrow</span>(d2) &lt;<span class="st"> </span><span class="kw">length</span>(i[[x]][[y]]) *<span class="st"> </span><span class="dv">20</span>)) {
-          qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">6</span>), Hmisc::<span class="kw">wtd.mean</span>(d2[, <span class="dv">2</span>], <span class="dt">weights =</span> d2[, <span class="dv">3</span>], 
-                                              <span class="dt">na.rm =</span> <span class="ot">FALSE</span>))
+          qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(d2), <span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">5</span>), 
+                  Hmisc::<span class="kw">wtd.mean</span>(d2[, <span class="dv">2</span>], <span class="dt">weights =</span> d2[, <span class="dv">3</span>], <span class="dt">na.rm =</span> <span class="ot">FALSE</span>))
         } else {
           qs &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">7</span>)
         }
       }))
       <span class="kw">cbind</span>(binv[-<span class="dv">1</span>], d1)
-      })
+    })
     <span class="kw">named_out</span>(l1, lev_vec)
   })
   <span class="kw">named_out</span>(dstats, <span class="kw">names</span>(i))
@@ -282,7 +297,7 @@ dut &lt;-<span class="st"> </span><span class="kw">Sys.time</span>() -<span clas
         qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(oof), <span class="kw">box_stats</span>(oof[, <span class="dv">2</span>], <span class="dt">weighted =</span> <span class="ot">TRUE</span>, 
                                      <span class="dt">weight.opts =</span> <span class="kw">list</span>(<span class="st">&quot;weights&quot;</span> =<span class="st"> </span>oof[, <span class="dv">3</span>])))
       } else if((<span class="kw">nrow</span>(oof) &gt;<span class="st"> </span><span class="dv">0</span>) &amp;<span class="st"> </span>(<span class="kw">nrow</span>(oof) &lt;<span class="st"> </span><span class="dv">10</span>)) {
-        qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">6</span>), 
+        qs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(oof), <span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">5</span>),  
                 Hmisc::<span class="kw">wtd.mean</span>(oof[, <span class="dv">2</span>], <span class="dt">weights =</span> oof[, <span class="dv">3</span>], <span class="dt">na.rm =</span> <span class="ot">FALSE</span>))
       } else {
         qs &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, <span class="dv">7</span>)
@@ -293,6 +308,199 @@ dut &lt;-<span class="st"> </span><span class="kw">Sys.time</span>() -<span clas
 <span class="kw">save</span>(dstats_gti, <span class="dt">file =</span> <span class="kw">full_path</span>(p_data, <span class="st">&quot;bias_stats_gti.rda&quot;</span>))</code></pre>
 <p><a href="#top">Back to top</a></p>
 <p>Checks: compared number of non-NA cells coming out of each GTI version at each level of aggregation (fine); compared cell counts between previous committed version and this one (difference exists, but due to fact that gtimu is no longer considered; checked that previous versions of difference rasters and reshapes of them were referencing the correct GTI-landcover bias rasters (i.e. to make sure rasters weren’t incorrectly indexed: all fine)); box_stats with weighted quantile option compared to previous commit where wtd.quantile was used separately (fine). Compared results from original roughed out version of approach for calculating bias statistics with results from new outputs list (using geowiki at 20 km aggregation as the comparison)</p>
+</div>
+<div id="differences" class="section level2">
+<h2><span class="header-section-number">2.5</span> 2011 differences</h2>
+<p>Whole country and agricultural areas only</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">load</span>(<span class="kw">full_path</span>(p_data, <span class="st">&quot;d_grid_act.rda&quot;</span>))  <span class="co"># actual diffence grids</span>
+
+<span class="co"># Subset difference grids, for 2011</span>
+snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
+lc_pct_diff &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_act[snms], function(x) {
+  <span class="kw">sapply</span>(x, function(y) <span class="kw">list</span>(y$g2011))
+})
+
+<span class="co"># construct agricultural area union mask</span>
+lev &lt;-<span class="st"> </span><span class="kw">names</span>(lc_pct_diff[[<span class="dv">1</span>]])
+lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(x) {
+  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x))
+  lcb &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
+    <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, y))
+    gti_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(gti_agg[[x]][[<span class="dv">1</span>]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    lc_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(lc_agg[[x]][[y]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    all_gt0 &lt;-<span class="st"> </span>gti_gt0 +<span class="st"> </span>lc_gt0
+    all_gt0[all_gt0 &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+    all_gt0
+  })
+  <span class="kw">named_out</span>(lcb, snms)
+})
+<span class="kw">names</span>(lcu) &lt;-<span class="st"> </span>lev
+
+bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_bins, function(x) x$g2011)
+awgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(area_wgts, function(x) x[[<span class="dv">1</span>]])
+
+<span class="co"># calculate means for 2011</span>
+wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
+wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, lc_pct_diff, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, lc_pct_diff, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+mu_dt &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)  <span class="co"># ag area means</span>
+mua &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)  <span class="co"># ag area abs mean</span>
+mu_nm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu.nm&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)  <span class="co"># country mean</span>
+mua_nm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua.nm&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)  <span class="co"># country abs</span>
+<span class="co"># across bin mean and abs mean</span>
+mu_bin &lt;-<span class="st"> </span>mu_dt[!<span class="kw">like</span>(bin, <span class="st">&quot;all&quot;</span>) &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mu&quot;</span>, <span class="kw">mean</span>(bias), by =<span class="st"> </span>.(ol, il)]
+<span class="kw">setnames</span>(mu_bin, <span class="st">&quot;V1&quot;</span>, <span class="st">&quot;bias&quot;</span>)
+mua_bin &lt;-<span class="st"> </span>mu_dt[!<span class="kw">like</span>(bin, <span class="st">&quot;all&quot;</span>) &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mua&quot;</span>, <span class="kw">mean</span>(bias), by =<span class="st"> </span>.(ol, il)]
+<span class="kw">setnames</span>(mua_bin, <span class="st">&quot;V1&quot;</span>, <span class="st">&quot;bias&quot;</span>)
+<span class="co"># mu_dt[il == &quot;sa30&quot; &amp; bin != &quot;all&quot; &amp; ol == &quot;f1&quot; &amp; bvals == &quot;mua&quot;, mean(bias)]</span>
+
+<span class="co"># check</span>
+<span class="co"># Older variant of code from compare-landcover.Rmd to evaluate whether newer DT</span>
+<span class="co"># version is finding correct results</span>
+bv &lt;-<span class="st"> &quot;mua&quot;</span>
+for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;f25&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;geow&quot;</span>, <span class="st">&quot;f10&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;f50&quot;</span>), 
+                <span class="kw">c</span>(<span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;f1&quot;</span>))) {
+  x &lt;-<span class="st"> </span>chk[<span class="dv">1</span>] 
+  y &lt;-<span class="st"> </span>chk[<span class="dv">2</span>] 
+  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x, <span class="st">&quot;..&quot;</span>, y))
+  rs &lt;-<span class="st"> </span>lcu[[y]][[x]] 
+  rs[rs ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  l3 &lt;-<span class="st"> </span><span class="kw">abs</span>(lc_pct_diff[[x]][[y]])
+  o &lt;-<span class="st"> </span>rs *<span class="st"> </span>l3
+  w &lt;-<span class="st"> </span>awgts[[y]][[<span class="dv">1</span>]] *<span class="st"> </span>rs
+  wmu &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(<span class="kw">getValues</span>(o), <span class="kw">getValues</span>(w), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+  <span class="kw">print</span>(b[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x &amp;<span class="st"> </span>bvals ==<span class="st"> </span>bv &amp;<span class="st"> </span>bin ==<span class="st"> &quot;all&quot;</span>, bias] ==
+<span class="st">          </span><span class="kw">round</span>(wmu, <span class="dv">2</span>))
+}  <span class="co"># check</span>
+
+svec &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mu_nm&quot;</span>, <span class="st">&quot;mua_nm&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;mu_bin&quot;</span>, <span class="st">&quot;mua_bin&quot;</span>)
+aa &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">&quot;Country&quot;</span>, <span class="dv">2</span>), <span class="kw">rep</span>(<span class="st">&quot;Agricultural&quot;</span>, <span class="dv">2</span>), <span class="kw">rep</span>(<span class="st">&quot;Density independent&quot;</span>, <span class="dv">2</span>))
+bb &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>, <span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>, <span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>)
+mcap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA-LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;GeoWiki&quot;</span>)
+
+lcf_out11 &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(svec), function(i) {
+  ao &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(snms, function(x) {
+    ai &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(y) {
+      <span class="kw">get</span>(svec[i])[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x, bias]
+    })
+    <span class="kw">named_out</span>(ai, <span class="kw">paste</span>(<span class="kw">c</span>(<span class="dv">1</span>, fact), <span class="st">&quot;km&quot;</span>))
+  }))
+  <span class="co">#cbind.data.frame(&quot;Region&quot; = aa[i], &quot;Map&quot; = mcap, a)</span>
+  <span class="kw">cbind.data.frame</span>(<span class="dt">Region =</span> aa[i], <span class="dt">Metric =</span> bb[i], <span class="st">&quot;Map&quot;</span> =<span class="st"> </span>mcap, ao)
+}))
+
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (MAE) in cropland maps&quot;</span>,
+                 <span class="st">&quot;relative to the 2011 reference map for each aggregation scale&quot;</span>,
+                 <span class="st">&quot;calculated over the entire country, for the union of&quot;</span>,
+                 <span class="st">&quot;agricultural regions (cropland $&gt;$ 0), and as density&quot;</span>, 
+                 <span class="st">&quot;independent means, wherein the mean bias/MAE values&quot;</span>,
+                 <span class="st">&quot;for each of 20 cropland cover classes&quot;</span>,
+                 <span class="st">&quot;(representing 5</span><span class="ch">\\</span><span class="st">% increments of cover 0</span><span class="ch">\\</span><span class="st">% to 100</span><span class="ch">\\</span><span class="st">% defined&quot;</span>,
+                 <span class="st">&quot;by the reference map) were calculated and then averaged.&quot;</span>)
+lcfout_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(lcf_out11, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(lcfout_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/cropland2011-bias.tex&quot;</span>, 
+      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)
+
+<span class="co"># do.call(rbind, lapply(snms, function(i) {</span>
+<span class="co">#   mu_dt[!like(bin, &quot;all&quot;) &amp; ol == &quot;f1&quot; &amp; il == i &amp; bvals == &quot;mu.nm&quot;, N]  </span>
+<span class="co"># }))</span>
+mubias_2011 &lt;-<span class="st"> </span>mu_dt
+<span class="kw">save</span>(lcf_out11, mubias_2011, <span class="dt">file =</span> <span class="kw">full_path</span>(p_data, <span class="st">&quot;lcf_out2011.rda&quot;</span>))</code></pre>
+</div>
+<div id="differences-1" class="section level2">
+<h2><span class="header-section-number">2.6</span> 2007 differences</h2>
+<p>Whole country and agricultural areas only</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Subset difference grids, for 2011</span>
+snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
+lc_pct_diff &lt;-<span class="st"> </span><span class="kw">lapply</span>(dlist_act[snms], function(x) {
+  <span class="kw">sapply</span>(x, function(y) <span class="kw">list</span>(y$g2007))
+})
+
+<span class="co"># construct agricultural area union mask</span>
+lev &lt;-<span class="st"> </span><span class="kw">names</span>(lc_list[[<span class="dv">1</span>]])
+lcu &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev, function(x) {
+  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x))
+  lcb &lt;-<span class="st"> </span><span class="kw">lapply</span>(snms, function(y) {
+    <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;...&quot;</span>, y))
+    gti_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(gti_agg[[x]][[<span class="dv">1</span>]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    lc_gt0 &lt;-<span class="st"> </span><span class="kw">Which</span>(lc_agg[[x]][[y]] &gt;<span class="st"> </span><span class="dv">0</span>)
+    all_gt0 &lt;-<span class="st"> </span>gti_gt0 +<span class="st"> </span>lc_gt0
+    all_gt0[all_gt0 &gt;<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="dv">1</span>
+    all_gt0
+  })
+  <span class="kw">named_out</span>(lcb, snms)
+})
+<span class="kw">names</span>(lcu) &lt;-<span class="st"> </span>lev
+
+bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_bins, function(x) x$g2007)
+awgts &lt;-<span class="st"> </span><span class="kw">lapply</span>(area_wgts, function(x) x[[<span class="dv">1</span>]])
+
+<span class="co"># calculate means for 2007</span>
+wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
+wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+a &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, lc_pct_diff, wm, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+b &lt;-<span class="st"> </span><span class="kw">bias_stats_list</span>(bins, awgts, lcu, lc_pct_diff, wma, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, <span class="ot">TRUE</span>)
+mu_dt &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mu &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)
+mua &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)
+mu_nm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mu.nm&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)
+mua_nm &lt;-<span class="st"> </span><span class="kw">extract_stat</span>(lev, snms, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;mua.nm&quot;</span>, <span class="st">&quot;bias&quot;</span>, mu_dt)
+<span class="co"># across bin mean and abs mean</span>
+mu_bin &lt;-<span class="st"> </span>mu_dt[!<span class="kw">like</span>(bin, <span class="st">&quot;all&quot;</span>) &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mu&quot;</span>, <span class="kw">mean</span>(bias), by =<span class="st"> </span>.(ol, il)]
+<span class="kw">setnames</span>(mu_bin, <span class="st">&quot;V1&quot;</span>, <span class="st">&quot;bias&quot;</span>)
+mua_bin &lt;-<span class="st"> </span>mu_dt[!<span class="kw">like</span>(bin, <span class="st">&quot;all&quot;</span>) &amp;<span class="st"> </span>bvals ==<span class="st"> &quot;mua&quot;</span>, <span class="kw">mean</span>(bias), by =<span class="st"> </span>.(ol, il)]
+<span class="kw">setnames</span>(mua_bin, <span class="st">&quot;V1&quot;</span>, <span class="st">&quot;bias&quot;</span>)
+
+<span class="co"># check</span>
+<span class="co"># Older variant of code from compare-landcover.Rmd to evaluate whether newer DT</span>
+<span class="co"># version is finding correct results</span>
+bv &lt;-<span class="st"> &quot;mua&quot;</span>
+for(chk in <span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;f25&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;geow&quot;</span>, <span class="st">&quot;f10&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;f50&quot;</span>), 
+                <span class="kw">c</span>(<span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;f1&quot;</span>))) {
+  x &lt;-<span class="st"> </span>chk[<span class="dv">1</span>] 
+  y &lt;-<span class="st"> </span>chk[<span class="dv">2</span>] 
+  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;.&quot;</span>, x, <span class="st">&quot;..&quot;</span>, y))
+  rs &lt;-<span class="st"> </span>lcu[[y]][[x]] 
+  rs[rs ==<span class="st"> </span><span class="dv">0</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  l3 &lt;-<span class="st"> </span><span class="kw">abs</span>(lc_pct_diff[[x]][[y]])
+  o &lt;-<span class="st"> </span>rs *<span class="st"> </span>l3
+  w &lt;-<span class="st"> </span>awgts[[y]][[<span class="dv">1</span>]] *<span class="st"> </span>rs
+  wmu &lt;-<span class="st"> </span><span class="kw">weighted.mean</span>(<span class="kw">getValues</span>(o), <span class="kw">getValues</span>(w), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+  <span class="kw">print</span>(b[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x &amp;<span class="st"> </span>bvals ==<span class="st"> </span>bv &amp;<span class="st"> </span>bin ==<span class="st"> &quot;all&quot;</span>, bias] ==
+<span class="st">          </span><span class="kw">round</span>(wmu, <span class="dv">2</span>))
+}  <span class="co"># check</span>
+
+svec &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mu_nm&quot;</span>, <span class="st">&quot;mua_nm&quot;</span>, <span class="st">&quot;mu&quot;</span>, <span class="st">&quot;mua&quot;</span>, <span class="st">&quot;mu_bin&quot;</span>, <span class="st">&quot;mua_bin&quot;</span>)
+aa &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">&quot;Country&quot;</span>, <span class="dv">2</span>), <span class="kw">rep</span>(<span class="st">&quot;Agricultural&quot;</span>, <span class="dv">2</span>), <span class="kw">rep</span>(<span class="st">&quot;Density independent&quot;</span>, <span class="dv">2</span>))
+bb &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>, <span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>, <span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>)
+mcap &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA-LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;GeoWiki&quot;</span>)
+
+lcf_out07 &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="dv">1</span>:<span class="kw">length</span>(svec), function(i) {
+  ao &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(snms, function(x) {
+    ai &lt;-<span class="st"> </span><span class="kw">sapply</span>(lev, function(y) {
+      <span class="kw">get</span>(svec[i])[ol ==<span class="st"> </span>y &amp;<span class="st"> </span>il ==<span class="st"> </span>x, bias]
+    })
+    <span class="kw">named_out</span>(ai, <span class="kw">paste</span>(<span class="kw">c</span>(<span class="dv">1</span>, fact), <span class="st">&quot;km&quot;</span>))
+  }))
+  <span class="co">#cbind.data.frame(&quot;Region&quot; = aa[i], &quot;Map&quot; = mcap, a)</span>
+  <span class="kw">cbind.data.frame</span>(<span class="dt">Region =</span> aa[i], <span class="dt">Metric =</span> bb[i], <span class="st">&quot;Map&quot;</span> =<span class="st"> </span>mcap, ao)
+}))
+
+caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors (MAE) in cropland maps&quot;</span>,
+                 <span class="st">&quot;relative to the 2007 reference map for each aggregation scale&quot;</span>,
+                 <span class="st">&quot;calculated over the entire country, for the union of&quot;</span>,
+                 <span class="st">&quot;agricultural regions, and as density&quot;</span>, 
+                 <span class="st">&quot;independent means, wherein the mean bias/MAE values&quot;</span>,
+                 <span class="st">&quot;for each of 20 cropland cover classes&quot;</span>,
+                 <span class="st">&quot;(representing 5</span><span class="ch">\\</span><span class="st">% increments of cover 0</span><span class="ch">\\</span><span class="st">% to 100</span><span class="ch">\\</span><span class="st">% defined&quot;</span>,
+                 <span class="st">&quot;by the reference map) were calculated and then averaged.&quot;</span>)
+lcfout_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(lcf_out07, <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(lcfout_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/cropland2007-bias.tex&quot;</span>, 
+      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)</code></pre>
 </div>
 </div>
 

@@ -133,12 +133,16 @@ colnames(ctabo) <- LC
 load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
+namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
+gti <- mask(gti, namask)  # apply mask to GTI
+# cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
 snms <- c("sa30", "globmu", "modmu", "geow")
 dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
 lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
 plot(lc_list[[1]])
+# cellStats(!is.na(lc_list[[1]]), sum)
 plot(gti)
 # tst <- raster("external/ext_data/geowikisa_masked.tif")  # check
 # plot(round(tst / 100 - lc_list[[4]], 4)) # okay
@@ -149,10 +153,10 @@ lc_agg <- aggregate_rast_list(fact, lc_list)   # landcover rasters
 gti_agg <- aggregate_rast_list(fact, list("gti" = gti))  # GTI rasters
 
 # need NA mask for weighting of aggregated value
-sumna <- function(x) sum(x, na.rm = FALSE)
-namask <- calc(stack(gti, stack(lc_list)), sumna)
-namask[namask > 0] <- 1
-namask2 <- !is.na(namask) 
+# sumna <- function(x) sum(x, na.rm = FALSE)
+# namask <- calc(stack(stack(gti), stack(lclist)), sumna)
+# namask[namask > 0] <- 1
+namask2 <- !is.na(namask)
 # namask <- raster(full_path(p_data, "namask.tif")) # load in NA mask
 # namask2 <- !is.na(namask)  # set NAs to zero
 area_wgts <- aggregate_rast_list(fact, list(namask2), fun = sum)
@@ -362,15 +366,16 @@ names(totc_cntry) <- snms
 # for cropped areas only - note here we are masking on cropland fraction only,
 # not on union of gti and each landcover map, which is needed below for mean 
 # bias estimates
-tot_area <- sum(freq(namask)[1:2, ])
-crop_areas <- lapply(lc_union$f1, freq)
-sapply(crop_areas, function(x) x[2, 2] / tot_area)  # 29, 31, 33, 53 (Glob)%
+tot_area <- sum(freq(namask)[1, 2])  # sum of just the non-NA area
+crop_areas <- lapply(lc_union$f1, freq)  
+sapply(crop_areas, function(x) x[2, 2] / tot_area)  # 29, 53, 33, 31 
 
 lc_ag2 <- lapply(snms, function(x) {
   sapply(names(lc_agg), function(y) lc_agg[[y]][[x]])
 })  # reshape lc_ag2 -> landcover fractions in outer list
 gti_ctot2 <- sapply(1:length(gti_c), function(x) {
   msk <- gti_agg[[x]]$gti > 0.005  # farmland > 0.05% mask
+  # msk <- gti_agg[[x]]$gti > 0.05  # farmland > 0.05% mask
   msked <- mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
   cellStats(msked, sum)
 })  # gti 
@@ -379,6 +384,7 @@ lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
   jj <- lc_ag2[[x]]  # recycle reshaped lc_c2 list
   sapply(1:length(xx), function(y) {
     msk <- jj[[y]] > 0.005  # farmland > 0.05% mask
+    # msk <- jj[[y]] > 0  # farmland > 0.05% mask
     msked <- mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
     cellStats(msked, sum)
   })
