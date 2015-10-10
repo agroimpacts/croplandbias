@@ -288,7 +288,6 @@ bins <- lapply(gti_agg, function(x) {
 # })
 # names(lcnu) <- lev
 lev <- names(cf_pct_diff[[1]])
-snms <- names(p_diff1)
 lcu <- lapply(lev, function(x) {
   lcb <- lapply(snms, function(y) {
     gti_gt0 <- Which(gti_agg[[x]][[1]] > 0)
@@ -331,6 +330,13 @@ for(chk in list(c("modmu", "f25"), c("geow", "f10"), c("sa30", "f50"),
 lcfmua <- extract_stat(lev, snms, "all", "mua", "bias", b)
 lcfmua_nm <- extract_stat(lev, snms, "all", "mua.nm", "bias", b) 
 # b[ol == "f10" & il == "globmu" & bin == "all"]
+lcfmua_nd <- extract_stat(lev, snms, 1:20, "mua.nm", "bias", b, 
+                          type = "nodensity")
+b[ol == "f1" & il == "sa30" & bin != "all" & bvals == "mua.nm", mean(bias)]
+
+
+
+
 
 svec <- c("mua.nm", "mua")
 aa <- c("Country", "Agricultural")

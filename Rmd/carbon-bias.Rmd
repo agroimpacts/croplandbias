@@ -509,11 +509,21 @@ stats <- cb_stats
 i1 <- "all"
 i2 <- "m"
 
-extract_stat0 <- function(namevec, stats, i1, i2) {
+cb_stats$f25$geow[bvals == "m" & bin != "all", mean("forest")lapply(.SD, mean), 
+                   .SDcols = LC]
+cb_stats$f25$geow[bvals == "m", ]
+cb_stats$f25$geow[bvals == "m" & bin != "all", lapply(.SD, mean), 
+                  .SDcols = "forest"]
+
+extract_stat0 <- function(namevec, stats, i1, i2, type = "density") {
   estats <- do.call(rbind, lapply(namevec, function(i) {
       dat <- sapply(stats, function(x) {
       vals <- unlist(sapply(x, function(y) {
-        v <- y[bin == i1 & bvals == i2, i, with = FALSE]
+        if(type == "density") {
+          v <- y[bin == i1 & bvals == i2, i, with = FALSE]
+        } else if(type == "nodensity") {
+          v <- y[bin != i1 & bvals == i2, lapply(.SD, mean), .SDcols = i]
+        }
         if(nrow(v) == 0) v <- rbindlist(list(v, as.list(NA)))
         v
       }))
@@ -537,26 +547,57 @@ N <- function(namevec, stats, i1, i2) {
 
 ### Plot means against scale, supplemental version 
 ```{r, eval=FALSE}
+# cropland area only
 a <- extract_stat0(LC, cb_stats, "all", "m")  # mean cropland only 
 b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(a, c(2:1, 3:ncol(a)))
-mu <- rbind(a, b)
+mu <- rbind(a, b)  # bias
 
 a <- extract_stat0(LC, cb_stats, "all", "ma")  # mean abs cropland only
 b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
-mua <- rbind(a, b)
+mua <- rbind(a, b)  # MAE
 
+# whole country
 a <- extract_stat0(LC, cb_stats, "all", "m0")  # mean whole country
 b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
-mu0 <- rbind(a, b)
+mu0 <- rbind(a, b)  # bias
 
 a <- extract_stat0(LC, cb_stats, "all", "ma0")  # mean abs whole country
 b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
 setcolorder(b, c(2:1, 3:ncol(b)))
-mu0a <- rbind(a, b)
+mu0a <- rbind(a, b)  # MAE
 
+# density independent
+a <- extract_stat0(LC, cb_stats, "all", "m0", type = "nodensity")
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+setcolorder(a, c(2:1, 3:ncol(a)))
+mund <- rbind(a, b)  # bias
+
+# check
+all(round(sapply(lev_vec, function(x) {
+  mean(cb_stats[[x]]$modmu[bvals == "m0" & bin != "all", forest])
+}), 2) == mund[V2 == "forest" & V1 == "modmu", lev_vec, with = FALSE])
+
+a <- extract_stat0(LC, cb_stats, "all", "ma0", type = "nodensity")
+b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
+setcolorder(b, c(2:1, 3:ncol(b)))
+munda <- rbind(a, b)  # MAE
+
+# check
+all(round(sapply(lev_vec, function(x) {
+  mean(cb_stats[[x]]$modmu[bvals == "ma0" & bin != "all", forest])
+}), 2) == munda[V2 == "forest" & V1 == "modmu", lev_vec, with = FALSE])
+
+```
+<a href="#top">Back to top</a>
+
+### Main text version of mean carbon bias against scale
+
+#### Agricultural area bias and accuracy
+
+```{r, eval=FALSE}
 #yr <- range(all_l[, 3:8, with = FALSE], all_u[, 3:8, with = FALSE])
 # yl <- range(all_mus[, 3:8, with = FALSE])
 
@@ -570,62 +611,6 @@ yl <- round(yl / 10) * 10
 yax <- seq(yl[1], yl[2], 10)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-# Version 1 of mean carbon bias against scale - probably for supplementals, if 
-# retained
-LC2 <- c(LC, "all")
-pdf(full_path(p_fig, "carbon_veg_scale.pdf"), height = 7, width = 5)
-par(mfrow = c(3, 2), mar = c(1, 0, 1, 1.25), mgp = c(1, 0.5, 0), tcl = -0.3,  
-    oma = c(6, 4, 1, 0))
-for(f in 1:length(LC2)) {
-  plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-       ylab = "", xlab = "", 
-       panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
-  #grid(NA, NULL, lwd = 1, lty = 1)
-  mtext(side = 3, text = pnms[f], line = 0)
-  if(f == 5) axis(1, at = 1:6, labels = c(1, fact))
-  if(f %in% c(1, 3, 5)) axis(2, at = yax, labels = yax, las = 2)
-  if(f %in% c(2, 4)) axis(2, at = yax, labels = rep("", length(yax)), las = 2)
-  for(i in 1:4) {
-    lines(1:6, mu[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
-          col = cols[i], lty = 2, lwd = lw)
-  }
-  for(i in 1:4) {
-    lines(1:6, mua[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
-          col = cols[i], lty = 1, lwd = lw)
-  }
-}
-# plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-#      ylab = "", xlab = "", 
-#      panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
-# for(i in 1:4) {
-#  lines(1:6, mu[V1 == snms[i], lev_vec, with = FALSE], col = cols[i], 
-#        lty = 2, lwd = lw)
-# }
-# for(i in 1:4) {
-#   lines(1:6, mua[V1 == snms[i], lev_vec, with = FALSE], col = cols[i],
-#         lty = 1, lwd = lw)
-# }
-mtext(side = 3, text = "Vegetation mean", line = 0)
-axis(1, at = 1:6, labels = c(1, fact))
-axis(2, at = yax, labels = rep("", length(yax)), las = 2)
-mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 1.5)
-mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 2)
-par(xpd = NA)
-x <- grconvertX(0.7, from = "ndc", to = "user")
-y <- grconvertY(0.075, from = "ndc", to = "user")
-legend(x = x, y = y, legend = c("Bias", "MAE"), lty = c(2, 1), 
-       lwd = 2, bty = "n", cex = 1.2)
-x <- grconvertX(0.1, from = "ndc", to = "user")
-y <- grconvertY(0.11, from = "ndc", to = "user")
-legend(x = x, y = y, legend = mcap, lty = 1, col = cols, lwd = 2, bty = "n",
-       cex = 1.2)
-dev.off()
-
-```
-<a href="#top">Back to top</a>
-
-### Main text version of mean carbon bias against scale
-```{r, eval=FALSE}
 alph <- c(225, 40)
 #Ccols <- brewer.pal(n = 7, name = "Greys")
 LC2 <- c(LC[-grep("second|grass", LC)], "All")
@@ -687,6 +672,122 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
+#### Density independent bias and accuracy
+
+```{r, eval=FALSE}
+cols <- c("red", "orange3", "green4", "blue")
+lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+pnms <- c("Forest", "Secondary", "Shrubland", "Grassland", "Sparse")
+lw <- 1.5
+
+yl <- range(mund[, 3:8, with = FALSE], munda[, 3:8, with = FALSE])
+yl <- round(yl / 10) * 10
+yax <- seq(yl[1], yl[2], 10)
+xax <- seq(1, 6, 5 / (length(yax) - 1))
+
+mutype <- c("munda", "mund")
+
+o <- c(0, w)
+pchs <- c("*", "+", "o", "-")
+cx <- c(2, 1.25, 1, 1)
+g1 <- "grey90"
+xl <- c(-0.5, 18)
+shd <- c(4.5, 10.5, 16.5)
+
+pdf(full_path(p_fig, "carbon_veg_scale_nd.pdf"), height = 7, width = 7)
+par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
+plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
+     ylab = "", xlab = "")#,
+for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
+polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
+grid(NA, length(yax) - 1, lwd = 1, lty = 1)
+lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey50")
+for(i in 1:length(lev_vec)) {
+  for(j in 1:length(snms)) {
+    for(k in 1:length(mutype)) {
+      dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
+      pcol <- makeTransparent(cols[j], alpha = alph[k])
+      polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
+      for(z in 1:length(LC2)) {
+        lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
+               pch = pchs[z], type = "pt")
+      }
+    }
+  }
+}
+yll <- -120
+axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
+axis(2, at = yax, labels = yax, las = 2)
+mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
+legend(x = 12.4, y = yll, legend = lcnms, pch = 15, col = cols, adj = 0,
+       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
+legend(x = 11.9, y = yll, legend = rep("", 4), pch = 15, adj = 0, 
+       col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
+       cex = 0.8)
+text(x = 12.7, y = yll - 2, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
+text(x = 12.2, y = yll - 2, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
+legend(x = 12.1, y = 165, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
+       pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
+dev.off()
+
+```
+<a href="#top">Back to top</a>
+
+
+```{r, eval = FALSE, echo=FALSE}
+# Version 1 of mean carbon bias against scale - probably for supplementals, if 
+# retained
+LC2 <- c(LC, "all")
+pdf(full_path(p_fig, "carbon_veg_scale.pdf"), height = 7, width = 5)
+par(mfrow = c(3, 2), mar = c(1, 0, 1, 1.25), mgp = c(1, 0.5, 0), tcl = -0.3,  
+    oma = c(6, 4, 1, 0))
+for(f in 1:length(LC2)) {
+  plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
+       ylab = "", xlab = "", 
+       panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
+  #grid(NA, NULL, lwd = 1, lty = 1)
+  mtext(side = 3, text = pnms[f], line = 0)
+  if(f == 5) axis(1, at = 1:6, labels = c(1, fact))
+  if(f %in% c(1, 3, 5)) axis(2, at = yax, labels = yax, las = 2)
+  if(f %in% c(2, 4)) axis(2, at = yax, labels = rep("", length(yax)), las = 2)
+  for(i in 1:4) {
+    lines(1:6, mu[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
+          col = cols[i], lty = 2, lwd = lw)
+  }
+  for(i in 1:4) {
+    lines(1:6, mua[V1 == snms[i] & V2 == LC2[f], lev_vec, with = FALSE], 
+          col = cols[i], lty = 1, lwd = lw)
+  }
+}
+# plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
+#      ylab = "", xlab = "", 
+#      panel.first = grid(NA, length(yax), lwd = 1, lty = 1))
+# for(i in 1:4) {
+#  lines(1:6, mu[V1 == snms[i], lev_vec, with = FALSE], col = cols[i], 
+#        lty = 2, lwd = lw)
+# }
+# for(i in 1:4) {
+#   lines(1:6, mua[V1 == snms[i], lev_vec, with = FALSE], col = cols[i],
+#         lty = 1, lwd = lw)
+# }
+mtext(side = 3, text = "Vegetation mean", line = 0)
+axis(1, at = 1:6, labels = c(1, fact))
+axis(2, at = yax, labels = rep("", length(yax)), las = 2)
+mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 1.5)
+mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 2)
+par(xpd = NA)
+x <- grconvertX(0.7, from = "ndc", to = "user")
+y <- grconvertY(0.075, from = "ndc", to = "user")
+legend(x = x, y = y, legend = c("Bias", "MAE"), lty = c(2, 1), 
+       lwd = 2, bty = "n", cex = 1.2)
+x <- grconvertX(0.1, from = "ndc", to = "user")
+y <- grconvertY(0.11, from = "ndc", to = "user")
+legend(x = x, y = y, legend = mcap, lty = 1, col = cols, lwd = 2, bty = "n",
+       cex = 1.2)
+dev.off()
+```
+
 ### Supplementary mean bias tables
 ```{r, eval=FALSE}
 # Statistics from non-croplands areas included in means, for supplementals
@@ -734,6 +835,8 @@ print(mus_xtab, type = "latex",
       file = "paper/figures/C-bias-mean-cropland-SA.tex", 
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
+
+# still to do: tables for density independent biases
 ```
 
 ```{r, eval=FALSE, echo=FALSE}

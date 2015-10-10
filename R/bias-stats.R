@@ -103,27 +103,4 @@ bias_stats_list <- function(rbinsl, rwgtsl, rmaskl, revall, fun, stnm, evalnm,
   return(DTO)
 }
 
-#' Extract specific statistics from bias_stats data.table
-#' @param ols vector with value(s) to subset from outer list (ol) variable
-#' @param ils vector with value(s) to subset from inner list (il) variable
-#' @param bins vector naming the statistical aggregation level to subset
-#' @param stat statistic to subset
-#' @param val Column header containing the value of interest (N or bias stat)
-#' @param dt Name of the bias_stat produced data.table
-#' @return Subset of statistics from bias_stat data.table
-#' @export
-extract_stat <- function(ols, ils, bins, stat, val, dt) {
-  ii <- rbindlist(lapply(ols, function(i) {
-    jj <- rbindlist(lapply(ils, function(j) {
-      v <- dt[ol == i & il == j & bin == bins & bvals == stat, val, 
-              with = FALSE]
-      if(nrow(v) == 0) v <- rbindlist(list(v, as.list(NA)))
-      vd <- data.table(v)
-    }))
-    jjdt <- cbind("ol" = i, "il" = ils, jj)
-  }))
-  setkey(ii, "ol")
-  return(ii)
-}
-
 
