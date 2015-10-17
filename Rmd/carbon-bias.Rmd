@@ -510,7 +510,7 @@ for(i in c("f1", "f25", "f10")) { # i <- "f1"
 
 #### Secondary methods
 
-```{r, eval = TRUE}
+```{r, eval=FALSE}
 # selection variables
 nms1 <- c(colnames(ctabo), "wgt")
 nms2 <- colnames(ctabo)
@@ -539,22 +539,10 @@ cb_stats <- lapply(lev_vec, function(x) {  # level
                     "mask" = lc_union[[x]][[y]], c_pct_diff[[x]][[y]]))
     DT <- na.omit(as.data.table.raster(s))
     setkey(DT, "bin")
-    # indexing columns
-    #front1 <- data.table("bin" = rep("all", 6), "N" = rep(nrow(DT), 6))
-    #front2 <- data.table("bin" = rep("abs", 6), "N" = rep(nrow(DT), 6))
-    # stats, overall means
-    #m <- cbind(bvals, DT[mask == 1, lapply(.SD, bfn, wgt), .SDcols = nms1])
-    #ma <- cbind(bvals, DT[mask == 1, lapply(.SD, bfna, wgt), .SDcols = nms1])
-    # stats per bin
-    #b <- cbind(bvals, 
-    #           DT[mask == 1, lapply(.SD, bfn, wgt), by = bin, .SDcols = nms1])
-    #ba <- cbind(bvals, 
-    #            DT[mask == 1, lapply(.SD, bfna, wgt), by = bin, .SDcols = nms1])    
-    # output
-    #odt <- rbind(cbind(front1, mu), cbind(front2, muabs), 
-    #             binl[bin][, bin := paste0("a", bin)], 
-    #             binl[binabs][, bin := paste0("b", bin)])[, wgt := NULL]
-
+    
+    # Potentially useful material deleted here: check repo prior to 17/10 if
+    # needed
+    
     fr1 <- data.table("bvals" = c("m", "m0", "ma", "ma0"))
     fr2 <- data.table("bin" = "all", "N" = nrow(DT))
     binl <- DT[, .N, by = bin]  # n obs per bin
@@ -618,7 +606,9 @@ N <- function(namevec, stats, i1, i2) {
 ```
 <a href="#top">Back to top</a>
 
-### Extract statistics for supplemental version 
+### Extract statistics for secondary methods
+
+For supplementals
 ```{r, eval=FALSE}
 # cropland area only
 a <- extract_stat0(LC, cb_stats, "all", "m")  # mean cropland only 
@@ -668,7 +658,7 @@ all(round(sapply(lev_vec, function(x) {
 
 ### Plot mean carbon bias and accuracy against scale
 
-#### Bias and accuracy weighted by agricultural area 
+#### Density-weighted bias and accuracy 
 
 ```{r, eval = FALSE}
 cols <- c("red", "orange3", "green4", "blue")
@@ -698,7 +688,6 @@ g1 <- "grey90"
 
 # ctabo
 xl <- c(-0.5, 18)
-# yl <- c(-200, 200)
 shd <- c(4.5, 10.5, 16.5)
 
 pdf(full_path(p_fig, "carbon_veg_scalew.pdf"), height = 7, width = 7)
@@ -736,120 +725,11 @@ text(x = 12.2, y = -212, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
 legend(x = 12.1, y = 260, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
        pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
 dev.off()
-
-
 ```
 
-#### Agricultural area bias and accuracy
-
-```{r, eval=FALSE}
-#yr <- range(all_l[, 3:8, with = FALSE], all_u[, 3:8, with = FALSE])
-# yl <- range(all_mus[, 3:8, with = FALSE])
-
-# yl <- range(mu[, 3:8, with = FALSE], mua[, 3:8, with = FALSE])
-# yl <- round(yl / 10) * 10
-yax <- seq(yl[1], yl[2], 10)
-xax <- seq(1, 6, 5 / (length(yax) - 1))
-
-mutype <- c("mua", "mu")
-
-xl <- c(-0.5, 18)
-yl <- c(-60, 70)
-shd <- c(4.5, 10.5, 16.5)
-
-pdf(full_path(p_fig, "carbon_veg_scale.pdf"), height = 7, width = 7)
-par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
-plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-     ylab = "", xlab = "")#,
-for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
-polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
-grid(NA, 13, lwd = 1, lty = 1)
-lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey50")
-for(i in 1:length(lev_vec)) {
-  for(j in 1:length(snms)) {
-    for(k in 1:length(mutype)) {
-      dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
-      pcol <- makeTransparent(cols[j], alpha = alph[k])
-      polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
-      for(z in 1:length(LC2)) {
-        lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
-               pch = pchs[z], type = "pt")
-      }
-    }
-  }
-}
-axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
-axis(2, at = yax, labels = yax, las = 2)
-mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
-mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
-legend(x = 12.4, y = -40, legend = lcnms, pch = 15, col = cols, adj = 0,
-       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
-legend(x = 11.9, y = -40, legend = rep("", 4), pch = 15, adj = 0, 
-       col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
-       cex = 0.8)
-text(x = 12.7, y = -42, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
-text(x = 12.2, y = -42, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 65, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
-       pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
-dev.off()
-
-```
-<a href="#top">Back to top</a>
-
-#### Density independent bias and accuracy
-
-```{r, eval=FALSE}
-yl <- range(mund[, 3:8, with = FALSE], munda[, 3:8, with = FALSE])
-yl <- round(yl / 10) * 10
-yax <- seq(yl[1], yl[2], 10)
-xax <- seq(1, 6, 5 / (length(yax) - 1))
-
-mutype <- c("munda", "mund")
-
-o <- c(0, w)
-pchs <- c("*", "+", "o", "-")
-cx <- c(2, 1.25, 1, 1)
-g1 <- "grey90"
-xl <- c(-0.5, 18)
-shd <- c(4.5, 10.5, 16.5)
-
-pdf(full_path(p_fig, "carbon_veg_scale_nd.pdf"), height = 7, width = 7)
-par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
-plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-     ylab = "", xlab = "")#,
-for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
-polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
-grid(NA, length(yax) - 1, lwd = 1, lty = 1)
-lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey50")
-for(i in 1:length(lev_vec)) {
-  for(j in 1:length(snms)) {
-    for(k in 1:length(mutype)) {
-      dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
-      pcol <- makeTransparent(cols[j], alpha = alph[k])
-      polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
-      for(z in 1:length(LC2)) {
-        lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
-               pch = pchs[z], type = "pt")
-      }
-    }
-  }
-}
-yll <- -120
-axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
-axis(2, at = yax, labels = yax, las = 2)
-mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
-mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
-legend(x = 12.4, y = yll, legend = lcnms, pch = 15, col = cols, adj = 0,
-       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
-legend(x = 11.9, y = yll, legend = rep("", 4), pch = 15, adj = 0, 
-       col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
-       cex = 0.8)
-text(x = 12.7, y = yll - 2, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
-text(x = 12.2, y = yll - 2, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 165, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
-       pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
-dev.off()
-
+```{r, echo=FALSE, eval=FALSE}
+# Agricultural area bias and accuracy, deleted here. Values in supplmentary table
+# Check repo before 17/10/15 to retrieve
 ```
 <a href="#top">Back to top</a>
 
@@ -891,18 +771,7 @@ for(i in 1:length(LC)) mu0s[Cover == LC[i], Cover := pnms[i]]
 setkey(mu0s, "Map")
 for(i in 1:length(snms)) mu0s[Map == snms[i], Map := mcap[i]]
 
-caption <- paste("Biases and mean absolute errors for each of the cropland", 
-                 "maps across aggregation scales and each possible landcover", 
-                 "type sharing the pixel with cropland. Means were calculated",
-                 "across the entire country.")
-mu0s_xtab <- xtable(mu0s[order(Metric, Cover)], digits = 1, caption = caption)
-print(mu0s_xtab, type = "latex", file = "paper/figures/C-bias-mean-all-SA.tex", 
-      tabular.environment = "longtable", floating = FALSE, 
-      caption.placement = "top", include.rownames = FALSE)
-
-# Statistics from non-croplands areas included in means, for supplementals
-# mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
-# mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]
+# Statistics from agricultural areas
 mus <- copy(rbind(cbind(Metric = "Bias", mu), 
                   cbind(Metric = "MAE", mua)))
 setnames(mus, c("V1", "V2", lev_vec), 
@@ -912,23 +781,8 @@ for(i in 1:length(LC)) mus[Cover == LC[i], Cover := pnms[i]]
 setkey(mus, "Map")
 for(i in 1:length(snms)) mus[Map == snms[i], Map := mcap[i]]
 
-caption <- paste("Biases and mean absolute errors for each of the cropland", 
-                 "maps across aggregation scales and each possible landcover", 
-                 "type sharing the pixel with cropland. Metrics were calculated",
-                 "across the union of agricultural areas", 
-                 "(cropland $>$0.05\\%) identified by the reference map and", 
-                 "the cropland map to which it was being compared")
-mus_xtab <- xtable::xtable(mus[order(Metric, Cover)], digits = 1, 
-                           caption = caption)
-print(mus_xtab, type = "latex", 
-      file = "paper/figures/C-bias-mean-cropland-SA.tex", 
-      tabular.environment = "longtable", floating = FALSE, 
-      caption.placement = "top", include.rownames = FALSE)
-
-# still to do: tables for density independent biases
-
 # Bind all three tables together
-fulls <- rbind(cbind("Region" = "Density weighted", muws), 
+fulls <- rbind(cbind("Region" = "Density", muws), 
                cbind("Region" = "Country", mu0s),
                cbind("Region" = "Agricultural", mus)) 
 
@@ -944,245 +798,14 @@ fulls_xtab <- xtable(fulls[order(Region, Metric, Cover)], digits = 1,
                      caption = caption)
 print(fulls_xtab, type = "latex", file = "paper/figures/C-bias-accuracy.tex", 
       tabular.environment = "longtable", floating = FALSE, 
-      caption.placement = "top", include.rownames = FALSE)
-
-
+      caption.placement = "top", include.rownames = FALSE) 
+#       add.to.row = list(pos = list(0), 
+#                         command = "\\hline \\endhead"))
 
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
-# Plot means against cropland density (to possibly be run - for now, 
-# too much information)
-mub <- do.call(rbind, lapply(1:20, function(x) {
-  cbind("bin" = x, extract_stat(LC, cb_stats, x, "m"))
-}))
-muba <- do.call(rbind, lapply(1:20, function(x) {
-  cbind("bin" = x, extract_stat(LC, cb_stats, x, "ma"))
-}))
-n <- do.call(rbind, lapply(1:20, function(x) {
-  cbind("bin" = x, N(LC, cb_stats, x, "m"))
-}))
-#n[, mean(f50), by = bin]
-
-pp <- list("x" = c(-2, 21), "y" = c(0, 0), 
-           "x21" = list(c(0, 9), c(9, 21)),
-           "y2" = list(c(seq(-100, -10, 10), seq(10, 100, 10)), 
-                       seq(10, 100, 10)), 
-           "y1lwd" = list(2, 1),  
-           "y2lwd" = 0.5, 
-           "y2lc" = list(c("black", rep("grey80", 4), "black", rep("grey80", 4),
-                           rep("grey80", 4), "black", rep("grey80", 4),"black"),
-                         rep("grey80", 10)),
-           "yl" = list(c(-100, 100), c(0, 100)), 
-           "yl2" = c(-100, 100), "xl" = c(1, 20),
-           "xaxl" = unlist(lapply(seq(5, 100, 10), function(x) c(x, " "))),
-           "xaxl2" = ifelse(seq(5, 100, 5) %in% c(25, 50, 75), seq(5, 100, 5), 
-                            " "),
-           "yax1" = list(seq(-100, 100, 50), seq(0, 100, 20)), 
-           "ycol" = c("grey70"))  # plot parameters
-
-yax <- seq(-100, 100, 10)
-xax <- seq(0, 22, 20 / (length(yax) - 2))
-
-pdf(full_path(p_fig, "carbon_biases_1-100km_v1.pdf"), width = 7.5, height = 7)
-par(mfrow = c(6, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,
-    oma = c(6, 4, 1, 0))
-for(f in 1:length(LC)) {
-  for(j in c(1, 4:6)) {#j <- 1; f <- 1
-      plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-       ylab = "", xlab = "", 
-       panel.first = grid(NA, length(yax) - 1, lwd = 1, lty = 1))
-      lines(pp$x, pp$y, lwd = 1)
-    for(i in 1:4) {
-      mub[V1 == snms[i] & V2 == LC[f], 
-          lines(get(lev_vec[j]), col = cols[i], lty = 2, lwd = lw)]
-      muba[V1 == snms[i] & V2 == LC[f], 
-           lines(get(lev_vec[j]), col = cols[i], lty = 1, lwd = lw)]
-    }
-  }
-}
-dev.off()
-
-ys <- c(-100, 100)
-yax <- seq(ys[1], ys[2], 10)
-xax <- seq(0, 22, 20 / (length(yax) - 2))
-
-#yl <- list(c(-100, 100), c(0, 100))
-yl <- seq(yax[1], yax[length(yax)], 10)
-yll <- as.character(yl)
-yll[seq(2, length(yll) - 1, 2)] <- ""
-Ccols <- brewer.pal(n = 6, name = "Dark2") 
-xaxl = ifelse(seq(5, 100, 5) %in% c(5, 25, 50, 75, 100), seq(5, 100, 5), " ")
-x <- mub[V1 == snms[f] & V2 == LC[j], get(lev_vec[i])]
-y <- 100
-toohigh <- function(x, y, col = "black", yadj = 0, cex = 1.1) {
-  h <- which(abs(x) > abs(y))
-  if(length(h) > 0) {
-    xi <- h[which.max(h)]
-    text(xi, y = y + yadj, labels = round(x[xi]), cex = cex, col = col, 
-         xpd = NA)
-  }
-}
-
-pdf(full_path(p_fig, "carbon_biases_1-100km_v2.pdf"), width = 7.5, height = 7)
-par(mfrow = c(4, 4), mar = c(0.5, 0, 0.5, 0.5), mgp = c(1, 0.5, 0), tcl = -0.3,
-    oma = c(6, 4, 1, 0))
-for(f in 1:length(snms)) {
-  for(i in c(1, 4:6)) {#i <- 1; j <- 1; f <- 2
-      plot(xax, yax, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-           ylab = "", xlab = "", 
-           panel.first = grid(NA, (length(yax) - 1) / 2, lwd = 1, lty = 1))
-      lines(pp$x, pp$y, lwd = 1)
-    for(j in 1:length(LC)) {
-      e <- parse(text = "V1 == snms[f] & V2 == LC[j]")
-      mub[eval(e), 
-          lines(get(lev_vec[i]), col = Ccols[j], lty = 2, lwd = lw)]
-
-      mub[V1 == snms[f] & V2 == LC[j], 
-          lines(get(lev_vec[i]), col = Ccols[j], lty = 2, lwd = lw)]
-      mub[V1 == snms[f] & V2 == LC[j], toohigh(get(lev_vec[i]), ys[1])]
-      muba[V1 == snms[f] & V2 == LC[j], 
-           lines(get(lev_vec[i]), col = Ccols[j], lty = 1, lwd = lw)]
-      axis(1, at = c(1, 5, 10, 15, 20), labels = rep("", 5), mgp = c(1, 1, 0), 
-           tcl = -0.7, lwd.ticks = 1.2, pos = pp$yl2[1])
-      axis(1, at = 1:20, labels = rep("", 20), las = 2, mgp = c(1, 0.4, 0), 
-           tcl = -0.3, pos = pp$yl2[1])
-      if(f == length(snms)) {
-        axis(1, at = 1:20, labels = pp$xaxl2, las = 2, mgp = c(1, 0.8, 0), 
-             tcl = -0.3, pos = pp$yl2[1])
-      }
-      if(i == 1) axis(2, at = yl, labels = yll, las = 2, mgp = c(1, 0.6, 0))
-      if(i == 1 & j == 1) {
-        mtext(lcnms[f], side = 2, line = 2.8, cex = 1, col = cols[f])
-      }
-    }
-  }
-}
-dev.off()
-
-i1 <- "sa30"; i2 <- "forest"; s1 <- "f1"
-mub[V1 == i1 & V2 == i2, ]
-mub[V1 == i1 & V2 == i2, plot(bin, f1, type = "l")]
-mubin[V1 == i1 & V2 == i2, plot(bin, f1, type = "l")]
-```
-
-```{r, eval=FALSE, echo=FALSE}
-# Checks on data values (embedded code)
-# Carbon values and carbon biases - random selection of cells from c_tab_diff
-# compared to recalculated values for those points
-i <- c_pct_diff
-for(chk in list(c("modmu", "f25", "forest"), c("geow", "f10", "shrub"), 
-                c("sa30", "f50", "sparse"))) {
-  x <- chk[1] #names(i[[1]])[3]
-  y <- chk[2] #names(i)[4]
-  tp <- chk[3]
-  r <- i[[y]][[x]][[tp]]
-  rid <- which(values(Which(r != 0)))
-  sid <- sample(rid, 20)
-  v1 <- r[sid]  # value to check
-  sav <- gti_agg[[y]]$gti[sid]
-  lcv <- lc_agg[[y]][[x]][sid]
-  c1 <- carbon(sav, cropC = 5, noncropC = ctabo[1, tp])
-  c2 <- carbon(lcv, cropC = 5, noncropC = ctabo[1, tp])
-  #round((sav * 5) + (ctabo[1, tp] * (1 - sav)), 2) == c1
-  #round((lcv * 5) + (ctabo[1, tp] * (1 - lcv)), 2) == c2
-  print(all(v1 == (c1 - c2) / c1 * 100))
-}  # all true
-  
-
-# Carbon bias by bins 
-# DT-derived values
-mu0a <- do.call(rbind, lapply(1:20, function(x) {
-  cbind("bin" = x, extract_stat(LC, cb_stats, x, "ma0"))
-}))
-cb_stats$f1$sa30
-cb_stats$f10$sa30[get("bin") == 19, ]
-
-# Older variant of code from compare-landcover.Rmd to evaluate whether newer DT
-# version is finding correct results
-for(chk in list(c("modmu", "f25", "forest"), c("geow", "f10", "shrub"), 
-                c("sa30", "f50", "sparse"))) {
-  x <- chk[1] #names(i[[1]])[3]
-  y <- chk[2] #names(i)[4]
-  tp <- chk[3]
-  print(paste(".", x, "..", y, "..", tp))
-  d1 <- do.call(rbind, lapply(1:(length(binv) - 1), function(j) {
-    #print(paste("......bin", j))
-    d2 <- do.call(rbind, lapply(tp, function(z) {#:length(i[[y]][[x]]),..
-      #print(paste("........variant", z))
-      l3 <- abs(i[[y]][[x]][[z]])  # i[[y]][[x]][[z]]
-      #print(paste("........vegetation:", names(l3)))
-      d3 <- do.call(rbind, lapply(1, function(k) { #:length(l3)...
-        rs <- gti_bins[[y]][[1]] == j #[[k]] == j    
-        rs[rs == 0] <- NA
-        o <- rs * l3 #[[k]]
-        w <- area_wgts[[y]][[1]] * rs
-        oo <- cbind.data.frame("lc" = rep(paste0(x, y, z), length(w)), 
-                               getValues(o), getValues(w))
-      }))
-      d3f <- d3[!is.na(d3[, 2]), ]
-    }))
-    if(nrow(d2) > 0) { #(length(i[[x]][[y]]) * 10)) {
-      qs <- c(nrow(d2), box_stats(d2[, 2], weighted = TRUE, 
-                                  weight.opts = list("weights" = d2[, 3])))
-    } else if((nrow(d2) > 0) & (nrow(d2) < length(i[[x]][[y]]) * 20)) {
-      qs <- c(rep(NA, 6), Hmisc::wtd.mean(d2[, 2], weights = d2[, 3], 
-                                          na.rm = FALSE))
-    } else {
-      qs <- rep(NA, 7)
-    }
-  }))
-  #print(round(d1[, "mu"], 2) == mubin[V1 == x & V2 == tp, y, with = FALSE], 
-  #          na.rm = TRUE)
-  #print(all(round(d1[, "mu"], 2) == mubin[V1 == x & V2 == tp, y, with = FALSE], 
-  #          na.rm = TRUE))
-  print(all(round(d1[, "mu"], 2) == 
-              mu0a[V1 == x & V2 == tp, y, with = FALSE], na.rm = TRUE))
-}
-# all true
-
-# another check of DT-derived stats against a raster-calculated variant
-tst <- sapply(names(c_pct_diff)[1], function(x) {
-  lapply(names(c_pct_diff[[1]]), function(y) {
-    cellStats(c_pct_diff[[x]][[y]]$forest, mean)
-  })
-})
-mean(round(unlist(tst)), 2) == mean(round(mu0[V2 == "forest", f1]), 2)
-
-
-gti_gt0 <- Which(gti_agg$f1$gti > 0)
-lc_gt0 <- calc(stack(lapply(lc_agg$f1, function(x) Which(x > 0))), sum)
-all_gt0 <- gti_gt0 + lc_gt0
-all_gt0 <- all_gt0 / all_gt0
-
-filts <- sapply(names(c_pct_diff), function(x) {
-  gti_gt0 <- Which(gti_agg[[x]]$gti > 0)
-  lc_gt0 <- calc(stack(lapply(lc_agg[[x]], function(j) Which(j > 0))), sum)
-  all_gt0 <- gti_gt0 + lc_gt0
-  all_gt0 <- all_gt0 / all_gt0
-})
-
-tst <- sapply(names(c_pct_diff), function(x) {
-  lapply(names(c_pct_diff[[x]]), function(y) {
-    cellStats(filts[[x]] * c_pct_diff[[x]][[y]]$forest, mean)
-  })
-})
-
-tstabs <- sapply(names(c_pct_diff), function(x) {
-  lapply(names(c_pct_diff[[x]]), function(y) {
-    cellStats(abs(filts[[x]] * c_pct_diff[[x]][[y]]$forest), mean)
-  })
-})
-
-
-plot(c(1, 6), range(tst, tstabs), pch = "", xlab = )
-for(i in 1:nrow(tst)) lines(1:6, tst[i, ], lty = 2)
-for(i in 1:nrow(tstabs)) lines(1:6, tstabs[i, ], col = "red")
-
-cellStats(all_gt0 * c_pct_diff$f1$sa30$sparse, mean)
-cellStats(all_gt0 * c_pct_diff$f1$sa30$forest, median)
-cellStats(c_pct_diff$f1$sa30$forest, mean)
-cellStats(all_gt0 * c_pct_diff$f1$sa30$forest, mean)
-
+# Plot means against cropland density, deleted because not used. Check repo
+# prior to 17/10/15 if needed. 
 ```
 

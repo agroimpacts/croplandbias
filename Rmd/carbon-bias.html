@@ -97,9 +97,9 @@ img {
 <li><a href="#carbon-bias-statistics"><span class="toc-section-number">4.2</span> Carbon bias statistics</a><ul>
 <li><a href="#calculate-how-much-country-lvel-carbon-estimates-differ-between-datasets"><span class="toc-section-number">4.2.1</span> Calculate how much country-lvel carbon estimates differ between datasets</a></li>
 <li><a href="#calculate-weighted-bias-statistics"><span class="toc-section-number">4.2.2</span> Calculate weighted bias statistics</a></li>
-<li><a href="#plot-means-against-scale-supplemental-version"><span class="toc-section-number">4.2.3</span> Plot means against scale, supplemental version</a></li>
-<li><a href="#main-text-version-of-mean-carbon-bias-against-scale"><span class="toc-section-number">4.2.4</span> Main text version of mean carbon bias against scale</a></li>
-<li><a href="#supplementary-mean-bias-tables"><span class="toc-section-number">4.2.5</span> Supplementary mean bias tables</a></li>
+<li><a href="#extract-statistics-for-secondary-methods"><span class="toc-section-number">4.2.3</span> Extract statistics for secondary methods</a></li>
+<li><a href="#plot-mean-carbon-bias-and-accuracy-against-scale"><span class="toc-section-number">4.2.4</span> Plot mean carbon bias and accuracy against scale</a></li>
+<li><a href="#supplementary-biasaccuracy-tables"><span class="toc-section-number">4.2.5</span> Supplementary bias/accuracy tables</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -513,6 +513,9 @@ totc_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(totc_out,
 </div>
 <div id="calculate-weighted-bias-statistics" class="section level3">
 <h3><span class="header-section-number">4.2.2</span> Calculate weighted bias statistics</h3>
+<div id="primary-method" class="section level4">
+<h4><span class="header-section-number">4.2.2.1</span> Primary method</h4>
+<p>Weighted by <strong>actual</strong> cropland percentage, and then, with aggregation, by number of pixels being aggregated.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Helper functions to pass into data.table</span>
 <span class="co"># not used - switch on if quantiles needs</span>
 <span class="co"># bfn &lt;- function(x, y) {</span>
@@ -521,19 +524,85 @@ totc_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(totc_out,
 <span class="co"># bfna &lt;- function(x, y) {</span>
 <span class="co">#   box_stats(abs(x), weighted = TRUE, weight.opts = list(&quot;weights&quot; = y))</span>
 <span class="co"># }</span>
+
 wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
 wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+
+<span class="co"># Bias</span>
+cb_statsw_mu &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(lev_vec, function(x) {
+  il &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(snms, function(y) {
+    ref &lt;-<span class="st"> </span>gti_agg[[x]][[<span class="dv">1</span>]]
+    awgts &lt;-<span class="st"> </span>area_wgts[[x]][[<span class="dv">1</span>]]
+    rerror &lt;-<span class="st"> </span>c_pct_diff[[x]][[y]]
+    bstats &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(ref, awgts, rerror, LC, wm, <span class="st">&quot;Bias&quot;</span>, <span class="dt">rnd =</span> <span class="dv">2</span>, 
+                          <span class="dt">rweight =</span> <span class="ot">TRUE</span>, <span class="dt">aweight =</span> <span class="ot">TRUE</span>, <span class="dt">trim_wgt =</span> <span class="ot">TRUE</span>)
+    <span class="kw">cbind</span>(<span class="st">&quot;map&quot;</span> =<span class="st"> </span>y, bstats)
+  }))
+  <span class="co"># named_out(ol, snms)</span>
+  <span class="kw">cbind</span>(<span class="st">&quot;ol&quot;</span> =<span class="st"> </span>x, il)
+}))
+
+<span class="co"># calculate mean across cover types</span>
+cb_statsw_mu &lt;-<span class="st"> </span><span class="kw">cbind</span>(cb_statsw_mu, 
+                      <span class="st">&quot;All&quot;</span> =<span class="st"> </span><span class="kw">apply</span>(cb_statsw_mu[, LC, <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dv">1</span>, mean))
+
+<span class="co"># Accuracy</span>
+cb_statsw_mua &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(lev_vec, function(x) { <span class="co"># x &lt;- &quot;f1&quot;</span>
+  il &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(snms, function(y) { <span class="co"># y &lt;- &quot;sa30&quot;</span>
+    ref &lt;-<span class="st"> </span>gti_agg[[x]][[<span class="dv">1</span>]]
+    awgts &lt;-<span class="st"> </span>area_wgts[[x]][[<span class="dv">1</span>]]
+    rerror &lt;-<span class="st"> </span>c_pct_diff[[x]][[y]]
+    bstats &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(ref, awgts, rerror, LC, wma, <span class="st">&quot;MAE&quot;</span>, <span class="dt">rnd =</span> <span class="dv">2</span>, 
+                          <span class="dt">rweight =</span> <span class="ot">TRUE</span>, <span class="dt">aweight =</span> <span class="ot">TRUE</span>, <span class="dt">trim_wgt =</span> <span class="ot">TRUE</span>)
+    <span class="kw">cbind</span>(<span class="st">&quot;map&quot;</span> =<span class="st"> </span>y, bstats)
+  }))
+  <span class="co"># named_out(ol, snms)</span>
+  <span class="kw">cbind</span>(<span class="st">&quot;ol&quot;</span> =<span class="st"> </span>x, il)
+}))
+
+<span class="co"># calculate mean across cover types</span>
+cb_statsw_mua &lt;-<span class="st"> </span><span class="kw">cbind</span>(cb_statsw_mua, 
+                       <span class="st">&quot;All&quot;</span> =<span class="st"> </span><span class="kw">apply</span>(cb_statsw_mua[, LC, <span class="dt">with=</span><span class="ot">FALSE</span>], <span class="dv">1</span>, mean))
+<span class="co"># rowMeans(as.data.frame(cb_statsw_mua[1, ])[, LC])</span>
+
+<span class="co"># check error stats - do they match alternate approaches?</span>
+for(i in <span class="kw">c</span>(<span class="st">&quot;f1&quot;</span>, <span class="st">&quot;f25&quot;</span>, <span class="st">&quot;f10&quot;</span>)) { <span class="co"># i &lt;- &quot;f1&quot;</span>
+  for(j in <span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)) { <span class="co"># j &lt;- &quot;modmu&quot;</span>
+    for(k in <span class="kw">c</span>(<span class="st">&quot;forest&quot;</span>, <span class="st">&quot;shrub&quot;</span>, <span class="st">&quot;sparse&quot;</span>, <span class="st">&quot;second&quot;</span>)) {  <span class="co"># k &lt;- &quot;second&quot;</span>
+      <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;cross-checking calculations in&quot;</span>, i, j, k))
+      ref &lt;-<span class="st"> </span>gti_agg[[i]][[<span class="dv">1</span>]]
+      awgts &lt;-<span class="st"> </span>area_wgts[[i]][[<span class="dv">1</span>]]
+      rerror &lt;-<span class="st"> </span>c_pct_diff[[i]][[j]]
+      a1 &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(ref, awgts, rerror, LC, wm, <span class="st">&quot;mu&quot;</span>, 
+                        <span class="dt">aweight =</span> <span class="ot">FALSE</span>)[, <span class="kw">get</span>(k)]
+      a2 &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(ref, awgts, rerror, LC, wm, <span class="st">&quot;mu&quot;</span>, 
+                        <span class="dt">rweight =</span> <span class="ot">FALSE</span>, <span class="dt">aweight =</span> <span class="ot">FALSE</span>)[, <span class="kw">get</span>(k)]
+      a3 &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(ref, awgts, rerror, LC, wm, <span class="st">&quot;mu&quot;</span>)[, <span class="kw">get</span>(k)]
+      c1 &lt;-<span class="st"> </span><span class="kw">getValues</span>(c_pct_diff[[i]][[j]][[k]])
+      w1 &lt;-<span class="st"> </span><span class="kw">getValues</span>(gti_agg[[i]][[<span class="dv">1</span>]])
+      w2 &lt;-<span class="st"> </span><span class="kw">getValues</span>(area_wgts[[i]][[<span class="dv">1</span>]])
+      <span class="kw">print</span>(<span class="st">&quot;...non-area weighted mean matches?&quot;</span>)
+      <span class="kw">print</span>(a1 ==<span class="st"> </span><span class="kw">round</span>(<span class="kw">weighted.mean</span>(c1, w1, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">2</span>))
+      <span class="kw">print</span>(<span class="st">&quot;...totally unweighted mean matches?&quot;</span>)
+      <span class="kw">print</span>(a2 ==<span class="st"> </span><span class="kw">round</span>(<span class="kw">cellStats</span>(rerror[[k]], mean), <span class="dv">2</span>))
+      <span class="kw">print</span>(<span class="st">&quot;...double weighted mean matches?&quot;</span>)
+      <span class="kw">print</span>(a3 ==<span class="st"> </span><span class="kw">round</span>(<span class="kw">weighted.mean</span>(c1, w1 *<span class="st"> </span>w2, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">2</span>))
+    }
+  }
+}</code></pre>
+</div>
+<div id="secondary-methods" class="section level4">
+<h4><span class="header-section-number">4.2.2.2</span> Secondary methods</h4>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># selection variables</span>
+nms1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">colnames</span>(ctabo), <span class="st">&quot;wgt&quot;</span>)
+nms2 &lt;-<span class="st"> </span><span class="kw">colnames</span>(ctabo)
+<span class="co"># bvals &lt;- names(box_stats(sample(1:100, 200, replace = TRUE)))</span>
+bvals &lt;-<span class="st"> &quot;mu&quot;</span>
 
 <span class="co"># check constancy of &lt; 1/2% cropland being excluded</span>
 areas &lt;-<span class="st"> </span><span class="kw">sapply</span>(lc_agg, function(x) <span class="kw">res</span>(x[[<span class="dv">1</span>]])[<span class="dv">1</span>]^<span class="dv">2</span> /<span class="st"> </span><span class="dv">10000</span>)
 <span class="kw">plot</span>(areas, (areas *<span class="st"> </span><span class="fl">0.005</span>))  <span class="co"># scales</span>
 (areas *<span class="st"> </span><span class="fl">0.005</span>)  <span class="co"># 1/2 to 5000 ha</span>
-
-<span class="co"># selection variables</span>
-nms1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">colnames</span>(ctabo), <span class="st">&quot;wgt&quot;</span>)
-nms2 &lt;-<span class="st"> </span><span class="kw">colnames</span>(ctabo)
-<span class="co"># bvals &lt;- names(box_stats(sample(1:100, 200, replace = TRUE)))</span>
-bvals &lt;-<span class="st"> &quot;mu&quot;</span>
 
 dang &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()
   <span class="co">#print(paste(&quot;..&quot;, x))</span>
@@ -552,22 +621,10 @@ cb_stats &lt;-<span class="st"> </span><span class="kw">lapply</span>(lev_vec, f
                     <span class="st">&quot;mask&quot;</span> =<span class="st"> </span>lc_union[[x]][[y]], c_pct_diff[[x]][[y]]))
     DT &lt;-<span class="st"> </span><span class="kw">na.omit</span>(<span class="kw">as.data.table.raster</span>(s))
     <span class="kw">setkey</span>(DT, <span class="st">&quot;bin&quot;</span>)
-    <span class="co"># indexing columns</span>
-    <span class="co">#front1 &lt;- data.table(&quot;bin&quot; = rep(&quot;all&quot;, 6), &quot;N&quot; = rep(nrow(DT), 6))</span>
-    <span class="co">#front2 &lt;- data.table(&quot;bin&quot; = rep(&quot;abs&quot;, 6), &quot;N&quot; = rep(nrow(DT), 6))</span>
-    <span class="co"># stats, overall means</span>
-    <span class="co">#m &lt;- cbind(bvals, DT[mask == 1, lapply(.SD, bfn, wgt), .SDcols = nms1])</span>
-    <span class="co">#ma &lt;- cbind(bvals, DT[mask == 1, lapply(.SD, bfna, wgt), .SDcols = nms1])</span>
-    <span class="co"># stats per bin</span>
-    <span class="co">#b &lt;- cbind(bvals, </span>
-    <span class="co">#           DT[mask == 1, lapply(.SD, bfn, wgt), by = bin, .SDcols = nms1])</span>
-    <span class="co">#ba &lt;- cbind(bvals, </span>
-    <span class="co">#            DT[mask == 1, lapply(.SD, bfna, wgt), by = bin, .SDcols = nms1])    </span>
-    <span class="co"># output</span>
-    <span class="co">#odt &lt;- rbind(cbind(front1, mu), cbind(front2, muabs), </span>
-    <span class="co">#             binl[bin][, bin := paste0(&quot;a&quot;, bin)], </span>
-    <span class="co">#             binl[binabs][, bin := paste0(&quot;b&quot;, bin)])[, wgt := NULL]</span>
-
+    
+    <span class="co"># Potentially useful material deleted here: check repo prior to 17/10 if</span>
+    <span class="co"># needed</span>
+    
     fr1 &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="st">&quot;bvals&quot;</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;m&quot;</span>, <span class="st">&quot;m0&quot;</span>, <span class="st">&quot;ma&quot;</span>, <span class="st">&quot;ma0&quot;</span>))
     fr2 &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="st">&quot;bin&quot;</span> =<span class="st"> &quot;all&quot;</span>, <span class="st">&quot;N&quot;</span> =<span class="st"> </span><span class="kw">nrow</span>(DT))
     binl &lt;-<span class="st"> </span>DT[, .N, by =<span class="st"> </span>bin]  <span class="co"># n obs per bin</span>
@@ -596,11 +653,20 @@ stats &lt;-<span class="st"> </span>cb_stats
 i1 &lt;-<span class="st"> &quot;all&quot;</span>
 i2 &lt;-<span class="st"> &quot;m&quot;</span>
 
-extract_stat0 &lt;-<span class="st"> </span>function(namevec, stats, i1, i2) {
+cb_stats$f25$geow[bvals ==<span class="st"> &quot;m&quot;</span> &amp;<span class="st"> </span>bin !=<span class="st"> &quot;all&quot;</span>, <span class="kw">lapply</span>(.SD, mean), .SDcols =<span class="st"> </span>LC]
+cb_stats$f25$geow[bvals ==<span class="st"> &quot;m&quot;</span>, ]
+cb_stats$f25$geow[bvals ==<span class="st"> &quot;m&quot;</span> &amp;<span class="st"> </span>bin !=<span class="st"> &quot;all&quot;</span>, <span class="kw">lapply</span>(.SD, mean), 
+                  .SDcols =<span class="st"> &quot;forest&quot;</span>]
+
+extract_stat0 &lt;-<span class="st"> </span>function(namevec, stats, i1, i2, <span class="dt">type =</span> <span class="st">&quot;density&quot;</span>) {
   estats &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(namevec, function(i) {
       dat &lt;-<span class="st"> </span><span class="kw">sapply</span>(stats, function(x) {
       vals &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">sapply</span>(x, function(y) {
-        v &lt;-<span class="st"> </span>y[bin ==<span class="st"> </span>i1 &amp;<span class="st"> </span>bvals ==<span class="st"> </span>i2, i, with =<span class="st"> </span><span class="ot">FALSE</span>]
+        if(type ==<span class="st"> &quot;density&quot;</span>) {
+          v &lt;-<span class="st"> </span>y[bin ==<span class="st"> </span>i1 &amp;<span class="st"> </span>bvals ==<span class="st"> </span>i2, i, with =<span class="st"> </span><span class="ot">FALSE</span>]
+        } else if(type ==<span class="st"> &quot;nodensity&quot;</span>) {
+          v &lt;-<span class="st"> </span>y[bin !=<span class="st"> </span>i1 &amp;<span class="st"> </span>bvals ==<span class="st"> </span>i2, <span class="kw">lapply</span>(.SD, mean), .SDcols =<span class="st"> </span>i]
+        }
         if(<span class="kw">nrow</span>(v) ==<span class="st"> </span><span class="dv">0</span>) v &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">list</span>(v, <span class="kw">as.list</span>(<span class="ot">NA</span>)))
         v
       }))
@@ -621,134 +687,104 @@ N &lt;-<span class="st"> </span>function(namevec, stats, i1, i2) {
 }</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
-<div id="plot-means-against-scale-supplemental-version" class="section level3">
-<h3><span class="header-section-number">4.2.3</span> Plot means against scale, supplemental version</h3>
-<pre class="sourceCode r"><code class="sourceCode r">a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;m&quot;</span>)  <span class="co"># mean cropland only </span>
+</div>
+<div id="extract-statistics-for-secondary-methods" class="section level3">
+<h3><span class="header-section-number">4.2.3</span> Extract statistics for secondary methods</h3>
+<p>For supplementals</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># cropland area only</span>
+a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;m&quot;</span>)  <span class="co"># mean cropland only </span>
 b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
 <span class="kw">setcolorder</span>(a, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(a)))
-mu &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mu &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># bias</span>
 
 a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;ma&quot;</span>)  <span class="co"># mean abs cropland only</span>
 b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
 <span class="kw">setcolorder</span>(b, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(b)))
-mua &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mua &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># MAE</span>
 
+<span class="co"># whole country</span>
 a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;m0&quot;</span>)  <span class="co"># mean whole country</span>
 b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
 <span class="kw">setcolorder</span>(b, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(b)))
-mu0 &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mu0 &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># bias</span>
 
 a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;ma0&quot;</span>)  <span class="co"># mean abs whole country</span>
 b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
 <span class="kw">setcolorder</span>(b, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(b)))
-mu0a &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+mu0a &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># MAE</span>
 
-<span class="co">#yr &lt;- range(all_l[, 3:8, with = FALSE], all_u[, 3:8, with = FALSE])</span>
-<span class="co"># yl &lt;- range(all_mus[, 3:8, with = FALSE])</span>
+<span class="co"># density independent</span>
+a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;m0&quot;</span>, <span class="dt">type =</span> <span class="st">&quot;nodensity&quot;</span>)
+b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
+<span class="kw">setcolorder</span>(a, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(a)))
+mund &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># bias</span>
 
-cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;orange3&quot;</span>, <span class="st">&quot;green4&quot;</span>, <span class="st">&quot;blue&quot;</span>)
+<span class="co"># check</span>
+<span class="kw">all</span>(<span class="kw">round</span>(<span class="kw">sapply</span>(lev_vec, function(x) {
+  <span class="kw">mean</span>(cb_stats[[x]]$modmu[bvals ==<span class="st"> &quot;m0&quot;</span> &amp;<span class="st"> </span>bin !=<span class="st"> &quot;all&quot;</span>, forest])
+}), <span class="dv">2</span>) ==<span class="st"> </span>mund[V2 ==<span class="st"> &quot;forest&quot;</span> &amp;<span class="st"> </span>V1 ==<span class="st"> &quot;modmu&quot;</span>, lev_vec, <span class="dt">with =</span> <span class="ot">FALSE</span>])
+
+a &lt;-<span class="st"> </span><span class="kw">extract_stat0</span>(LC, cb_stats, <span class="st">&quot;all&quot;</span>, <span class="st">&quot;ma0&quot;</span>, <span class="dt">type =</span> <span class="st">&quot;nodensity&quot;</span>)
+b &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">V2 =</span> <span class="st">&quot;All&quot;</span>, a[, <span class="kw">lapply</span>(.SD, mean), <span class="dt">by =</span> V1, <span class="dt">.SDcols =</span> lev_vec])
+<span class="kw">setcolorder</span>(b, <span class="kw">c</span>(<span class="dv">2</span>:<span class="dv">1</span>, <span class="dv">3</span>:<span class="kw">ncol</span>(b)))
+munda &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)  <span class="co"># MAE</span>
+
+<span class="co"># check</span>
+<span class="kw">all</span>(<span class="kw">round</span>(<span class="kw">sapply</span>(lev_vec, function(x) {
+  <span class="kw">mean</span>(cb_stats[[x]]$modmu[bvals ==<span class="st"> &quot;ma0&quot;</span> &amp;<span class="st"> </span>bin !=<span class="st"> &quot;all&quot;</span>, forest])
+}), <span class="dv">2</span>) ==<span class="st"> </span>munda[V2 ==<span class="st"> &quot;forest&quot;</span> &amp;<span class="st"> </span>V1 ==<span class="st"> &quot;modmu&quot;</span>, lev_vec, <span class="dt">with =</span> <span class="ot">FALSE</span>])</code></pre>
+<p><a href="#top">Back to top</a></p>
+</div>
+<div id="plot-mean-carbon-bias-and-accuracy-against-scale" class="section level3">
+<h3><span class="header-section-number">4.2.4</span> Plot mean carbon bias and accuracy against scale</h3>
+<div id="density-weighted-bias-and-accuracy" class="section level4">
+<h4><span class="header-section-number">4.2.4.1</span> Density-weighted bias and accuracy</h4>
+<pre class="sourceCode r"><code class="sourceCode r">cols &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;orange3&quot;</span>, <span class="st">&quot;green4&quot;</span>, <span class="st">&quot;blue&quot;</span>)
 lcnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;SA LC&quot;</span>, <span class="st">&quot;GlobCover&quot;</span>, <span class="st">&quot;MODIS&quot;</span>, <span class="st">&quot;Geowiki&quot;</span>)
 pnms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Forest&quot;</span>, <span class="st">&quot;Secondary&quot;</span>, <span class="st">&quot;Shrubland&quot;</span>, <span class="st">&quot;Grassland&quot;</span>, <span class="st">&quot;Sparse&quot;</span>)
 lw &lt;-<span class="st"> </span><span class="fl">1.5</span>
 
-yl &lt;-<span class="st"> </span><span class="kw">range</span>(mu[, <span class="dv">3</span>:<span class="dv">8</span>, <span class="dt">with =</span> <span class="ot">FALSE</span>], mua[, <span class="dv">3</span>:<span class="dv">8</span>, <span class="dt">with =</span> <span class="ot">FALSE</span>])
-yl &lt;-<span class="st"> </span><span class="kw">round</span>(yl /<span class="st"> </span><span class="dv">10</span>) *<span class="st"> </span><span class="dv">10</span>
-yax &lt;-<span class="st"> </span><span class="kw">seq</span>(yl[<span class="dv">1</span>], yl[<span class="dv">2</span>], <span class="dv">10</span>)
+<span class="co"># yl &lt;- range(cb_statsw_mu[, LC, with = FALSE], </span>
+<span class="co">#             cb_statsw_mua[, LC, with = FALSE])</span>
+<span class="co"># yl &lt;- round(yl / 10) * 10</span>
+yl &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">290</span>, <span class="dv">290</span>)
+yax &lt;-<span class="st"> </span><span class="kw">seq</span>(yl[<span class="dv">1</span>], yl[<span class="dv">2</span>], <span class="dv">20</span>)
 xax &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">5</span> /<span class="st"> </span>(<span class="kw">length</span>(yax) -<span class="st"> </span><span class="dv">1</span>))
 
-<span class="co"># Version 1 of mean carbon bias against scale - probably for supplementals, if </span>
-<span class="co"># retained</span>
-LC2 &lt;-<span class="st"> </span><span class="kw">c</span>(LC, <span class="st">&quot;all&quot;</span>)
-<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;carbon_veg_scale.pdf&quot;</span>), <span class="dt">height =</span> <span class="dv">7</span>, <span class="dt">width =</span> <span class="dv">5</span>)
-<span class="kw">par</span>(<span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">2</span>), <span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="fl">1.25</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">tcl =</span> -<span class="fl">0.3</span>,  
-    <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">6</span>, <span class="dv">4</span>, <span class="dv">1</span>, <span class="dv">0</span>))
-for(f in <span class="dv">1</span>:<span class="kw">length</span>(LC2)) {
-  <span class="kw">plot</span>(xax, yax, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
-       <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>, 
-       <span class="dt">panel.first =</span> <span class="kw">grid</span>(<span class="ot">NA</span>, <span class="kw">length</span>(yax), <span class="dt">lwd =</span> <span class="dv">1</span>, <span class="dt">lty =</span> <span class="dv">1</span>))
-  <span class="co">#grid(NA, NULL, lwd = 1, lty = 1)</span>
-  <span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">3</span>, <span class="dt">text =</span> pnms[f], <span class="dt">line =</span> <span class="dv">0</span>)
-  if(f ==<span class="st"> </span><span class="dv">5</span>) <span class="kw">axis</span>(<span class="dv">1</span>, <span class="dt">at =</span> <span class="dv">1</span>:<span class="dv">6</span>, <span class="dt">labels =</span> <span class="kw">c</span>(<span class="dv">1</span>, fact))
-  if(f %in%<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>)) <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> yax, <span class="dt">labels =</span> yax, <span class="dt">las =</span> <span class="dv">2</span>)
-  if(f %in%<span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">4</span>)) <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> yax, <span class="dt">labels =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="kw">length</span>(yax)), <span class="dt">las =</span> <span class="dv">2</span>)
-  for(i in <span class="dv">1</span>:<span class="dv">4</span>) {
-    <span class="kw">lines</span>(<span class="dv">1</span>:<span class="dv">6</span>, mu[V1 ==<span class="st"> </span>snms[i] &amp;<span class="st"> </span>V2 ==<span class="st"> </span>LC2[f], lev_vec, <span class="dt">with =</span> <span class="ot">FALSE</span>], 
-          <span class="dt">col =</span> cols[i], <span class="dt">lty =</span> <span class="dv">2</span>, <span class="dt">lwd =</span> lw)
-  }
-  for(i in <span class="dv">1</span>:<span class="dv">4</span>) {
-    <span class="kw">lines</span>(<span class="dv">1</span>:<span class="dv">6</span>, mua[V1 ==<span class="st"> </span>snms[i] &amp;<span class="st"> </span>V2 ==<span class="st"> </span>LC2[f], lev_vec, <span class="dt">with =</span> <span class="ot">FALSE</span>], 
-          <span class="dt">col =</span> cols[i], <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> lw)
-  }
-}
-<span class="co"># plot(xax, yax, pch = &quot;&quot;, yaxt = &quot;n&quot;, xaxt = &quot;n&quot;, xaxs = &quot;i&quot;, yaxs = &quot;i&quot;, </span>
-<span class="co">#      ylab = &quot;&quot;, xlab = &quot;&quot;, </span>
-<span class="co">#      panel.first = grid(NA, length(yax), lwd = 1, lty = 1))</span>
-<span class="co"># for(i in 1:4) {</span>
-<span class="co">#  lines(1:6, mu[V1 == snms[i], lev_vec, with = FALSE], col = cols[i], </span>
-<span class="co">#        lty = 2, lwd = lw)</span>
-<span class="co"># }</span>
-<span class="co"># for(i in 1:4) {</span>
-<span class="co">#   lines(1:6, mua[V1 == snms[i], lev_vec, with = FALSE], col = cols[i],</span>
-<span class="co">#         lty = 1, lwd = lw)</span>
-<span class="co"># }</span>
-<span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">3</span>, <span class="dt">text =</span> <span class="st">&quot;Vegetation mean&quot;</span>, <span class="dt">line =</span> <span class="dv">0</span>)
-<span class="kw">axis</span>(<span class="dv">1</span>, <span class="dt">at =</span> <span class="dv">1</span>:<span class="dv">6</span>, <span class="dt">labels =</span> <span class="kw">c</span>(<span class="dv">1</span>, fact))
-<span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> yax, <span class="dt">labels =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="kw">length</span>(yax)), <span class="dt">las =</span> <span class="dv">2</span>)
-<span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">text =</span> <span class="st">&quot;Resolution (km)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="fl">1.5</span>)
-<span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">text =</span> <span class="st">&quot;Bias/MAE (%)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="dv">2</span>)
-<span class="kw">par</span>(<span class="dt">xpd =</span> <span class="ot">NA</span>)
-x &lt;-<span class="st"> </span><span class="kw">grconvertX</span>(<span class="fl">0.7</span>, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>, <span class="dt">to =</span> <span class="st">&quot;user&quot;</span>)
-y &lt;-<span class="st"> </span><span class="kw">grconvertY</span>(<span class="fl">0.075</span>, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>, <span class="dt">to =</span> <span class="st">&quot;user&quot;</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> x, <span class="dt">y =</span> y, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;MAE&quot;</span>), <span class="dt">lty =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">1</span>), 
-       <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">1.2</span>)
-x &lt;-<span class="st"> </span><span class="kw">grconvertX</span>(<span class="fl">0.1</span>, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>, <span class="dt">to =</span> <span class="st">&quot;user&quot;</span>)
-y &lt;-<span class="st"> </span><span class="kw">grconvertY</span>(<span class="fl">0.11</span>, <span class="dt">from =</span> <span class="st">&quot;ndc&quot;</span>, <span class="dt">to =</span> <span class="st">&quot;user&quot;</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> x, <span class="dt">y =</span> y, <span class="dt">legend =</span> mcap, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">col =</span> cols, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,
-       <span class="dt">cex =</span> <span class="fl">1.2</span>)
-<span class="kw">dev.off</span>()</code></pre>
-<p><a href="#top">Back to top</a></p>
-</div>
-<div id="main-text-version-of-mean-carbon-bias-against-scale" class="section level3">
-<h3><span class="header-section-number">4.2.4</span> Main text version of mean carbon bias against scale</h3>
-<pre class="sourceCode r"><code class="sourceCode r">alph &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">225</span>, <span class="dv">40</span>)
-<span class="co">#Ccols &lt;- brewer.pal(n = 7, name = &quot;Greys&quot;)</span>
+alph &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">225</span>, <span class="dv">40</span>)
 LC2 &lt;-<span class="st"> </span><span class="kw">c</span>(LC[-<span class="kw">grep</span>(<span class="st">&quot;second|grass&quot;</span>, LC)], <span class="st">&quot;All&quot;</span>)
-<span class="co"># xax &lt;- seq(0, 7, 6 / (length(yax) - 2)); length(xax)</span>
 x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>, <span class="dv">12</span>, <span class="dv">15</span>)
 w &lt;-<span class="st"> </span><span class="dv">3</span> /<span class="st"> </span><span class="dv">8</span>
 xo &lt;-<span class="st"> </span>(<span class="kw">cumsum</span>(<span class="kw">rep</span>(w, <span class="dv">8</span>)) -<span class="st"> </span>w /<span class="st"> </span><span class="dv">2</span>)[-<span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">8</span>)]
-<span class="co">#x + xo[j] + o[k]</span>
 xa &lt;-<span class="st"> </span><span class="kw">sapply</span>(x, function(x) x +<span class="st"> </span>xo)
-mutype &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;mua&quot;</span>, <span class="st">&quot;mu&quot;</span>)
+mutype &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;cb_statsw_mua&quot;</span>, <span class="st">&quot;cb_statsw_mu&quot;</span>)
 
 o &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, w)
 pchs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;*&quot;</span>, <span class="st">&quot;+&quot;</span>, <span class="st">&quot;o&quot;</span>, <span class="st">&quot;-&quot;</span>)
-<span class="co"># cx &lt;- c(1, 0.7, 0.6, 1)</span>
 cx &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>, <span class="fl">1.25</span>, <span class="dv">1</span>, <span class="dv">1</span>)
 g1 &lt;-<span class="st"> &quot;grey90&quot;</span>
-<span class="co"># pchShow()</span>
+
 <span class="co"># ctabo</span>
 xl &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="fl">0.5</span>, <span class="dv">18</span>)
-yl &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">60</span>, <span class="dv">70</span>)
 shd &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">4.5</span>, <span class="fl">10.5</span>, <span class="fl">16.5</span>)
 
-<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;carbon_veg_scale.pdf&quot;</span>), <span class="dt">height =</span> <span class="dv">7</span>, <span class="dt">width =</span> <span class="dv">7</span>)
+<span class="kw">pdf</span>(<span class="kw">full_path</span>(p_fig, <span class="st">&quot;carbon_veg_scalew.pdf&quot;</span>), <span class="dt">height =</span> <span class="dv">7</span>, <span class="dt">width =</span> <span class="dv">7</span>)
 <span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">rep</span>(<span class="dv">1</span>, <span class="dv">4</span>), <span class="dt">oma =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">mgp =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>, <span class="dv">0</span>), <span class="dt">tcl =</span> -<span class="fl">0.3</span>)
 <span class="kw">plot</span>(xl, yl, <span class="dt">pch =</span> <span class="st">&quot;&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">xaxs =</span> <span class="st">&quot;i&quot;</span>, <span class="dt">yaxs =</span> <span class="st">&quot;i&quot;</span>, 
      <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>)<span class="co">#,</span>
 for(i in shd) <span class="kw">polyfunc2</span>(<span class="dt">x =</span> i, <span class="dt">y =</span> yl, <span class="dt">w =</span> <span class="dv">3</span>, <span class="dt">col =</span> g1, <span class="dt">bcol =</span> g1, <span class="dt">lwd =</span> <span class="dv">1</span>)
+<span class="kw">abline</span>(<span class="dt">h =</span> yax, <span class="dt">v =</span> <span class="ot">NULL</span>, <span class="dt">col =</span> <span class="st">&quot;grey80&quot;</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 <span class="kw">polyfunc2</span>(<span class="dt">x =</span> <span class="fl">8.75</span>, <span class="dt">y =</span> yl, <span class="dt">w =</span> <span class="fl">18.5</span>, <span class="dt">col =</span> <span class="st">&quot;transparent&quot;</span>, <span class="dt">bcol =</span> <span class="st">&quot;black&quot;</span>)
-<span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">13</span>, <span class="dt">lwd =</span> <span class="dv">1</span>, <span class="dt">lty =</span> <span class="dv">1</span>)
 <span class="kw">lines</span>(<span class="kw">c</span>(-<span class="dv">1</span>, <span class="dv">18</span>), <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> <span class="st">&quot;grey50&quot;</span>)
-for(i in <span class="dv">1</span>:<span class="kw">length</span>(lev_vec)) {
+for(i in <span class="dv">1</span>:<span class="kw">length</span>(lev_vec)) { <span class="co"># i &lt;- 1; j &lt;- 1; k &lt;- 1</span>
   for(j in <span class="dv">1</span>:<span class="kw">length</span>(snms)) {
     for(k in <span class="dv">1</span>:<span class="kw">length</span>(mutype)) {
-      dat &lt;-<span class="st"> </span><span class="kw">get</span>(mutype[k])[V1 ==<span class="st"> </span>snms[j] &amp;<span class="st"> </span>V2 %in%<span class="st"> </span>LC2, <span class="kw">get</span>(lev_vec[i])]
+      dat &lt;-<span class="st"> </span><span class="kw">get</span>(mutype[k])[ol ==<span class="st"> </span>lev_vec[i] &amp;<span class="st"> </span>map ==<span class="st"> </span>snms[j], LC2, with=<span class="ot">FALSE</span>]
       pcol &lt;-<span class="st"> </span><span class="kw">makeTransparent</span>(cols[j], <span class="dt">alpha =</span> alph[k])
       <span class="kw">polyfunc2</span>(xa[j, i] +<span class="st"> </span>o[k], <span class="kw">range</span>(dat), <span class="dt">w =</span> w, <span class="dt">col =</span> pcol, <span class="dt">bcol =</span> pcol)
       for(z in <span class="dv">1</span>:<span class="kw">length</span>(LC2)) {
-        <span class="kw">lpfunc</span>(x[i] +<span class="st"> </span>xo[j] +<span class="st"> </span>o[k], dat[z], <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">size =</span> cx[z], 
-               <span class="dt">pch =</span> pchs[z], <span class="dt">type =</span> <span class="st">&quot;pt&quot;</span>)
+        <span class="kw">lpfunc</span>(x[i] +<span class="st"> </span>xo[j] +<span class="st"> </span>o[k], dat[, z, <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, 
+               <span class="dt">size =</span> cx[z], <span class="dt">pch =</span> pchs[z], <span class="dt">type =</span> <span class="st">&quot;pt&quot;</span>)
       }
     }
   }
@@ -757,21 +793,46 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(lev_vec)) {
 <span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> yax, <span class="dt">labels =</span> yax, <span class="dt">las =</span> <span class="dv">2</span>)
 <span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">text =</span> <span class="st">&quot;Resolution (km)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="fl">0.5</span>)
 <span class="kw">mtext</span>(<span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">text =</span> <span class="st">&quot;Bias/MAE (%)&quot;</span>, <span class="dt">outer =</span> <span class="ot">TRUE</span>, <span class="dt">line =</span> <span class="dv">1</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.4</span>, <span class="dt">y =</span> -<span class="dv">40</span>, <span class="dt">legend =</span> lcnms, <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">col =</span> cols, <span class="dt">adj =</span> <span class="dv">0</span>,
+<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.4</span>, <span class="dt">y =</span> -<span class="dv">210</span>, <span class="dt">legend =</span> lcnms, <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">col =</span> cols, <span class="dt">adj =</span> <span class="dv">0</span>,
        <span class="dt">pt.cex =</span> <span class="fl">1.5</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">x.intersp =</span> <span class="fl">0.5</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">11.9</span>, <span class="dt">y =</span> -<span class="dv">40</span>, <span class="dt">legend =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="dv">4</span>), <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">adj =</span> <span class="dv">0</span>, 
+<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">11.9</span>, <span class="dt">y =</span> -<span class="dv">210</span>, <span class="dt">legend =</span> <span class="kw">rep</span>(<span class="st">&quot;&quot;</span>, <span class="dv">4</span>), <span class="dt">pch =</span> <span class="dv">15</span>, <span class="dt">adj =</span> <span class="dv">0</span>, 
        <span class="dt">col =</span> <span class="kw">makeTransparent</span>(cols, <span class="dt">alpha =</span> alph[<span class="dv">2</span>]), <span class="dt">pt.cex =</span> <span class="fl">1.5</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, 
        <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;MAE&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.2</span>, <span class="dt">y =</span> -<span class="dv">42</span>, <span class="dt">labels =</span> <span class="st">&quot;Bias&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
-<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">65</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Forest&quot;</span>, <span class="st">&quot;Shrubland&quot;</span>, <span class="st">&quot;Sparse&quot;</span>, <span class="st">&quot;Mean&quot;</span>), 
+<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.7</span>, <span class="dt">y =</span> -<span class="dv">212</span>, <span class="dt">labels =</span> <span class="st">&quot;MAE&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
+<span class="kw">text</span>(<span class="dt">x =</span> <span class="fl">12.2</span>, <span class="dt">y =</span> -<span class="dv">212</span>, <span class="dt">labels =</span> <span class="st">&quot;Bias&quot;</span>, <span class="dt">srt =</span> <span class="dv">45</span>, <span class="dt">adj =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="dt">cex =</span> <span class="fl">0.8</span>)
+<span class="kw">legend</span>(<span class="dt">x =</span> <span class="fl">12.1</span>, <span class="dt">y =</span> <span class="dv">260</span>, <span class="dt">legend =</span> <span class="kw">c</span>(<span class="st">&quot;Forest&quot;</span>, <span class="st">&quot;Shrubland&quot;</span>, <span class="st">&quot;Sparse&quot;</span>, <span class="st">&quot;Mean&quot;</span>), 
        <span class="dt">pch =</span> pchs, <span class="dt">pt.cex =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="dv">2</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)
 <span class="kw">dev.off</span>()</code></pre>
 <p><a href="#top">Back to top</a></p>
 </div>
-<div id="supplementary-mean-bias-tables" class="section level3">
-<h3><span class="header-section-number">4.2.5</span> Supplementary mean bias tables</h3>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
+</div>
+<div id="supplementary-biasaccuracy-tables" class="section level3">
+<h3><span class="header-section-number">4.2.5</span> Supplementary bias/accuracy tables</h3>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Statistics from cropland area-weighted measures, reshaped</span>
+cb_stats_s &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">rev</span>(mutype), function(i) {
+  i0 &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(snms, function(x) {
+    i1 &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <span class="kw">lapply</span>(<span class="kw">c</span>(LC, <span class="st">&quot;All&quot;</span>), function(y) {
+      i2 &lt;-<span class="st"> </span><span class="kw">do.call</span>(cbind, <span class="kw">lapply</span>(lev_vec, function(z) {
+        <span class="kw">get</span>(i)[ol ==<span class="st"> </span>z &amp;<span class="st"> </span>map ==<span class="st"> </span>x, <span class="kw">get</span>(y)]
+      }))
+      <span class="kw">cbind.data.frame</span>(y, i2)
+    }))
+    i1 &lt;-<span class="st"> </span><span class="kw">cbind.data.frame</span>(x, i1)
+    <span class="kw">colnames</span>(i1) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Cover&quot;</span>, lev_vec)
+    <span class="kw">data.table</span>(i1)
+  }))
+})
+<span class="kw">names</span>(cb_stats_s) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Bias&quot;</span>, <span class="st">&quot;Accuracy&quot;</span>)
+muws &lt;-<span class="st"> </span><span class="kw">copy</span>(<span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">Metric =</span> <span class="st">&quot;Bias&quot;</span>, cb_stats_s$Bias), 
+                   <span class="kw">cbind</span>(<span class="dt">Metric =</span> <span class="st">&quot;MAE&quot;</span>, cb_stats_s$Accuracy)))
+<span class="kw">setnames</span>(muws, lev_vec, <span class="kw">paste</span>(<span class="kw">c</span>(<span class="dv">1</span>, fact), <span class="st">&quot;km&quot;</span>))
+<span class="kw">setkeyv</span>(muws, <span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Cover&quot;</span>))
+for(i in <span class="dv">1</span>:<span class="kw">length</span>(LC)) muws[Cover ==<span class="st"> </span>LC[i], Cover :<span class="er">=</span><span class="st"> </span>pnms[i]]
+<span class="kw">setkey</span>(muws, <span class="st">&quot;Map&quot;</span>)
+for(i in <span class="dv">1</span>:<span class="kw">length</span>(snms)) muws[Map ==<span class="st"> </span>snms[i], Map :<span class="er">=</span><span class="st"> </span>mcap[i]]
+
+
+<span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
 <span class="co"># mu0[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]</span>
 <span class="co"># mu0a[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]</span>
 mu0s &lt;-<span class="st"> </span><span class="kw">copy</span>(<span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">Metric =</span> <span class="st">&quot;Bias&quot;</span>, mu0), 
@@ -783,18 +844,7 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(LC)) mu0s[Cove
 <span class="kw">setkey</span>(mu0s, <span class="st">&quot;Map&quot;</span>)
 for(i in <span class="dv">1</span>:<span class="kw">length</span>(snms)) mu0s[Map ==<span class="st"> </span>snms[i], Map :<span class="er">=</span><span class="st"> </span>mcap[i]]
 
-caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors for each of the cropland&quot;</span>, 
-                 <span class="st">&quot;maps across aggregation scales and each possible landcover&quot;</span>, 
-                 <span class="st">&quot;type sharing the pixel with cropland. Means were calculated&quot;</span>,
-                 <span class="st">&quot;across the entire country.&quot;</span>)
-mu0s_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(mu0s[<span class="kw">order</span>(Metric, Cover)], <span class="dt">digits =</span> <span class="dv">1</span>, <span class="dt">caption =</span> caption)
-<span class="kw">print</span>(mu0s_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-all-SA.tex&quot;</span>, 
-      <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
-      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)
-
-<span class="co"># Statistics from non-croplands areas included in means, for supplementals</span>
-<span class="co"># mu[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]</span>
-<span class="co"># mua[, c(lev_vec) := lapply(.SD, round), .SDcols = lev_vec]</span>
+<span class="co"># Statistics from agricultural areas</span>
 mus &lt;-<span class="st"> </span><span class="kw">copy</span>(<span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="dt">Metric =</span> <span class="st">&quot;Bias&quot;</span>, mu), 
                   <span class="kw">cbind</span>(<span class="dt">Metric =</span> <span class="st">&quot;MAE&quot;</span>, mua)))
 <span class="kw">setnames</span>(mus, <span class="kw">c</span>(<span class="st">&quot;V1&quot;</span>, <span class="st">&quot;V2&quot;</span>, lev_vec), 
@@ -804,18 +854,26 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(LC)) mus[Cover
 <span class="kw">setkey</span>(mus, <span class="st">&quot;Map&quot;</span>)
 for(i in <span class="dv">1</span>:<span class="kw">length</span>(snms)) mus[Map ==<span class="st"> </span>snms[i], Map :<span class="er">=</span><span class="st"> </span>mcap[i]]
 
+<span class="co"># Bind all three tables together</span>
+fulls &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">cbind</span>(<span class="st">&quot;Region&quot;</span> =<span class="st"> &quot;Density&quot;</span>, muws), 
+               <span class="kw">cbind</span>(<span class="st">&quot;Region&quot;</span> =<span class="st"> &quot;Country&quot;</span>, mu0s),
+               <span class="kw">cbind</span>(<span class="st">&quot;Region&quot;</span> =<span class="st"> &quot;Agricultural&quot;</span>, mus)) 
+
 caption &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Biases and mean absolute errors for each of the cropland&quot;</span>, 
                  <span class="st">&quot;maps across aggregation scales and each possible landcover&quot;</span>, 
-                 <span class="st">&quot;type sharing the pixel with cropland. Metrics were calculated&quot;</span>,
-                 <span class="st">&quot;across the union of agricultural areas&quot;</span>, 
-                 <span class="st">&quot;(cropland $&gt;$0.05</span><span class="ch">\\</span><span class="st">%) identified by the reference map and&quot;</span>, 
-                 <span class="st">&quot;the cropland map to which it was being compared&quot;</span>)
-mus_xtab &lt;-<span class="st"> </span>xtable::<span class="kw">xtable</span>(mus[<span class="kw">order</span>(Metric, Cover)], <span class="dt">digits =</span> <span class="dv">1</span>, 
-                           <span class="dt">caption =</span> caption)
-<span class="kw">print</span>(mus_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, 
-      <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-mean-cropland-SA.tex&quot;</span>, 
+                 <span class="st">&quot;type sharing the pixel with cropland. Three variants&quot;</span>, 
+                 <span class="st">&quot;of the bias/accuracy values are provided, indicated by the:&quot;</span>,
+                 <span class="st">&quot;Region column: 1) weighted by reference cropland density&quot;</span>, 
+                 <span class="st">&quot;(Density weighted); 2) across the entire country (Country);&quot;</span>,
+                 <span class="st">&quot;3) for agricultural areas only (Agricultural, i.e.&quot;</span>, 
+                 <span class="st">&quot;$&gt;$0.05</span><span class="ch">\\</span><span class="st">% cropland).&quot;</span>)
+fulls_xtab &lt;-<span class="st"> </span><span class="kw">xtable</span>(fulls[<span class="kw">order</span>(Region, Metric, Cover)], <span class="dt">digits =</span> <span class="dv">1</span>, 
+                     <span class="dt">caption =</span> caption)
+<span class="kw">print</span>(fulls_xtab, <span class="dt">type =</span> <span class="st">&quot;latex&quot;</span>, <span class="dt">file =</span> <span class="st">&quot;paper/figures/C-bias-accuracy.tex&quot;</span>, 
       <span class="dt">tabular.environment =</span> <span class="st">&quot;longtable&quot;</span>, <span class="dt">floating =</span> <span class="ot">FALSE</span>, 
-      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>)</code></pre>
+      <span class="dt">caption.placement =</span> <span class="st">&quot;top&quot;</span>, <span class="dt">include.rownames =</span> <span class="ot">FALSE</span>) 
+<span class="co">#       add.to.row = list(pos = list(0), </span>
+<span class="co">#                         command = &quot;\\hline \\endhead&quot;))</span></code></pre>
 </div>
 </div>
 </div>

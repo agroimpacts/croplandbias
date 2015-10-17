@@ -8,7 +8,10 @@ Changes:
 
 * New functions to support this weighted bias
 
-* Updated partially through carbon-bias (denisty weighted bias/accuracy becomes 
-  primary. 
-  
-* Removing density independent accuracy/bias from carbon bias 
+* Updated through carbon-bias 
+  ** Density weighted bias/accuracy becomes 
+     primary metric. 
+  ** Removed density independent accuracy/bias metrics, removed graphical plots
+     for everything not density weighted. 
+  ** Cleaned-up bunch of commented out code. 
+
