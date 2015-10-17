@@ -7,6 +7,7 @@
 #' @param rerror List of error rasters
 #' @param evalnm Name of value encoded in reval's cells (for column header)
 #' @param fun Function to evaluate--should be able to handle weights
+#' @param stnm Name of statistic (for output column header)
 #' @param rweight Apply reference weighting or not
 #' @param aweight Apply area weighting or not
 #' @param rnd Rounding value to apply to statistic
@@ -61,7 +62,7 @@
 #'   round(cellStats(rerror, sum), 4)
 #' @import data.table
 #' @export
-bias_statsw <- function(ref, awgts, rerror, evalnm, fun, rnd = 2, 
+bias_statsw <- function(ref, awgts, rerror, evalnm, fun, stnm = "st", rnd = 2, 
                         rweight = TRUE, aweight = TRUE, trim_wgt = TRUE) {
   if(rweight == FALSE) ref[!is.na(ref)] <- 1  # to turn of ref weights
   if(aweight == FALSE) awgts[!is.na(awgts)] <- 1  # turn off area weights
@@ -75,6 +76,7 @@ bias_statsw <- function(ref, awgts, rerror, evalnm, fun, rnd = 2,
   DT[, wgt := ref * awgts]  # calculate weights from ref and area weights
   nms <- c(evalnm, "wgt")
   odt <- round(DT[, lapply(.SD, fun, wgt), .SDcols = nms], rnd)
+  odt <- cbind(stnm, odt)
   if(trim_wgt == TRUE) odt[, wgt := NULL]
   odt
 }
@@ -85,7 +87,9 @@ bias_statsw <- function(ref, awgts, rerror, evalnm, fun, rnd = 2,
 #' @param rerrorl 2-level list of spatial error rasters 
 #' @param evalnm Name of value encoded in reval's cells (for column header)
 #' @param fun Function to evaluate--should be able to handle weights
+#' @param stnm Name of statistic (for output column header)
 #' @param rnd Rounding value to apply to statistic
+
 #' @param rweight Apply reference weighting or not
 #' @param aweight Apply area weighting or not
 #' @param rnd Rounding value to apply to statistic
@@ -93,7 +97,7 @@ bias_statsw <- function(ref, awgts, rerror, evalnm, fun, rnd = 2,
 #' @return A list of data.table output statistics
 #' @details This function runs the bias_statsw function over a list of rasters
 #' @export
-bias_statsw_list <- function(refl, awgtsl, rerrorl, evalnm, fun, rnd = 2, 
+bias_statsw_list <- function(refl, awgtsl, rerrorl, evalnm, fun, stnm, rnd = 2, 
                         rweight = TRUE, aweight = TRUE, trim_wgt = TRUE, 
                         silent = FALSE) {
   olnames <- names(rerrorl)
@@ -101,7 +105,7 @@ bias_statsw_list <- function(refl, awgtsl, rerrorl, evalnm, fun, rnd = 2,
     ref <- refl[[x]]
     awgts <- awgtsl[[x]]
     rerror <- rerrorl[[x]]
-    bstats <- bias_statsw(ref, awgts, rerror, evalnm, fun, rnd, rweight, 
+    bstats <- bias_statsw(ref, awgts, rerror, evalnm, fun, stnm, rnd, rweight, 
                           aweight, trim_wgt)
   })
   named_out(ol, olnames)

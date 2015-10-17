@@ -1,16 +1,14 @@
 # Overwritten with each commit
 
-October 10, 2015
+October 17, 2015
 
 Changes:
 
-* Various changes to text, including update to factor in density independent
-error
+* Calculated density weighted cropland bias
 
-* Changes to supporting Rmd analyses. Carbon bias plots updated to density 
-independence
+* New functions to support this weighted bias
 
-* Renamed landcover-bias-plots to cropland-bias
-
-* Added new functions to calculate mean bias/MAE (after discussion with Adam) by
-weighting by cropland area and by numbers of pixels in aggregation. 
+* Updated partially through carbon-bias (denisty weighted bias/accuracy becomes 
+  primary. 
+  
+* Removing density independent accuracy/bias from carbon bias 
