@@ -90,8 +90,8 @@ img {
 <li><a href="#reshape-and-disaggregate-lists"><span class="toc-section-number">2.4.1</span> Reshape and disaggregate lists</a></li>
 <li><a href="#plot-maps"><span class="toc-section-number">2.4.2</span> Plot maps</a></li>
 </ul></li>
-<li><a href="#calculate-bias-statistics"><span class="toc-section-number">2.5</span> Calculate bias statistics</a><ul>
-<li><a href="#mean-percent-bias-in-et-estimates"><span class="toc-section-number">2.5.1</span> Mean percent bias in ET estimates</a></li>
+<li><a href="#calculate-biasaccuracy-statistics"><span class="toc-section-number">2.5</span> Calculate bias/accuracy statistics</a><ul>
+<li><a href="#primary-method"><span class="toc-section-number">2.5.1</span> Primary method</a></li>
 <li><a href="#bias-in-relation-to-rainfall"><span class="toc-section-number">2.5.2</span> Bias in relation to rainfall</a></li>
 </ul></li>
 </ul></li>
@@ -392,7 +392,6 @@ rnder &lt;-<span class="st"> </span>function(x) {
   <span class="kw">round</span>(<span class="kw">c</span>(<span class="kw">floor</span>(x[<span class="dv">1</span>] /<span class="st"> </span>rnd), <span class="kw">ceiling</span>(x[<span class="dv">2</span>] /<span class="st"> </span>rnd))) *<span class="st"> </span>rnd 
 }
 
-
 <span class="co"># For Supplementals</span>
 <span class="co"># brks &lt;- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))</span>
 brks &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">25</span>, -<span class="dv">15</span>, -<span class="dv">10</span>, -<span class="dv">5</span>, -<span class="dv">3</span>, -<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">25</span>)
@@ -448,10 +447,39 @@ for(j in <span class="dv">1</span>) {
 <p><a href="#top">Back to top</a></p>
 </div>
 </div>
-<div id="calculate-bias-statistics" class="section level2">
-<h2><span class="header-section-number">2.5</span> Calculate bias statistics</h2>
-<div id="mean-percent-bias-in-et-estimates" class="section level3">
-<h3><span class="header-section-number">2.5.1</span> Mean percent bias in ET estimates</h3>
+<div id="calculate-biasaccuracy-statistics" class="section level2">
+<h2><span class="header-section-number">2.5</span> Calculate bias/accuracy statistics</h2>
+<div id="primary-method" class="section level3">
+<h3><span class="header-section-number">2.5.1</span> Primary method</h3>
+<p>Density dependent method</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># weighted mean functions</span>
+wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
+wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
+snms &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;sa30&quot;</span>, <span class="st">&quot;globmu&quot;</span>, <span class="st">&quot;modmu&quot;</span>, <span class="st">&quot;geow&quot;</span>)
+
+<span class="co"># Quick look at density dependent</span>
+<span class="co"># reshape for ET mu</span>
+err2011 &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="st">&quot;f25&quot;</span>, function(x) {
+  <span class="kw">sapply</span>(l2dag$mu, function(y) <span class="kw">list</span>(y[[x]]))
+})
+<span class="kw">names</span>(err2011) &lt;-<span class="st"> &quot;f25&quot;</span>
+
+<span class="co"># calculate bias/MAE for data </span>
+a &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(gti_agg$f25, awgts, err2011$f25, snms, wm, <span class="st">&quot;mu&quot;</span>)
+b &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(gti_agg$f25, awgts, err2011$f25, snms, wma, <span class="st">&quot;mua&quot;</span>)
+et_muw &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)
+
+<span class="co"># reshape for ET mu</span>
+err2011 &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="st">&quot;f25&quot;</span>, function(x) {
+  <span class="kw">sapply</span>(l2dag$gs, function(y) <span class="kw">list</span>(y[[x]]))
+})
+<span class="kw">names</span>(err2011) &lt;-<span class="st"> &quot;f25&quot;</span>
+
+<span class="co"># calculate bias/MAE for data</span>
+a &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(gti_agg$f25, awgts, err2011$f25, snms, wm, <span class="st">&quot;mu&quot;</span>)
+b &lt;-<span class="st"> </span><span class="kw">bias_statsw</span>(gti_agg$f25, awgts, err2011$f25, snms, wma, <span class="st">&quot;mua&quot;</span>)
+et_gsw &lt;-<span class="st"> </span><span class="kw">rbind</span>(a, b)</code></pre>
+<p>Agricultural area method</p>
 <pre class="sourceCode r"><code class="sourceCode r">lev_vec &lt;-<span class="st"> &quot;f25&quot;</span>
 <span class="co"># create mask for non-cropland areas, unioning GTI and each LC, filtering out</span>
 <span class="co"># areas of no-cropland (&lt;1/2% total cover)</span>
@@ -474,10 +502,6 @@ bins &lt;-<span class="st"> </span><span class="kw">lapply</span>(gti_agg[[<span
 })
 <span class="kw">names</span>(bins) &lt;-<span class="st"> </span>lev_vec
 <span class="co"># bins &lt;- cut(gti_agg$f25$gti, breaks = binv, include.lowest = TRUE)</span>
-
-<span class="co"># weighted mean functions</span>
-wm &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(x, w)
-wma &lt;-<span class="st"> </span>function(x, w) stats::<span class="kw">weighted.mean</span>(<span class="kw">abs</span>(x), w)
 
 <span class="co"># calculate bias stats</span>
 vnms &lt;-<span class="st"> </span><span class="kw">names</span>(l2dag)
@@ -518,7 +542,7 @@ mus[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NUL
 <span class="kw">setkeyv</span>(mus, <span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Variable&quot;</span>))
 muas &lt;-<span class="st"> </span><span class="kw">rbindlist</span>(<span class="kw">lapply</span>(<span class="kw">names</span>(mua), function(x) <span class="kw">cbind</span>(x, mua[[x]])))
 muas[, ol :<span class="er">=</span><span class="st"> </span><span class="ot">NULL</span>]
-<span class="kw">setnames</span>(muas, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Abs Bias&quot;</span>))
+<span class="kw">setnames</span>(muas, <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;il&quot;</span>, <span class="st">&quot;bias&quot;</span>), <span class="kw">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Map&quot;</span>, <span class="st">&quot;MAE&quot;</span>))
 <span class="kw">setkeyv</span>(muas, <span class="kw">c</span>(<span class="st">&quot;Map&quot;</span>, <span class="st">&quot;Variable&quot;</span>))
 mutab &lt;-<span class="st"> </span>mus[muas]
 mutab[, <span class="kw">lapply</span>(.SD, function(x) <span class="kw">max</span>(<span class="kw">abs</span>(x))), .SDcols =<span class="st"> </span><span class="dv">3</span>:<span class="dv">4</span>]

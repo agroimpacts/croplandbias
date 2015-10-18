@@ -308,7 +308,6 @@ rnder <- function(x) {
   round(c(floor(x[1] / rnd), ceiling(x[2] / rnd))) * rnd 
 }
 
-
 # For Supplementals
 # brks <- c(seq(floor(rng[1]), -5, by = 5), -1, 1, seq(5, ceiling(rng[4]), 5))
 brks <- c(-25, -15, -10, -5, -3, -1, 1, 3, 5, 10, 15, 25)
@@ -365,9 +364,43 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
-## Calculate bias statistics
+## Calculate bias/accuracy statistics
 
-### Mean percent bias in ET estimates
+### Primary method
+
+Density dependent method
+
+```{r, eval=FALSE}
+# weighted mean functions
+wm <- function(x, w) stats::weighted.mean(x, w)
+wma <- function(x, w) stats::weighted.mean(abs(x), w)
+snms <- c("sa30", "globmu", "modmu", "geow")
+
+# Quick look at density dependent
+# reshape for ET mu
+err2011 <- lapply("f25", function(x) {
+  sapply(l2dag$mu, function(y) list(y[[x]]))
+})
+names(err2011) <- "f25"
+
+# calculate bias/MAE for data 
+a <- bias_statsw(gti_agg$f25, awgts, err2011$f25, snms, wm, "mu")
+b <- bias_statsw(gti_agg$f25, awgts, err2011$f25, snms, wma, "mua")
+et_muw <- rbind(a, b)
+
+# reshape for ET mu
+err2011 <- lapply("f25", function(x) {
+  sapply(l2dag$gs, function(y) list(y[[x]]))
+})
+names(err2011) <- "f25"
+
+# calculate bias/MAE for data
+a <- bias_statsw(gti_agg$f25, awgts, err2011$f25, snms, wm, "mu")
+b <- bias_statsw(gti_agg$f25, awgts, err2011$f25, snms, wma, "mua")
+et_gsw <- rbind(a, b)
+```
+
+Agricultural area method
 ```{r, eval=FALSE}
 lev_vec <- "f25"
 # create mask for non-cropland areas, unioning GTI and each LC, filtering out
@@ -391,10 +424,6 @@ bins <- lapply(gti_agg[[2]], function(x) {
 })
 names(bins) <- lev_vec
 # bins <- cut(gti_agg$f25$gti, breaks = binv, include.lowest = TRUE)
-
-# weighted mean functions
-wm <- function(x, w) stats::weighted.mean(x, w)
-wma <- function(x, w) stats::weighted.mean(abs(x), w)
 
 # calculate bias stats
 vnms <- names(l2dag)
@@ -435,7 +464,7 @@ setnames(mus, c("x", "il", "bias"), c("Variable", "Map", "Bias"))
 setkeyv(mus, c("Map", "Variable"))
 muas <- rbindlist(lapply(names(mua), function(x) cbind(x, mua[[x]])))
 muas[, ol := NULL]
-setnames(muas, c("x", "il", "bias"), c("Variable", "Map", "Abs Bias"))
+setnames(muas, c("x", "il", "bias"), c("Variable", "Map", "MAE"))
 setkeyv(muas, c("Map", "Variable"))
 mutab <- mus[muas]
 mutab[, lapply(.SD, function(x) max(abs(x))), .SDcols = 3:4]

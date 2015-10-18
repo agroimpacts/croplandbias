@@ -1,27 +1,10 @@
 # Overwritten with each commit
 
-October 17-18, 2015
+October 18, 2015, update 2
 
 Changes:
 
-* Updated yield/production bias
-** Replaced assessment of adjusted cropland fraction bias/accuracy with 
-   density-weighted variant. Removed whole country and agricultural-area bias
-   variants. 
-** Removed older variants of yield aggregation
-** Replaced original muy calculations with density-weighted variant (which is 
-   pretty much the same thing)
-** Removed commented out p/ydiff2/3, and disaggregated versions of them.
-** Added density-weighted error metrics as primary bias/accuracy method.
-*** Upgraded check against rasters around line 998 to deal with NAs messing up 
-    weighted.means (removed all NAs from raster stack I was checking against). 
-    Allowed easier testing bias and absolute error.  
-*** Redid plots, with density weighted as primary plot. Agricultural area 
-    metrics retained for supplementals
-*** Output tables combine density-weighted and agricultural area bias and 
-    accuracy. 
-    
-* cropland-bias: 
-** Cleaned up some bias/accuracy plotting code, renaming primary and 
-   supplemental plots appropriately.
-** Added check for cropland density categories between 2.5% and 97.5%. 
+* Updated ET bias
+** Re-ran, checking statistics for density weighted bias/accuracy. All <2%, 
+   so didn't make output table of these. Existing agricultural area 
+   bias/accuracy retained, but probably not used in supplementals
