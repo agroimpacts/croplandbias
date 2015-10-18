@@ -39,7 +39,7 @@ load(full_path(p_data, "bias_stats_gti.rda"))  # bias statistics
 
 ## Plots
 Plot maps of biases at different resolutions, for publication output (and display here). To avoid the visual distortion of NA areas filled in by larger levels of aggregation, each aggregated difference must be disaggregated first and masked before plotting.   
-```{r, ethen val = FALSE}
+```{r, eval = FALSE}
 namask <- raster(full_path(p_data, "namask.tif"))
 # cellStats(namask, sum)
 snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
@@ -260,7 +260,6 @@ dev.off()
 <a href="#top">Back to top</a>
 
 # Total bias
-
 Calculate how much cropland estimates differ between datasets
 ```{r, eval = FALSE}
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
@@ -338,7 +337,6 @@ awgts <- lapply(awgts, function(x) x[[1]])
 
 # Subset difference grids, for 2011
 snms <- c("sa30", "globmu", "modmu", "geow")
-err2011[[1]]
 err2011 <- lapply(lev, function(x) {
   sapply(dlist_act[snms], function(y) list(y[[x]]$g2011))
 })
@@ -409,7 +407,7 @@ pchs <- c("+", "o", "x")
 yax <- seq(yl[1], yl[2], 5)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-pdf(full_path(p_fig, "cropland_bias_mainw.pdf"), height = 7, width = 7)
+pdf(full_path(p_fig, "cropland_bias_main.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -424,16 +422,9 @@ for(i in 1:length(svec)) {
     # pchs1 <- pchs
     nm <- snms[j]
     for(k in 1:length(mutype)) {
-      #dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
-      #dat <- lcf[Metric == mutype[k] & Map == nm, lv, with = FALSE]
       dat <- bacc2011[ol == lv & stnm == mutype[k], nm, with = FALSE][[1]]
       pcol <- makeTransparent(cols[j], alpha = alph[k])
-      #polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
       polyfunc2(xa[j, i] + o[k], c(0, dat), w = w, col = pcol, bcol = pcol)
-      # for(z in 1:length(reg)) {
-        # lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
-               # pch = pchs[z], type = "pt")
-      # }
     }
   }
 }
@@ -448,77 +439,8 @@ legend(x = 11.9, y = -19.9, legend = rep("", 4), pch = 15, adj = 0,
        cex = 0.8)
 text(x = 12.7, y = -20.5, labels = "MAE", srt = 45, adj = c(0, 0), cex= 0.8)
 text(x = 12.2, y = -20.5, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
-# legend(x = 12.1, y = 40, 
-#        legend = c("Country", "Agricultural", "Density independent"), pch = pchs, 
-#        pt.cex = c(1.5, 1.5), bty = "n", cex = 0.8)
 dev.off()
 
-
-
-fact <- c(1, 5, 10, 25, 50, 100)
-alph <- c(225, 40)
-x <- c(0, 3, 6, 9, 12, 15)
-w <- 3 / 8
-xo <- (cumsum(rep(w, 8)) - w / 2)[-c(2, 4, 6, 8)]
-o <- c(0, w)
-xa <- sapply(x, function(x) x + xo)
-cx <- c(1.25, 1, 1)
-g1 <- "grey90"
-reg <- c("Country", "Agricultural", "Density independent")
-lcnms <- c("SA-LC", "GlobCover", "MODIS", "GeoWiki")
-mutype <- c("MAE", "Bias")
-svec <- paste(gsub("f", "", bacc2011[stnm == "mu", ol]), "km")
-xl <- c(-0.5, 18)
-yl <- c(-40, 40)
-shd <- c(4.5, 10.5, 16.5)
-cols <- c("red", "orange3", "green4", "blue")
-colnms <- snms
-pchs <- c("+", "o", "x")
-yax <- seq(yl[1], yl[2], 5)
-xax <- seq(1, 6, 5 / (length(yax) - 1))
-
-pdf(full_path(p_fig, "cropland_bias_main.pdf"), height = 7, width = 7)
-par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
-plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
-     ylab = "", xlab = "")#,
-for(i in shd) polyfunc2(x = i, y = yl, w = 3, col = g1, bcol = g1, lwd = 1)
-abline(h = yax, v = NULL, col = "grey80", lty = 1)
-polyfunc2(x = 8.75, y = yl, w = 18.5, col = "transparent", bcol = "black")
-lines(c(-1, 18), c(0, 0), lwd = 2, col = "grey80")
-# i <- 1; j <- 1; k <- 1
-for(i in 1:length(svec)) {
-  lv <- colnms[i]
-  for(j in 1:length(snms)) {
-    pchs1 <- pchs
-    nm <- lcnms[j]
-    for(k in 1:length(mutype)) {
-      #dat <- get(mutype[k])[V1 == snms[j] & V2 %in% LC2, get(lev_vec[i])]
-      dat <- lcf[Metric == mutype[k] & Map == nm, lv, with = FALSE]
-      pcol <- makeTransparent(cols[j], alpha = alph[k])
-      polyfunc2(xa[j, i] + o[k], range(dat), w = w, col = pcol, bcol = pcol)
-      for(z in 1:length(reg)) {
-        lpfunc(x[i] + xo[j] + o[k], dat[z], col = "black", size = cx[z], 
-               pch = pchs[z], type = "pt")
-      }
-    }
-  }
-}
-
-axis(1, at = seq(1.5, 18.5, 3), labels = fact)
-axis(2, at = yax, labels = yax, las = 2)
-mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
-mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
-legend(x = 12.4, y = -19.9, legend = lcnms, pch = 15, col = cols, adj = 0,
-       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
-legend(x = 11.9, y = -19.9, legend = rep("", 4), pch = 15, adj = 0, 
-       col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
-       cex = 0.8)
-text(x = 12.7, y = -20.5, labels = "MAE", srt = 45, adj = c(0, 0), cex= 0.8)
-text(x = 12.2, y = -20.5, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 40, 
-       legend = c("Country", "Agricultural", "Density independent"), pch = pchs, 
-       pt.cex = c(1.5, 1.5), bty = "n", cex = 0.8)
-dev.off()
 ```
 
 ## Other calculations methods 
@@ -550,7 +472,7 @@ pchs <- c("+", "o", "x")
 yax <- seq(yl[1], yl[2], 5)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-pdf(full_path(p_fig, "cropland_bias_scale.pdf"), height = 7, width = 7)
+pdf(full_path(p_fig, "cropland_bias_region.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -622,7 +544,13 @@ mtext(side = 1, text = "% Cropland", outer = TRUE)
 mtext(side = 2, text = "Bin count", outer = TRUE, line = 1)
 dev.off()
 
-
+# check bin frequencies starting a bit higher: 2.5% cover
+binv <- seq(2.5, 97.5, 5)
+gti_bins <- lapply(gti_agg, function(x) {
+  lapply(x, function(y) cut(y, breaks = binv, include.lowest = TRUE))
+})
+bins_25 <- lapply(gti_bins, function(x) freq(x$g2011))
+barplot(bins_25$f1[1:19, 2])
 ```
 
 
