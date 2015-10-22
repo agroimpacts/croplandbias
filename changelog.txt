@@ -8,3 +8,6 @@ Changes:
 ** Re-ran, checking statistics for density weighted bias/accuracy. All <2%, 
    so didn't make output table of these. Existing agricultural area 
    bias/accuracy retained, but probably not used in supplementals
+   
+* Revised intro through results of paper to match statistics update 
+  and revised figures.  All but ABM section revised. 

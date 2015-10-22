@@ -443,8 +443,8 @@ plot(fitdist(residuals(dgam4), "norm"))
 # pred <- predict(dgam4, newdata = newdat, type = "response", se.fit = TRUE)
 
 # above, with smooth fit instead of quadratic
-dgam4b <- gam(log(dv + 0.0001) ~ s(pv, k = 3) + s(x, y), weights = w, data = dat,
-              method = "ML")
+dgam4b <- gam(log(dv + 0.0001) ~ s(pv, k = 3) + s(x, y), weights = w, 
+              data = dat, method = "ML")
 plot(dat$pv, dat$dv)
 summary(dgam4b)
 AIC(dgam4b)

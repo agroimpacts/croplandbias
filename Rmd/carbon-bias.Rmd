@@ -669,8 +669,8 @@ lw <- 1.5
 # yl <- range(cb_statsw_mu[, LC, with = FALSE], 
 #             cb_statsw_mua[, LC, with = FALSE])
 # yl <- round(yl / 10) * 10
-yl <- c(-290, 290)
-yax <- seq(yl[1], yl[2], 20)
+yl <- c(-150, 150)
+yax <- seq(yl[1], yl[2], 10)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
 alph <- c(225, 40)
