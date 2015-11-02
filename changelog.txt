@@ -1,13 +1,17 @@
 # Overwritten with each commit
 
-October 18, 2015, update 2
+November 1, 2015
 
 Changes:
 
-* Updated ET bias
-** Re-ran, checking statistics for density weighted bias/accuracy. All <2%, 
-   so didn't make output table of these. Existing agricultural area 
-   bias/accuracy retained, but probably not used in supplementals
+* Carbon bias
+** Missing legends in bias/MAE plot fixed
+
+* ABM bias
+** New results on food production incorporated. % households without land 
+   replaced by % production deficit (relationship is same shape)
    
-* Revised intro through results of paper to match statistics update 
-  and revised figures.  All but ABM section revised. 
+* Manuscript
+** Changes to text about landcover variables used in VIC.
+** New ABM results woven into results and discussion.s
+** Discussion fully drafted.

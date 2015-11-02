@@ -60,6 +60,9 @@ disagg <- lapply(snms, function(x) {
   named_out(l1, lev)
 })
 names(disagg) <- snms
+
+# writeRaster(disagg$globmu$f100, 
+#             filename = "external/ext_data/test/disagg100km.tif")
 ```
 
 ## Plot of selected rasters and levels 
@@ -97,6 +100,8 @@ flex_legend(ncuts = brklen, legend.text = legtext,
             leg.adj = list(c(0.2, 0.35), c(0.5, -0.5)), cex.val = cx, 
             textcol = lcol, bordercol = lcol)
 dev.off()
+
+lev <- names(gti_agg)
 ```
 The map below was created by the code above, showing biases at 1 km, 25 km, 50 km, and 100 km from South Africa's landcover product, the mean estimates from 
 GlobCover and MODIS, and Geowiki/GLC-SHARE.  
@@ -315,6 +320,9 @@ And relative to 2011 GTI data
 ```{r, echo = FALSE}
 stats2011
 ```
+
+
+
 
 <a href="#top">Back to top</a>
 

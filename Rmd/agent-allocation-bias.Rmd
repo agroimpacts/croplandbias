@@ -60,8 +60,8 @@ mdfilt <- mu[mu$na < 20 & mu$f > 5 & mu$N < 1500, ]
 mdsel <- as.numeric(row.names(mdfilt))
 
 # Examine, including in QGIS
-plot(md)
-plot(md[mdsel[mdsel < 314], ], col = "red", add = TRUE)  # filter out Cape ones
+# plot(md)
+# plot(md[mdsel[mdsel < 314], ], col = "red", add = TRUE)  # filter out Cape ones
 writeOGR(md[mdsel[mdsel < 314], ], dsn = "external/ext_data/md_abms.sqlite",
          layer = "md_abms", driver = "SQLite")
 
@@ -102,7 +102,7 @@ gti4 <- crop(gti, extent(abm_md))
 lc4 <- crop(lc_list, extent(abm_md))
 cb <- brick(stack(gti4, lc4), filename = "external/ext_data/cropland-md4.tif", 
             overwrite = TRUE)
-cpct <- extract(gti4, abm_md)
+cpct <- raster::extract(gti4, abm_md)
 dcrop_pct <- round(sapply(cpct, sum, na.rm = TRUE) / sapply(cpct, length), 1)
 ```
 Cropland percentages:
@@ -175,14 +175,56 @@ dev.off()
 
 <a href="#top">Back to top</a>
 
+# Select modeled yields for agent-based model
+
+From earlier simulation, to give idea about variability
+```{r, eval = FALSE}
+dssat <- fread(full_path(p_data, "abm/dssat-yields.csv"))
+dssat_red <- copy(dssat[])
+
+dts <- c(2007288, 2007303, 2007318, 2007333, 2007348, 2007363, 2008013, 2008028)
+dssat[PDAT %in% dts, ]
+
+plot(1:31, 1:31, ylim = range(dssat$HWAH), pch = "", xlab = "YEAR", 
+     ylab = "HWAH")
+points(dssat[PDAT %in% dts & FNAM != "ZASP0001", HWAH])
+boxplot(dssat[PDAT %in% dts & FNAM == "ZASP0001", HWAH])
+boxplot(dssat[PDAT %in% dts & FNAM == "ZASP0002", HWAH])
+boxplot(dssat[PDAT %in% dts & FNAM == "ZASP0003", HWAH])
+dssat[PDAT %in% dts, mean(HWAH), by = FNAM]
+dssat[PDAT %in% dts, mean(HWAH), by = .(CU, FNAM)]
+
+plot(1:8, 1:8, ylim = range(dssat$HWAH), pch = "", xlab = "YEAR", 
+     ylab = "HWAH")
+for(i in unique(dssat$FNAM)) {
+  dssat[PDAT %in% dts & CU == 1 & FNAM == i, lines(HWAH)]
+}
+
+# provincial ag census statistics from 2007
+prodyld <- cbind.data.frame("md" = as.character(abm_md$name_2), 
+                            "pha" = c(6219, 6203, 6391, 9404), 
+                            "prod" = c(14781, 17434, 24366, 25578))
+prodyld$yld <- prodyld$prod / prodyld$pha
+
+outylds <- copy(dssat[PDAT %in% c(2007303, 2007348, 2008013) & 
+                   FNAM != "ZASP0001", ])
+outylds[PDAT %in% dts, mean(HWAH), by = .(FNAM)]
+outylds[PDAT %in% dts, mean(HWAH), by = CU]
+outylds[PDAT %in% dts, mean(HWAH), by = .(CU, FNAM)]
+write.csv(outylds, file = full_path(p_data, "abm/abm-yields.csv"))
+```
+
+
+<a href="#top">Back to top</a>
+
 # Downscaling and agent allocation
 
 Performed separately and described in the methods. 
 
 # Analysis of agent allocation bias
 ```{r, eval = FALSE}
-abias <- data.table(read_excel(full_path(p_data, "abm/agent-bias2.xlsx")))
-abias <- abias[Alg == 1]
+abias <- data.table(read_excel(full_path(p_data, "abm/stats.xlsx")))
+# abias <- abias[Alg == 1]
 setkey(abias, MD)
 hhs <- data.table(read_excel(full_path(p_data, "abm/agent-bias2.xlsx"), 
                              sheet = 2))
@@ -217,6 +259,17 @@ not_enough <- round(abias[var == "HHs_cant_find", snms, with = FALSE] /
                              .SDcol = c(snms, "HH_gen")][, snms, with = FALSE]), 
                     2)
 
+# production deficits
+hhprod <- abias[var == "prod", gti / HHs]
+mdprodlc <- abias[var == "prod", 
+                  lapply(.(sa30, globmu, modmu, geow), function(x) x / HHs)]
+prdef <- abias[var == "prod", lapply(.(sa30, globmu, modmu, geow), function(x) {
+  (gti - x) / gti * 100
+})]  # district total deficit
+hhprodlc <- abias[var == "prod", 
+                  lapply(.(sa30, globmu, modmu, geow), function(x) x / HHs)]
+hhprod_def <- (hhprod - hhprodlc) / hhprod * 100  # household deficit
+
 cexs <- seq(1, 2, 1 / 3)
 # pdf(full_path(p_fig, "agent-bias.pdf"), height = 5, width = 3)
 pdf(full_path(p_fig, "agent-bias.pdf"), height = 2.5, width = 5)
@@ -228,14 +281,14 @@ par(mfrow = c(1, 3), mar = c(4, 2, 0.5, 0), mgp = c(0.9, 0.1, 0),
     tcl = -0.2, oma = c(3.5, 0, 0, 0.1))
 scols <- c("red", "orange3", "green4", "blue")
 cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
-plot(unlist(pctbias), unlist(noland), col = cols, cex = cexs, pch = 20, 
-     ylab = "% HH without farms", xlab = "% error in cropland area", 
-     cex.lab = cx[2], cex.axis = cx[1])
 plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20, 
      ylab = "% land unallocated", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
 plot(unlist(pctbias), unlist(land_def), col = cols, cex = cexs, pch = 20, 
      ylab = "% land deficit", xlab = "% error in cropland area", 
+     cex.lab = cx[2], cex.axis = cx[1])
+plot(unlist(pctbias), unlist(hhprod_def), col = cols, cex = cexs, pch = 20, 
+     ylab = "% food deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
 par(xpd = NA)
 

@@ -662,7 +662,7 @@ all(round(sapply(lev_vec, function(x) {
 
 ```{r, eval = FALSE}
 cols <- c("red", "orange3", "green4", "blue")
-lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+lcnms <- c("SA-LC", "GlobCover", "MODIS", "Geowiki")
 pnms <- c("Forest", "Secondary", "Shrubland", "Grassland", "Sparse")
 lw <- 1.5
 
@@ -715,14 +715,14 @@ axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
 axis(2, at = yax, labels = yax, las = 2)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
 mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
-legend(x = 12.4, y = -210, legend = lcnms, pch = 15, col = cols, adj = 0,
+legend(x = 12.4, y = -110, legend = lcnms, pch = 15, col = cols, adj = 0,
        pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0.5)
-legend(x = 11.9, y = -210, legend = rep("", 4), pch = 15, adj = 0, 
+legend(x = 11.9, y = -110, legend = rep("", 4), pch = 15, adj = 0, 
        col = makeTransparent(cols, alpha = alph[2]), pt.cex = 1.5, bty = "n", 
        cex = 0.8)
-text(x = 12.7, y = -212, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
-text(x = 12.2, y = -212, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
-legend(x = 12.1, y = 260, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
+text(x = 12.7, y = -115, labels = "MAE", srt = 45, adj = c(0, 0), cex = 0.8)
+text(x = 12.2, y = -115, labels = "Bias", srt = 45, adj = c(0, 0), cex = 0.8)
+legend(x = 12.1, y = 120, legend = c("Forest", "Shrubland", "Sparse", "Mean"), 
        pch = pchs, pt.cex = c(2, 1.5, 1.5, 2), bty = "n", cex = 0.8)
 dev.off()
 ```
