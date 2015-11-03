@@ -1,17 +1,11 @@
 # Overwritten with each commit
 
-November 1, 2015
+November 2, 2015
 
 Changes:
 
-* Carbon bias
-** Missing legends in bias/MAE plot fixed
-
-* ABM bias
-** New results on food production incorporated. % households without land 
-   replaced by % production deficit (relationship is same shape)
-   
 * Manuscript
-** Changes to text about landcover variables used in VIC.
-** New ABM results woven into results and discussion.s
-** Discussion fully drafted.
+** Full draft complete (abstract and methods added)
+
+* Code
+** html guide added to overview.Rmd
