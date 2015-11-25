@@ -1,6 +1,8 @@
 \RequirePackage{lineno}  % http://www-d0.fnal.gov/Run2Physics/WWW/templates/lineno.html
-\documentclass[12pt]{iopart}
-\newcommand{\gguide}{{\it Preparing graphics for IOP journals}}
+%\documentclass[12pt]{iopart}
+\documentclass[11pt, titlepage]{article}
+\usepackage[top=20mm, bottom=20mm, left=23mm, right=23mm]{geometry}
+%\newcommand{\gguide}{{\it Preparing graphics for IOP journals}}
 %Uncomment next line if AMS fonts required
 %\usepackage{iopams}  
 % parameters from other files
@@ -17,10 +19,13 @@
 %\usepackage{amsmath}
 \usepackage{longtable}
 \usepackage{placeins}
+\usepackage{multirow}
+\usepackage[numbers,round,sort,compress]{natbib}
+\bibpunct{(}{)}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
 
 
 \begin{document}
-\bibliographystyle{unsrt}
+%\bibliographystyle{unsrt}
 
 \setpagewiselinenumbers
 %\modulolinenumbers[5]
@@ -41,6 +46,26 @@
 %   \hline
 %\end{tabular}
 %\end{table}  
+\section*{Reference data accuracy}
+
+The accuracy of the reference vector dataset was assessed by Estes et al \cite{estes_platform_2015}. The assessment was undertaken using a sub-sample of 609 1 km$^2$ grid cells, which were selected using a weighted randomized sampling scheme. Weights were derived from a logistic regression model of cropland occurrence probability in South Africa, with 1 corresponding to the lowest quartile of probability, and 4 the highest. The accuracy assessment included all cropland classes mapped within the reference dataset, which ranged from communal/smallholder fields to commercial row crops to orchards and other types of horticulture. An visual accuracy assessment was conducted within each 1 km$^2$ grid cell, wherein each cell was divided into 25 smaller cells of 200 X 200 m (4 ha), and then the proportion of each cell filled with cropfields visible in underlying Google Maps imagery was then calculated to the nearest 5\% of coverage, using a finer 20-cell mesh overlaid on each sub-cell within which field presence/absence was recorded. The same procedure was then performed to assess coverage by reference map polygons, as well as the intersections and differences between cells determined to be occupied by visual assessment, and those by the reference polygons. These intersections and differences were used to calculate the area of true positives, false positives, true negatives, and false negatives within each grid cell, and from this obtain accuracy measures.  In this case, accuracy was assessed using two landcover classes: cropland and non-cropland, thus a two class confusion matrix was constructed (Table 1) according to remote sensing classification accuracy guidelines set out by Oloffson et al. \cite{olofsson_good_2014}. In this case, the reference data were the visually interpreted crop field presences/absences, and the map data were the field boundary vectors being assessed (i.e. the data which provide the reference maps in this study), the class ``crop" refers to crop field presence and ``non-crop" to crop field absence, or all other landcover types.  The total area of vectorized crop fields was used to calculate the proportion \emph{W} of South Africa's total area mapped as crop fields, and of the areas ``mapped'' (by omission) as having other cover types.  These were then used to weight the proportions of each mapped class \emph{i} corresponding to reference class \emph{j} by the total area \emph{A} mapped for class \emph{i}. The total accuracy (0.97, or 97\%) was calculated by summing the diagonal (bold in Table 1), as well as the producer's accuracy \emph{P} for each reference class \emph{j}, and the user's accuracy \emph{U} for each mapped class \emph{i}.  
+
+\begin{table}[ht]
+\centering
+\caption{Confusion matrix for the assessment of the hand-digitized crop field boundaries used to generate reference cropland cover percentage values. Here \emph{Reference} denotes a visual assessment of crop field presence in high resolution imagery within a sample of 609 sites, while \emph{Map} refers to the vectorized crop field boundaries. The assessment had two classes: crop fields and non-crop fields, and proportions corresponding to these two categories are the proportions of areas determined by class agreements and disagreement in the 609 sites (see text above), which are weighted by the proportion \emph{W} of each class' total mapped area \emph{A$_i$} in South Africa. \emph{P} and \emph{U} provide the Producer's and User's accuracies, respectively. }
+\begin{tabular}{rrrrrrr}
+  \hline
+  & & Reference (j) & & & & \\\cline{3-7}
+  & & Crop & Non-crop & \emph{W}$_i$ & \emph{A}$_i$ (ha) & \emph{U}$_i$ \\ 
+  \hline
+  Map (i) & Crop & \textbf{0.108} & 0.007 & 0.114 & 14018567 & 0.943 \\ 
+  & Non-crop & 0.021 & \textbf{0.865} & 0.886 & 108541733 & 0.977 \\ 
+  & Total & 0.128 & 0.872 & 1.000 & 122560300 &  \\ 
+  & \emph{P}$_j$ & 0.840 & 0.992 &  &  &  \\ 
+   \hline
+\end{tabular}
+\end{table}
+
 \section*{Landcover map bias}
 
 \input{figures/cropland2011-bias.tex}
@@ -148,7 +173,8 @@
 
 
 \FloatBarrier
-\section*{References}
-\bibliography{}
+%\section*{References}
+\bibliographystyle{pnas2011} 
+{\footnotesize \bibliography{/Users/lestes/Dropbox/publications/full.bib}}
 \end{document}  
 
