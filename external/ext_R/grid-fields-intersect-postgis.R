@@ -34,7 +34,7 @@ if(test == "N") {
 
 # Connection
 drv <- dbDriver("PostgreSQL")
-con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", password = "P0stG1S")
+con <- dbConnect(drv, dbname = "db", user = "user", password = "pw")
 
 prjsrid <- 97490
 prj.sql <- paste("select proj4text from spatial_ref_sys where srid=", prjsrid, sep = "")

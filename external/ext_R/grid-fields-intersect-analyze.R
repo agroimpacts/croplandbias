@@ -16,7 +16,7 @@ source("/u/sandbox/afmap/R/KMLAccuracyFunctions.R")
 
 # Connection
 drv <- dbDriver("PostgreSQL")
-con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", password = "P0stG1S")
+con <- dbConnect(drv, dbname = "db", user = "user", password = "pw")
 
 # Projection information
 prjsrid <- 97490

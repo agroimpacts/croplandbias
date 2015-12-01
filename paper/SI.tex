@@ -1,0 +1,299 @@
+\RequirePackage{lineno}  % http://www-d0.fnal.gov/Run2Physics/WWW/templates/lineno.html
+%\documentclass[12pt]{iopart}
+\documentclass[11pt, titlepage]{article}
+\usepackage[top=20mm, bottom=20mm, left=23mm, right=23mm]{geometry}
+%\newcommand{\gguide}{{\it Preparing graphics for IOP journals}}
+%Uncomment next line if AMS fonts required
+%\usepackage{iopams}  
+% parameters from other files
+\newcommand{\citetapos}[1]{\citeauthor{#1}'s \citeyearpar{#1}}  % apostrophe's in cites
+%\usepackage[square,numbers,sort&compress]{natbib}
+\def\linenumberfont{\normalfont\small\sffamily}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+% From link below: next two lines allow caption to fill the full figure box, and caption formats to be changed (e.g. font)
+% http://tex.stackexchange.com/questions/107350/caption-below-the-figure-and-aligned-with-left-side-of-figure
+% http://ctan.mackichan.com/macros/latex/contrib/caption/caption-eng.pdf
+\usepackage{caption}
+\captionsetup[figure]{slc=off, font=footnotesize}
+%\usepackage{amsmath}
+\usepackage{longtable}
+\usepackage{placeins}
+\usepackage{multirow}
+\usepackage[numbers,round,sort,compress]{natbib}
+\bibpunct{(}{)}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
+% figures float at top of page
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+
+\begin{document}
+%\bibliographystyle{unsrt}
+
+\setpagewiselinenumbers
+%\modulolinenumbers[5]
+%\linenumbers
+\begin{center}\section*{\Large Supplementary Methods and Results}\end{center}
+%\begin{table}[ht]
+%\centering
+%\caption{Confidence classes for the forcing data based on bias-correction weights.}
+%\begin{tabular}{cc}
+%  \hline
+%  Confidence class & Bias-correction weight \\ 
+%  \hline
+%High & 0.75-1.00 \\ 
+%Medium-High & 0.50-0.75\\ 
+%Medium-Low & 0.25-0.50\\ 
+% Low & 0.05-0.25 \\ 
+% None & $<$0.05 \\ 
+%   \hline
+%\end{tabular}
+%\end{table}  
+\section{\large Overview}
+This document provides supplementary information on methods and results from the different components of the analysis described in the main text.  The code used to conduct the analysis is presented after sections 1-X.  
+
+\section{\large Reference data accuracy}
+
+The accuracy of the reference vector dataset was assessed by Estes et al \cite{estes_platform_2015}, and described further here. The assessment was undertaken using a sub-sample of 609 1 km$^2$ grid cells, which were selected using a weighted randomized sampling scheme. Weights were derived from a logistic regression model of cropland occurrence probability in South Africa, with 1 corresponding to the lowest quartile of probability, and 4 the highest. The accuracy assessment included all cropland classes mapped within the reference dataset, which ranged from communal/smallholder fields to commercial row crops to orchards and other types of horticulture. A visual accuracy assessment was conducted within each 1 km$^2$ grid cell, wherein each cell was divided into 25 smaller cells of 200 X 200 m (4 ha), and then the proportion of each cell overlapping with cropfields visible in underlying, high resolution Google Maps imagery was then calculated to the nearest 5\% of coverage, using a finer 20-cell mesh overlaid on each sub-cell within which field presence/absence was recorded. The same procedure was then performed to assess coverage by reference map polygons, as well as the intersections and differences between cells determined to be occupied by i) visual assessment and ii) by the digitized polygons. These intersections and differences were used to calculate the area of true positives, false positives, true negatives, and false negatives within each 1 km$^2$ grid cell, which were then used to calculate accuracy measures.  In this case, accuracy was assessed using two landcover classes: cropland and non-cropland, thus a two class confusion matrix was constructed (Table 1) according to remote sensing classification accuracy guidelines set out by Oloffson et al. \cite{olofsson_good_2014}. In this case, the reference data were the visually interpreted crop field presences/absences, and the map data were the field boundary vectors being assessed (i.e. the data which provide the reference maps in this study), the class ``crop" refers to crop field presence and ``non-crop" to crop field absence.  The total area of vectorized crop fields was used to calculate the proportion \emph{W} of South Africa's total area mapped as crop fields, and of the areas ``mapped'' (by omission) as having other cover types.  These were then used to weight the proportions of each mapped class \emph{i} corresponding to each reference class \emph{j} by the total area \emph{A} mapped for class \emph{i}. The total accuracy (0.97, or 97\%) was calculated by summing the diagonal (bold in Table 1), as well as the producer's accuracy \emph{P} for each reference class \emph{j}, and the user's accuracy \emph{U} for each mapped class \emph{i}.  
+
+\begin{table}[!ht]
+\centering
+\caption{Confusion matrix for the assessment of the hand-digitized crop field boundaries used to generate reference cropland cover percentage values. Here \emph{Reference} denotes a visual assessment of crop field presence in high resolution imagery within a sample of 609 sites, while \emph{Map} refers to the vectorized crop field boundaries. The assessment had two classes: crop fields and non-crop fields, and proportions corresponding to these two categories are the proportions of areas determined by class agreements and disagreement in the 609 sites (see text above), which are weighted by the proportion \emph{W} of each class' total mapped area \emph{A$_i$} in South Africa. \emph{P} and \emph{U} provide the Producer's and User's accuracies, respectively. }
+\begin{tabular}{rrrrrrr}
+  \hline
+  & & Reference (j) & & & & \\\cline{3-7}
+  & & Crop & Non-crop & \emph{W}$_i$ & \emph{A}$_i$ (ha) & \emph{U}$_i$ \\ 
+  \hline
+  Map (i) & Crop & \textbf{0.108} & 0.007 & 0.114 & 14018567 & 0.943 \\ 
+  & Non-crop & 0.021 & \textbf{0.865} & 0.886 & 108541733 & 0.977 \\ 
+  & Total & 0.128 & 0.872 & 1.000 & 122560300 &  \\ 
+  & \emph{P}$_j$ & 0.840 & 0.992 &  &  &  \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+%\clearpage
+\FloatBarrier
+\section{\large Cropland map error analysis}
+We examined the impact of several sources of uncertainty on our results.  The first is the potential temporal mismatch between the reference dataset and the landcover products we were testing.  We tested this by examining two versions of the reference dataset, the initial version created in 2007, and the updated version from 2011 used in the main analysis.  The 2011 version shows 3\% more cropland area than the 2007 version. To examine the effect of the over mapping bias and accuracy measures, we converted the 2007 vector maps to gridded cropland percentage and subtracted each test map, and then compared the differences in bias and mean absolute error (MAE) values calculated between both (Table 2). The largest difference was 1.63\%, between the 1 km SA-LC residuals, which means that the overestimation bias by SA-LC was actually greater relative to the 2007 version of the reference map.  Except for the corresponding MAE value, all other difference were $<$1\%. 
+
+% latex table generated in R 3.2.1 by xtable 1.7-4 package
+% Wed Nov 25 15:57:07 2015
+\begin{table}[!ht]
+\caption{Differences in the bias and mean absolute errors values resulting from cropland percentage residuals calculated using 1) the 2011 reference map and 2) the 2007 reference map, with 2007 values subtracted from 2011 values. Differences from each test map and each scale of aggregation are shown. }
+\centering
+\begin{tabular}{rlrrrr}
+  \hline
+ & Resolution & SA-LC & GlobCover & MODIS & GeoWiki \\ 
+  \hline
+1 & 1 km & 1.63 & -0.80 & 0.12 & 0.64 \\ 
+  2 & 5 km & 0.99 & -0.38 & 0.40 & 0.80 \\ 
+  3 & 10 km & 0.89 & -0.27 & 0.44 & 0.77 \\ 
+  4 & 25 km & 0.83 & -0.12 & 0.47 & 0.76 \\ 
+  5 & 50 km & 0.79 & 0.04 & 0.47 & 0.73 \\ 
+  6 & 100 km & 0.76 & 0.19 & 0.54 & 0.72 \\ 
+  7 & 1 km & 1.30 & -0.77 & -0.10 & 0.27 \\ 
+  8 & 5 km & -0.22 & -0.44 & -0.08 & 0.12 \\ 
+  9 & 10 km & -0.48 & -0.34 & -0.08 & 0.12 \\ 
+  10 & 25 km & -0.61 & -0.20 & -0.08 & 0.20 \\ 
+  11 & 50 km & -0.67 & -0.09 & -0.36 & 0.22 \\ 
+  12 & 100 km & -0.70 & 0.04 & -0.24 & 0.19 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+As a further exploration of uncertainty, we included the full range of variability that resulted from a) using either the 2007 or 2011 map to calculate bias and accuracy, and b) from different levels of cropland percentages used when converting MODIS and GlobCover mixed cropland classes into cropland percentage maps, following Fritz et al. \cite{fritz_mapping_2015}. We pooled the residuals from across each of these permutations, for each reference-test map combination, and examined how their overall mean values change with aggregation scale (Fig. 1), and also assessed the total distribution of errors within different class of cropland density, determined by dividing the 2011 1 km reference map into 20 different zones, or bins, of cropland density, ranging from 0-5\% cropland cover up to 95-100\% cover. We then calculated summary statistics from the pooled residuals and absolute values of residuals within each of these bins (Fig. 2).   
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 14cm]{figures/biases_1-100km.pdf} 
+%     \vspace{-3cm}
+      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute error.  The black numbers in each plot area present the overall means of bias/MAE for each sensor-scale combination. The bin-wise and overall mean statistics were calculated from pooled map errors calculated from differences between the 2007 reference map and each cropland map (including all three variants--high, medium, and low--of the MODIS and GlobCover-derived cropland maps), and the 2011 reference map and each cropland map. }
+      \label{fig:default}
+\end{figure}
+
+%\vspace{0.5 cm}
+%\begin{equation}
+%\hspace*{1.5 cm} 
+%   \label{metric}
+%     R_n  = \frac{(1 - \alpha)dswr + dlwr - \sigma * T^4}{\lambda}
+%\end{equation}
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 14cm]{figures/biases_1km.pdf} 
+%     \vspace{-3cm}
+      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps at 1 km resolution, as a function of cropland density. Colored lines (color-coded to map product name) show the bias/MAE at each level of cropland density, calculated in bins spanning 5\% (e.g. 0-5\% cropland cover, 5-10\%, etc.). Box plots show the variability of bias in each bin (whiskers = 2.5 and 97.5 percentiles, box the inter-quartile, and grey bar in box the median). Biases are presented in the top row, and MAEs in the bottom row. Statistics were calculated from pooled map errors calculated from differences between the 2007 reference map and each cropland map (including all three variants--high, medium, and low--of the MODIS and GlobCover-derived cropland maps), and the 2011 reference map and each cropland map. }
+      \label{fig:default}
+\end{figure}
+
+We also calculated how different methods of calculating the bias and accuracy statistics impacted out findings, using three different methods. First, we simply took the straight averages across the entire country, which substantially understates bias and accuracy because cropland covers only 10\% of the country, and all landcover products successfully discriminate the non-cropped regions.  We also compared the average error metrics extracted from within just the agricultural regions of the maps, defined here as the union of areas having $>$0.5\% cropland in the reference and each test map. This also tends to understate bias, because the area having $<$5\% cropland is much larger than areas having higher densities of cropland (see Fig. 4 frequencies of cells per five percentile bins of cropland density). Finally, we calculated a density-independent metrics, which is similar to the density weighted mean calculated for our main analysis, which was calculated by averaging the mean bias and MAE values within different levels of cropland cover (divided in increments of 5\%). The results of these three alternate metrics are shown in Figure 3. 
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 7cm]{figures/cropland_bias_region.pdf} 
+%     \vspace{-3cm}
+      \caption{A comparison of three alternate methods for calculating bias and accuracy (mean absolute error): as a straight average across the entire country, averaged over agricultural areas only (the union of areas defined as having $>$0.5\% cropland cover in the reference map and each test map), and independent of cropland density, wherein the mean bias/MAE values for each of 20 cropland cover classes (representing 5\% increments of cover 0\% to 100\% defined by the reference map) were calculated and then averaged.}
+      \label{fig:default}
+\end{figure}
+
+%\input{figures/cropland2011-bias.tex}
+%\input{figures/cropland2007-bias.tex}
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/cropland_bins.pdf} 
+%     \vspace{-3cm}
+      \caption{Number of cells within each cropland density bin at each scale of aggregation, where bins represent 5\% increments of cropland cover (values on x-axis provide the upper limit of each bin). Bin values were based on the 2011 reference map, excluding areas with $<$0.5\% cropland.}
+      \label{fig:default}
+\end{figure}
+
+We used magisterial district boundaries for South Africa (Fig. 5) to extract absolute residual values for agricultural areas ($>$0.5\% cropland cover) and 2011 reference cropland density values, the means of which respectively served as the response and predictor in the generalized additive model \cite{wood_mgcv:_2001} analysis (main text). 
+
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[scale = 0.7]{figures/md_map.pdf} 
+%     \vspace{-3cm}
+      \caption{South Africa's magisterial districts.}
+      \label{fig:default}
+\end{figure}
+
+\clearpage
+\section{\large Carbon analysis}
+
+To calculate carbon stocks using the method of Ruesch and Gibbs \cite{ruesch_new_2008}, we simplified their landcover-specific carbon density classes into six categories, based on the similarity of their class types and the fact that they had the same assigned carbon densities. Other classes were dropped because of their low level of, or lack of, occurrence. The class adjustments were as follows:
+
+\begin{itemize}
+\item Classes 1, 3, 6, 8 corresponding to broadleaf and mixed forests were reduced to a single forest class.
+\item Classes 4 and 5 (needleaf forests) were dropped. 
+\item Classes 9, 10, 17 (secondary forests, forest/cropland mosaic) where merged to a single secondary forest class.
+\item Classes 20-23 (water, snow, ice, built-up areas) were dropped.
+\item Class 19 (bare areas) was dropped.
+\end{itemize}
+
+All other classes (cropland, shrubland, spare vegetation) were retained. Each of these classes has a specific carbon density according to the ecofloristic zone it is found in, of which there are 10 for Africa (Zones 6-9 and 10-15; see \cite{ruesch_new_2008}). We calculated the area of each ecofloristic zone using their polygon boundary maps\footnote{available from cdiac.ornl.gov/ftp/global\_carbon/ecofloristic\_zones.zip}. For each of the simplified cover classes, we then calculated the mean ecofloristic zone carbon density value, weighted by ecofloristic zone area. We used these values to generate the different carbon maps, as described in the main text.  
+
+Maps of the mean residual differences between the reference map and each of the 5 derived carbon maps for each test map are shown in Figure 6. Table 3 provides the bias and mean absolute errors for the different carbon maps and how they vary with scale.  
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/carbon_bias_map.pdf} 
+%     \vspace{-3cm}
+      \caption{Spatial patterns of error (averaged across all five different possible cover types adjacent to cropland) in carbon stock estimates. }
+      \label{fig:default}
+\end{figure}
+
+%\input{figures/totC-bias.tex}
+
+\FloatBarrier
+\input{figures/C-bias-accuracy.tex}
+
+\clearpage
+\section{\large Gridded maize yield and production}
+
+For our crop yield and production analysis, we followed several steps to create the gridded yield and crop production maps. First, we calibrated cropland percentage maps so that they matched total cropland areas reported for coarser administrative units, following methods set out by Ramankutty et al \cite{ramankutty_farming_2008}: 
+
+\begin{enumerate}
+ \item We extracted the 2011 reference percentages within each of South Africa's 9 provinces (the same units used by Ramankutty et al \cite{ramankutty_farming_2008}, converted these to proportions and summed them to calculate the ``reported'' cropland areas for each province. We did the same to calculate provincial cropland areas for each test map;  
+  \item We divided the ``reported'' provincial cropland area estimates by provincial areas to calculate \emph{rpcf}, the reference provincial cropland fractions, and then did the same with test map provincial cropland areas to calculate \emph{tpcf}, the test map provincial cropland fractions; 
+  \item A province-specific correction factor \emph{upcf} (\emph{rpcf/tpcf}) was then calculated and applied to each testmap cropland fraction (\emph{tcf}) in each pixel (x, y):
+
+  \begin{equation}  
+    \textrm{tcfa}_{x,y} = \textrm{upcf}_{x,y} * \textrm{tcf}_{x,y}
+  \end{equation}
+
+Yielding \emph{tcfa}, the calibrated test map cropland fraction.  
+\end{enumerate}
+
+The differences between the reference map cropland fraction and \emph{tfca} are shown in Figure 7 (where they were adjusted back to percentages), while Table 4 provides the corresponding bias and accuracy values (MAE).
+
+We then used \emph{tcfa}, per Monfreda et al \cite{monfreda_farming_2008}, to disaggregate magisterial district-level reported maize yields and harvested areas \cite{statistics_south_africa_building_2007}, according to the following steps: 
+
+\begin{enumerate}
+  \item We first disaggregated maize yields using the following formula: 
+  
+  \begin{equation}
+  \textrm{fcrop}_{x,y} = \textrm{tfca}_{x,y}\frac{\textrm{cmda}}{\textrm{tmda}}
+  \end{equation}
+  
+  Where \emph{fcrop} is the fraction of each cell in each district harvested for maize, \emph{cmda} is the district-reported harvested area for maize, and \emph{tmda} is the total area of the magisterial district;
+  \item The reported maize yield for each magisterial district was then assigned to each pixel in \emph{fcrop} in the district having non-zero maize harvested areas;
+  \item Production estimates were calculated by multiplying yield and harvested areas.
+\end{enumerate}
+
+The maps of differences between reference-derived yield and production maps and those based on the test maps are shown in Figures 8 and 9, where the values were normalized to the country mean yield or production (calculated from the reference map).  Table 5 presents the bias and accuracy values for each reference-test comparison of gridded yield and production estimates, giving both the cropland density-weighted variants of bias and accuracy, and for comparison the same values calculated as straight averages within agricultural pixels (i.e. pixels in the reference or test map having $.$0.5\% cropland). In the former variant, yields show relatively much less bias than in the latter, where large yield biases were driven by the discrepancies in the low cropland density regions in the center of the country. In contrast, the density-weighted measures reveal large production biases, whereas the unweighted agricultural region measures show no bias in production estimates.  The density-weighted variant shows that error scales with cropland cover, as seen in Figure 2 in the main text. 
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/cropland_adj_bias_map2.pdf} 
+      \caption{Errors in cropland maps adjusted using provincial cropland area statistics.}
+      \label{fig:default}
+\end{figure}
+
+\FloatBarrier
+\input{figures/cropadj-bias-accuracy.tex}
+
+\clearpage
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/yld_bias_map.pdf} 
+      \caption{Errors (normalized to the reference-derived country mean) in disaggregated maize yield estimates.}
+      \label{fig:default}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/prod_bias_map.pdf} 
+      \caption{Errors (normalized to reference-derived country mean) production estimates calculated from disaggregated maize yield and harvested area estimates.}
+      \label{fig:default}
+\end{figure}
+
+\FloatBarrier
+\input{figures/yldprod-bias.tex}
+
+\section{\large Evapotranspiration analysis}
+%\input{figures/et-bias.tex}
+A number of the variables used by the Variable Infiltration Capacity \cite[VIC][]{liang_simple_1994} model are linked to a 0.25$^{\circ}$ resolution, AVHRR-derived landcover map. These include seasonal leaf area index (LAI) phenologies (Fig. 10), as well as other properties such as plant rooting depth and infiltration rates. Landcover properties therefore impact the model's simulation of water balance. To test how landcover map error impacts VIC simulations, we created five new versions of VIC's native landcover scheme, one based on the reference cropland map, and the other four on each of the test maps. For each version, we first reprojected the relevant 25 km cropland map to the geographic coordinate system used by VIC and resampled it to 0.25$^{\circ}$. We then adjusted VIC's landcover scheme by replacing its existing cropland percentages with those from our map, and then proportionally adjusted the remaining cover types in each cell to accommodate the changed cropland amounts. Since LAI is strongly linked to rainfall seasonality in South Africa, which varies between winter (May-August) rainfall in the west and southwest of the country and summer (October-March) rainfall in the east and northeast, we assigned LAI curves that peaked during the winter months to the cover types in the western half of the country, and those peaking in the summer months to the eastern half (Fig. 10). 
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 10cm]{figures/lai_seasonal_cycles.png} 
+      \caption{Seasonal LAI curves for different cover types in VIC's landcover scheme, showing the phenologies used for the winter-rainfall portion of the country in the west and southwest (left column), and for the summer rainfall region in the country's easter to northeast (right column). }
+      \label{fig:default}
+\end{figure}
+
+After making these adjustments, we conducted five different VIC simulations, one for each of the adjusted landcover schemes. The model was run at a daily time step for 28 years, from 1981-2008, from which monthly total evapotranspiration values were extracted.  We calculated from these results the average annual total ET, the maximum and minimum monthly ET observed throughout the entire time series, and the mean ET during the month which on average had the highest ET during the time series. We then found the differences between the reference and test map variants of each of these ET variables, and calculated their bias and MAE values (Fig. 11). The results are similar across the four variables, and we present the difference maps for the mean annual ET comparison in the main text.  
+
+\begin{figure}[ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/et_bias_map4.pdf} 
+      \caption{Maps of error between reference- and test map-derived ET estimates simulated by the VIC model. Four different variants of ET were assessed: annual mean (left column, also presented in Fig. 2 of the main text), the maximum (second column, TS max) and minimum (third column, TS min) ET values observed during the 30 year times, and mean ET during the month in which ET peaks (right column, Peak).}
+      \label{fig:default}
+\end{figure}
+
+
+\section{\large Agent-based model assessment}
+
+\subsection{\large Maize production}
+The agent-based model simulates household food production using a look-up table that links maize yields to several different variables: planting date; cultivar (open-pollinated or hybrid); soil properties, and weather.  The look-up table itself was based on a series of yield simulations conducted by the DSSAT cropping system model run over 31 years (1979-2010) for a location in the southern Province of Zambia, corresponding to the region where household survey data were collected. The model was run for three dominant soil series\footnote{extracted from a gridded version of the ISRIC-WISE database, available from http://dssat.net/649}, using two open-pollinated and two hybrid cultivars (each pair representing a short- and medium-length growing season variety) whose coefficients were obtained from the inputs files for the PSIMs modeling platform \cite{elliott_parallel_2014}. Each cultivar was simulated under planting dates ranging from October 15th until January 30th, varying by 15 day increments, with row spacing fixed at 90 cm and planting density at 3.7 plants m$^2$, and 5 kg ha$^{-1}$ applied at planting. Models were run using weather data extracted from a bias-corrected version of the Princeton Global Meteorological forcing dataset \cite{sheffield_development_2006,chaney_spatial_2014,estes_changing_2014}.  
+
+\subsection{\large District selection}
+For our analysis of how landcover map error impacts agent-based model results, we selected four districts in South Africa which had similar climatic characteristics ($\sim$800 mm annual rainfall) to the region in Zambia where the crop model simulations and household survey data were collected.  These were four contiguous districts along the western border of Lesotho, Clocolan, Ficksburg, Fouriesburg, and Marquard (Fig. 12, top left), which had between 29-45\% of their areas covered by cropland, according to the 2011 reference map (Fig. 12, top right).  
+
+\begin{figure}[!ht]
+  \centering
+     \includegraphics[width = 12cm]{figures/abm-selected-districts.pdf} 
+      \caption{The location of the four selected magisterial districts (top left) used in evaluating agent allocation bias, the reference levels of cropland cover within those districts (top right), and the difference in cropland percentage between the reference and each of the four cropland maps (lower four panels). }
+      \label{fig:default}
+\end{figure}
+
+
+
+\FloatBarrier
+%\section*{References}
+\bibliographystyle{pnas2011} 
+{\footnotesize \bibliography{/Users/lestes/Dropbox/publications/full.bib}}
+\end{document}  
+
