@@ -16,11 +16,27 @@
 % http://ctan.mackichan.com/macros/latex/contrib/caption/caption-eng.pdf
 \usepackage{caption}
 \captionsetup[figure]{slc=off, font=footnotesize}
-%\usepackage{amsmath}
+\usepackage{amsmath}
 \usepackage{longtable}
 \usepackage{placeins}
 \usepackage{multirow}
 \usepackage[numbers,round,sort,compress]{natbib}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+%\usepackage[noend]{algpseudocode}
+\floatstyle{plain}
+\newfloat{myalgo}{tbhp}{mya}
+
+\newenvironment{Algorithm}[2][tbh]%
+{\begin{myalgo}[#1]
+\centering
+\begin{minipage}{#2}
+\begin{algorithm}[H]}%
+{\end{algorithm}
+\end{minipage}
+\end{myalgo}}
+
+
 \bibpunct{(}{)}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
 % figures float at top of page
 \makeatletter
@@ -289,7 +305,145 @@ For our analysis of how landcover map error impacts agent-based model results, w
       \label{fig:default}
 \end{figure}
 
+\subsection{\large Model description}
 
+The following summary follows the Overview, Design and Details protocol \cite{grimm_standard_2006,polhill_using_2008} designed as a standardized method for describing individual-based models and agent-based models.
+
+\subsubsection{Purpose} 
+We developed an agent-based simulation to explore the intra-seasonal dynamics during the maize production of smallholder farmers under climate changes with an emphasis on household-level heterogeneity.
+
+\subsubsection{State variables and scales} 
+The primary analytical components in the model are actors (households) and cells (land). We designed a greedy algorithm that allocates land to households based on a heuristic rule that households tend to live near each other to form communities like villages. The simulation runs on four districts in South Africa. For each district, a set of synthetic household agents is created from the land cover data of that district and the farmer register in Monze District of Zambia. We extracted the frequencies of cultivated area from the farmer register using bins (in hectare) of 0-1, 1-2, 2-3, 3-4, 4-5, and 5-10. Because each of the land cells is 1 hectare (ha), we considered the households in the same bin having the same integer value of cultivated area. For example, households in the bin (0, 1] all have 1 ha of cropland, and households in the bin (5, 10] all have 8 ha of cropland. From this distribution of cultivated area (Figure~\ref{fig:histo}), we calculated its mean value as:
+
+\begin{displaymath} 
+\begin{split} & \textit{Mean value of cultivated area} \\ 
+& = \textit{area of 1}^{st}\textit{ bin} * 1 + \textit{area of 2}^{nd}\textit{bin} * 2 + \textit{area of 3}^{rd}\textit{ bin} * 3 + \textit{area of 4}^{th}\textit{ bin} * 4 \\ 
+& \quad  + \textit{area of 5}^{th}\textit{ bin} * 5 + + \textit{area of 6}^{th}\textit{ bin} * (6 + 10)/2 \\ & = 0.3308 *1 + 0.3591 * 2 + 0.1619 * 3 + 0.0835 * 4 + 0.0335 * 5 + 0.0062 * 5 * 8 \\ 
+& = 2.2854 \textit{ (ha)} 
+\end{split}
+\end{displaymath}
+
+\begin{figure}[!ht] 
+\centering 
+\includegraphics[width = 10cm]{figures/histogram.eps} 
+\caption{Histogram of cultivated area in
+the farmer register. } 
+\label{fig:histo} 
+\end{figure}
+
+We then used the mean value of cultivated area to divide the total area of cropland in each district to get the number of households (Table~\ref{tab:numOfHHs}).
+
+\begin{table}[!ht] 
+\centering 
+\caption{Number of households created and their total cultivated area.} 
+\centering
+\begin{tabular}{p{2.5cm}|p{2cm}|p{3cm}|p{3cm}|p{3.5cm}} 
+\hline District & Cropland area (ha) & Calculated number of households & Actual number of household agents & Total cultivated area of household agents \\
+\hline 
+clocolan & 54413.3 & 23810 & 23810 & 54410 \\ 
+ficksburg & 51363.93 & 22475 & 22475 & 51367 \\ 
+fouriesburg & 29402.99 & 12866 & 12865 & 29400 \\ 
+marquard & 55633.12 & 24343 & 24341 & 55615 \\ 
+\hline
+\end{tabular} 
+\label{tab:numOfHHs} 
+\end{table}
+
+Four key household initial characteristics define agents: (1) cultivated area (used primarily for maize production), (2) day of planting maize, (3) soil properties of land cells, and (4) seed type of maize. To determine (1), the household agents are assigned 1 ha, 2 ha, 3 ha, 4 ha, 5ha, and 8 ha, according to the frequencies we extracted from the farmer register previously. The results in Table 1 show a good matching between the total area of cropland from the land cover data and the total cultivated area of household agents. As for (2), (3), and (4), we create a distribution from our household survey that is shown in Figure~\ref{fig:distribution}. In addition to the initial characteristics, each household has two internal variables: household ID and harvest amount. Each land cell has the following variables: household ID (if assigned), land cover type (cropland or not), and revenue (if harvested). The harvest amount of a household is the sum of revenue of cropland cells managed by that household.
+
+\begin{figure}[!ht] 
+\centering 
+\includegraphics[width = 10cm]{figures/distribution.pdf} 
+\caption{Distribution of soil properties, maize type (cultivar), and planting day. The soil properties, cultivar, and planting day can be used to find the yield in the look-up table created from the DSSAT cropping system model. CU 1 indicates a local maize type and CU 3 indicates a hybrid one. Day 303 means the 303\textsuperscript{rd} day of the year.} %Peng: first mentioning of DSSAT
+\label{fig:distribution} \end{figure}
+
+The model runs biweekly for the growing season from October 2007 to April 2008, with all household harvested on April 1\textsuperscript{st} in 2008. The four districts in South Africa are represented at a 100m spatial resolution. We took the gridded cropland reference map at 1 km and disaggregated it into 100m land cells that are either cropland or not. %Peng: first mentioning of the cropland reference map %
+
+\subsubsection{Process overview and scheduling}
+
+We developed an algorithm shown in Algorithm~\ref{alg1}, to allocate the cropland cells to households.  Our land allocation algorithm first chooses a number of seed households (HHs) in the procedure \mbox{ALLOCATE\_HH} and invokes \mbox{ALLOCATE\_MANY\_FARMLAND} to randomly assign unallocated cropland cells/patches to them. Then the algorithm randomly selects an unallocated cropland cell/patch that is adjacent to some already allocated cell/patch, and allocates it to the next household using \mbox{ALLOCATE\_MANY\_FARMLAND}. In this way, the households should be located close to each other to form communities. This is repeated until there is no unallocated land or there is no household that hasn't been assigned any land. \mbox{ALLOCATE\_MANY\_FARMLAND} repeatedly invokes \mbox{ALLOCATE\_FARMLAND} until required amount of cropland has been allocated to a household. Comments are denoted by right-pointing triangles.
+
+\begin{Algorithm}[t]{14cm} 
+\begin{algorithmic}[1] 
+\Procedure{allocate\_farmland}{$H$, $P$} \Comment{$H$: household, $P$: patch}
+\State $A \leftarrow $ the area of farmland needed by $H$ 
+\If {$A > $ the area of $P$}
+  \Comment{$P$ is fully occupied by $H$}  
+\State $occupiedRatio(P) \leftarrow 1 $ 
+\Else \State $occupiedRatio(P) \leftarrow (A - 1)$  
+  \Comment{$P$ is partially occupied by $H$}
+\EndIf 
+\State $N \leftarrow $ neighbor farmland (in radius $r$) of $P$  
+\Comment{$r$ is a global parameter of allocation radius} 
+\State $status(N) \leftarrow $ tentative seed patches 
+\EndProcedure 
+\Statex
+
+\Procedure {allocate\_many\_farmland}{$H$, $P$} \Comment{$H$: household, $P$: patch} 
+\State \textbf{Invoke} allocate\_farmland($H$, $P$) 
+\Repeat
+\State $searchRadius \leftarrow 700m $ \Comment{starting from a threshold value} 
+\State $UP \leftarrow $ a randomly selected unoccupied farmland within $searchRadius$ of $P$ 
+\State \textbf{Invoke} allocate\_farmland($H$, $UP$) 
+\If {$A > $ the area of $P$} 
+\State $searchRadius \leftarrow (searchRadius + 100m) $ 
+\EndIf 
+\Until{$H$ is assigned enough farmland $\vee$ $searchRadius == s$} 
+\Comment{$s$ is a global parameter of the maximum search radius} 
+\EndProcedure 
+\Statex
+
+\Procedure {allocate\_hh}{} 
+\State $i \leftarrow 1$ \Comment{the id of current household to be allocated} 
+\Repeat 
+\State $SH \leftarrow $ the $i$th household 
+\State $status(SH) \leftarrow $ seed household 
+\State $SP \leftarrow $ a randomly selected patch 
+\State \textbf{Invoke} allocate\_many\_farmland($SH$, $SP$) 
+\State $i \leftarrow (i+1) $ \Until{$i == numSeed\quad\vee\quad$ there is no unoccupied land}
+\Comment{$numSeed$ is a global parameter of the total number of seed households created during initialization} \Repeat 
+\State $SH \leftarrow $ the $i$th household 
+\State $TSP \leftarrow $ a randomly selected patch so that $status(TSP) == $ tentative seed patch $\wedge$
+$occupiedRatio(TSP) == 0$ 
+\State \textbf{Invoke} allocate\_many\_farmland($SH$, $TSP$) 
+\State $i \leftarrow (i+1) $
+\Until{$i == numHHs\quad\vee\quad$ there is no unoccupied land}
+\Comment{$numHHs$ is the total number of households} 
+\EndProcedure
+
+\end{algorithmic} 
+\caption{Algorithm to allocate cropland patches (cells) to households.} 
+\label{alg1} 
+\end{Algorithm}
+
+Once a cropland cell is allocated to a household agent, its soil property is determined by the characteristics of the household. The simulation runs biweekly and when the planting day of a household arrives, that household will plant maize on all of its cropland cells. When April 1st arrives, all households will harvest their cropland cells where the yield is calculated using the look-up table from the DSSAT cropping system.
+
+\subsection{\large Design concepts}
+
+\subsubsection{Emergence} 
+Cropland cells are allocated to households with seeding and geospatial proximity searching. The resulting household communities define the scope of labor sharing activities.
+
+\subsubsection{Adaptation}
+%Peng: Not true for the South Africa model:
+% The labor sharing module in the model (however disabled in South
+% Africa simulations) allows the households to adapt to climate changes
+% and food crisis through labor exchanges.
+% 
+\subsubsection{Fitness/objectives} 
+The objective of the model is to evaluate the impact of climate variability on food production, one component of food security. An important aspect of climate change impact research in agricultural systems is the ability of farmers to adapt to changing climate conditions. This means farmers must have some signal detection mechanism and then some process by which they modify their behavior based on their own experiences, or experiences they learn from others. However, in the version of the model used in this paper we reduced the overall complexity to focus primarily on the impact of crop bias in land cover data on model initialization (or rather sensitive the allocation of land to agents is to different land cover datasets). In particular, we do not employ agent-interactions or learning in the version of the model used here.  
+
+\subsubsection{Prediction} 
+The look-up table assumes no deviation from optimal yields for the specified planting scenarios. In other words, households do not take into account the possibility of frost, pests, or other disturbances that affect yields in the real world.
+
+\subsubsection{Interaction} 
+Households interact with the cropland cells through planting and harvesting. Because labor sharing is turned off in the model there is no formal agent-to-agent interaction in the model.
+
+\subsubsection{Sensing} 
+Households do not sense the actions of other agents or environmental conditions in the version of the model used for this manuscript. 
+
+
+\subsubsection{Model calibration} 
+The model was calibrated during two phases: land allocation and food production. After the cropland cells are allocated to households, the model is considered well calibrated when all households were allocated their appropriate area of cropland, and all cropland was allocated. The land allocation algorithm starts with an initial value of maximum searching scope. The model is then run iteratively, increasing the value of maximum searching scope if there are households not allocated any cropland and cropland unallocated. When harvesting is finished at April 1st, the total production is compared against the district level census data, and the average yield is compared against the post-harvest survey data.
 
 \FloatBarrier
 %\section*{References}
