@@ -37,7 +37,7 @@ paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths)  # gti 2011
 gti@crs <- sa.shp@proj4string
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Transform magisterial districts, remove Prince Edward Islands
