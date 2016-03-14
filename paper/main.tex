@@ -1,54 +1,5 @@
-%% PNAStwoS.tex
-%% Sample file to use for PNAS articles prepared in LaTeX
-%% For two column PNAS articles
-%% Version1: Apr 15, 2008
-%% Version2: Oct 04, 2013
-%
-%% BASIC CLASS FILE
-%\documentclass{pnas}
-%
-%% ADDITIONAL OPTIONAL STYLE FILES Font specification
-%
-%\usepackage{pnastwoF}
-%\usepackage{cite}
-%\usepackage[numbers,round,sort,compress]{natbib}
-%\bibpunct{(}{)}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
-%\usepackage{lineno}
-%\setlength\linenumbersep{2pt}
-%\usepackage{placeins}
-%\usepackage{float}
-%\restylefloat*{figure}
-%\usepackage{dblfloatfix}  % http://tex.stackexchange.com/questions/235623/placing-a-figure-in-the-bottom-of-a-page-spanning-the-two-columns-of-an-ieee-doc 
-%\usepackage{subfigure}
-%\usepackage{wrapfig}
-%\usepackage{caption}
-%\setlength\belowcaptionskip{-2cm}
-%\setlength{\textfloatsep}{5pt plus 1.0pt minus 2.0pt}
-%\usepackage{multirow}
-%\setlength{\parskip}{1cm plus4mm minus3mm}
-%\usepackage{makecell}
-%\usepackage{boldline}
-%\setcellgapes{3pt}
-%\usepackage[flushleft]{threeparttable}
-%
-%% OPTIONAL MACRO DEFINITIONS
-%\def\s{\sigma}
-%%%%%%%%%%%%
-%% For PNAS Only:
-%\url{www.pnas.org/cgi/doi/10.1073/pnas.0709640104}
-%\copyrightyear{2008}
-%\issuedate{Issue Date}
-%\volume{Volume}
-%\issuenumber{Issue Number}
-%\setcounter{page}{2687} %Set page number here if desired
-%%%%%%%%%%%%
-%
-%
-%
 \documentclass[a4paper]{article}
 \usepackage[affil-it]{authblk}    
-
-
 \usepackage{graphicx}
 \usepackage{tabularx}
 \usepackage{epstopdf}
@@ -89,14 +40,6 @@
   menucolor=blue,pagecolor=blue,
   urlcolor=blue]{hyperref}
 
-% Let's add todonotes and comments:
-%\usepackage[draft]{todonotes}
-%
-%% Select what to do with command \comment:  
-%% \newcommand{\comment}[1]{}  %comment not showed
-%\newcommand{\comment}[1]
-%{{[\bfseries \color{blue} #1]}} %comment showed
-
 \usepackage{lineno}
 \usepackage{float}
 \usepackage[anythingbreaks]{breakurl}
@@ -107,20 +50,6 @@
 %\hspace*{\fill}
 
 \title{Errors in Landcover Data Limit Our Understanding of Global Change}
-%\title{Our Understanding of Global Change is Built on a Shaky Foundation}
-
-%\author{Lyndon Estes{\affil{1}{Woodrow Wilson School, Princeton University, Princeton, NJ USA}\affil{2}{Civil and Environmental Engineering, Princeton University, Princeton, NJ USA}},
-%Peng Chen\affil{3}{Indiana University, Bloomington, IN USA},
-%Stephanie Debats\affil{2}{},
-%Tom Evans\affil{3}{},
-%Stefanus Ferreira\affil{4}{GeoTerraImage, Pretoria, RSA}{},
-%Gabrielle Ragazzo\affil{5}{Ecology and Evolutionary Biology, Princeton University, Princeton, NJ USA},
-%Justin Sheffield\affil{2}{},
-%Adam Wolf\affil{5}{},
-%Eric Wood\affil{2}{},
-%\and
-%Kelly Caylor\affil{2}{}}
-
 \author[1,2]{Lyndon Estes}
 \author[3]{Peng Chen}
 \author[1]{Stephanie Debats}
@@ -138,7 +67,7 @@
 \affil[4]{GeoTerraImage, Pretoria, RSA}
 \affil[5]{Ecology and Evolutionary Biology, Princeton University, Princeton, NJ USA}
 
-
+\date{}
 %\contributor{Submitted to Proceedings of the National Academy of Sciences
 %of the United States of America}
 
@@ -152,9 +81,6 @@
 %\begin{article}
 \begin{abstract}
 {Research into global environmental change is often built upon landcover maps, which can have substantial errors. How these errors impact our understanding of global change processes and associated policies is thus of great interest, but is difficult to fully quantify because we lack spatially comprehensive reference data, particularly in the World's most rapidly developing regions. We used a high quality, national-scale cropland map to assess bias and accuracy in current generation landcover maps and four examples of ``downstream'' (landcover-dependent) analyses, two related to physical processes (estimates of vegetative carbon stocks and evapotranspiration) and two to socio-economic processes (gridded crop production estimates and agent-based simulation of household food security), at resolutions ranging from 1-100 km. We found that the landcover maps have substantial errors below 25 km resolution, with substantial biases and inaccuracies, particularly from maps derived from coarse resolution sensors. In some cases these error metrics remain high even when maps are aggregated to 100 km. These errors can be substantially amplified in downstream analyses (e.g. the carbon and crop production analyses), but in cases where the values of different cover types that underpin the analysis are similar (e.g. evapotranspiration estimates) the results can be relatively insensitive. To avoid these errors, and thus minimize the risk of misunderstanding global change processes or misinforming policy, substantial map aggregation of landcover maps from their base resolution is often needed. We provide several guidelines that can help landcover map users select appropriate datasets and  aggregation scales under different use cases. 
-
-%To achieve low \emph{bias} in a map-wide statistic (e.g. average carbon density), then finer resolutions can be maintained, but if high \emph{accuracy} is desired (e.g. spatial comparisons of map values, or change detection), then coarser pixels are needed.
-%Map accuracy is lowest at intermediate levels of cover, thus if the mapped region has highly heterogenous cover (e.g. regions dominated by smallholder-farming), then greater aggregation is also necessary. From a dataset perspective, maps derived from coarse resolution sensors (e.g. MODIS) often need to be aggregated to at \textcolor{red}{50-100} km resolution for bias to be reduced to within +\-10\%, and \textcolor{red}{50-100+} km for mean absolute error (MAE), a measure of accuracy, to be <10\%. For comparable rates of bias and error, higher resolution imaging systems (e.g. Landsat) produce maps that require less aggregation (1-25 km).  For regional to global analyses, new fusion products, such as the GeoWiki cropland map, which constrain maps so that the sum of their pixels match a total reported for a larger scale (e.g. government cropped area statistics for administrative districts), need just 5 km of aggregation to produce unbiased maps for most applications. However, this technique does less to improve accuracy, which may still require $\geq$25 km or more aggregation to achieve <10\% MAE. Widely used global datasets for carbon, crop area, and crop yield should be rebuilt on GeoWiki and similar maps, while new methods that fuse human judgement, the latest computer vision-based algorithms, and growing high resolution image archives can help produce the next generation of landcover maps. 
 }
 \end{abstract}
 
