@@ -63,7 +63,7 @@ disaggregate_rast_list <- function(names1, names2, rlist, rmask) {
         r <- rlist[[x]][[y]][[1]]
       } else {
         r <- disaggregate(rlist[[x]][[y]][[1]], fact = fact)
-        r <- mask(crop(r, rmask), rmask)
+        r <- raster::mask(crop(r, rmask), rmask)
       }
     })
     named_out(l1, names2)

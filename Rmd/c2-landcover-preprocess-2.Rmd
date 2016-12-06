@@ -382,18 +382,28 @@ cover2011 <- brick(full_path(p_data, "cover2011.tif"))
 
 # sum these also with and without horticulture
 sumfun <- function(x) sum(x, na.rm = TRUE)
+# gti <- lapply(list(cover2007, cover2011), function(y) {
+#   r <- calc(y[[-6]], sumfun)
+#   r[r > 100] <- 100
+#   writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name), overwrite = TRUE)
+# }) 
 gti <- lapply(list(cover2007, cover2011), function(y) {
-  r <- calc(y[[-6]], sumfun)
-  r[r > 100] <- 100
-  writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name), overwrite = TRUE)
-}) 
+  raster(gsub("\\.tif", "sum.tif", y@file@name))
+})
 
 # Leave commented out in case want to bring back horticulture class
-# gti_hort <- lapply(list(cover2007, cover2011), function(y) {
-#   r <- calc(y, sumfun)
-#   r[r > 100] <- 100
-#   writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
-# }) 
+gti_hort <- lapply(list(cover2007, cover2011), function(y) {
+  r <- calc(y, sumfun)
+  r[r > 100] <- 100
+  # writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
+  r
+})
+
+# calculate areas
+cellStats(cover2011[[2]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # communal areas 18.7\% cropland
+cellStats(cover2011[[6]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # horticulture 3.1\% of cropland
 
 # Remove communal farmlands
 sust_mask <- !is.na(cover2007[[2]]) | !is.na(cover2011[[2]])  # remove communal areas from both dates

@@ -134,7 +134,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -211,6 +211,8 @@ sapply(1:nrow(tst), function(i) {
               sum)
 }) # should be all zeroes
 
+# save for further analysis
+save(gti_c, lc_c, file = full_path(p_data, "carbon-tier1.rda"))
 ```
 <a href="#top">Back to top</a>
 

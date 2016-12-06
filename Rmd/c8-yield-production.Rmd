@@ -21,6 +21,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 library(SAcropland)
 library(xtable)
 library(RColorBrewer)
+library(spatstat)
 p_root <- full_path(proj_root("SAcropland"), "SAcropland")
 p_fig <- full_path(p_root, "paper/figures/")
 p_data <- full_path(p_root, "external/ext_data/")
@@ -612,7 +613,9 @@ cyld_agg <- c(cyldf1, cyldr)
 # check Monfreda's yield data to see how it deals with null areas
 monf <- full_path("external/ext_data/monfreda_data/maize_HarvAreaYield_NetCDF",
                   "maize_AreaYieldProduction.nc")
-monfmz <- brick(monf, level = 2)
+# monfmz <- brick(monf, level = 2, varname = "maizeData")
+monfmz <- raster(monf, level = 2)
+
 plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)), col = bpy.colors(20))
 plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)) > 0)  # almost all SA > 0 
 
@@ -704,8 +707,8 @@ for(i in lev[-1]) {
 # sapply(cprod, function(x) cellStats(x, sum))
 # sapply(carea, function(x) cellStats(x, sum))
 
-DT <- na.omit(as.data.table.raster(s, xy = TRUE))
-DT[, wgt := ref * awgts]  # calculate weights from ref and area weights
+# DT <- na.omit(as.data.table.raster(s, xy = TRUE))
+# DT[, wgt := ref * awgts]  # calculate weights from ref and area weights
 
 # Mean production in producing cells at different levels of aggregation. 
 # No need to weight by cropland density, because production value already factors
@@ -1295,7 +1298,7 @@ p4s <- projection(raster(nrow = 10, ncol = 10)) # GCS
 presa <- crop(pre, spTransform(sa.shp, p4s))  # crop to SA
 projection(presa) <- p4s  
 presa <- projectRaster(presa, lcu$f25$sa30)  # project to Albers
-presa <- mask(presa, awgts$f25, maskvalue = 0)  # mask
+presa <- raster::mask(presa, awgts$f25, maskvalue = 0)  # mask
 presa1k <- disaggregate(presa, fact = 25)
 
 # reclassify rainfalls to nearest 100 mm, tweak to catch lower and upper bound
@@ -1375,6 +1378,8 @@ print(ygap_xtab, type = "latex",
       file = "paper/figures/ygap-spat-bias.tex")
 
 save(list = ls(), file = full_path(p_data, "yield-bias.rda"))
+save(cyld_agg, cpagg1, file = full_path(p_data, "yieldprod-1km.rda"))
+
 ```
 <a href="#top">Back to top</a>
 

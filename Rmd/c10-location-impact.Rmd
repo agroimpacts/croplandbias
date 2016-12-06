@@ -1,0 +1,163 @@
+---
+title: "Yield and production bias/accuracy"
+author: "Lyndon Estes"
+output: 
+  html_document:
+    highlight: tango
+    theme: spacelab
+    toc: yes 
+    number_sections: true
+---
+
+# Impact of cropland errors on location
+
+Evaluated in terms of how landcover map error impacts the ability to locate areas having a particular quantity of interest. 
+
+## Data
+
+Derived carbon (section 6) and yield estimates (section 8). 
+
+```{r, eval=FALSE}
+library(SAcropland)
+library(xtable)
+library(RColorBrewer)
+library(spatstat)
+p_root <- full_path(proj_root("SAcropland"), "SAcropland")
+p_fig <- full_path(p_root, "paper/figures/")
+p_data <- full_path(p_root, "external/ext_data/")
+p_data2 <- full_path(p_root, "data/")
+#p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
+# load(full_path(p_data, "yield-bias.rda"))
+
+# SA provinces
+prov <- readOGR("external/ext_data/provinces.sqlite", layer = "provinces")
+prov <- prov[prov$id_1 != 9, ]  # remove Princeton Edward Islands
+prov[prov$id_1 == 10, "id_1"] <- 9 # reset WC to id 10
+load("external/ext_data/MZshapes.Rdata")
+
+# yield and carbon data
+load("external/ext_data/yieldprod-1km.rda")
+load("external/ext_data/carbon-tier1.rda")
+
+```
+
+## Differences in location
+
+If you are interested in selecting areas of highest yield/production/carbon potential, how far off are you relative to "truth". Use top quintile/decline to assess this, and then calculate mean nearest neighbor distance between two pixels of each map. 
+
+### Identify high value areas
+```{r, eval = FALSE}
+# top decile of...
+# ...yield
+yclass <- lapply(cyld_agg$f1, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# ...production
+pclass <- lapply(cpagg1$f1, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# ...carbon
+cdat <- c("gti" = gti_c$f1, lc_c$f1)  # combine C 1 km sets
+cdatf <- lapply(cdat, function(x) {  # mask out non-cropland areas and take mu C
+  msk <- x$forest < 99.6
+  cmu <- calc(x, mean)
+  raster::mask(cmu, msk, maskvalue = 0)
+})
+cclass <- lapply(cdatf, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# carbon efficiencies (C / yield)
+effclass <- lapply(1:5, function(x) { # x <- 1
+  cyld <- cyld_agg$f1[[x]]
+  cyld[cyld == 0] <- NA
+  cdatfc <- crop(cdatf[[x]], cyld)
+  eff <- cdatfc / cyld  # carbon efficiency
+  # eff[is.infinite(eff)] <- NA
+  rq <- quantile(eff, c(0, 0.9, 1))
+  types <- cut(eff, breaks = rq)
+  types > 1
+})
+names(effclass) <- names(cclass)
+
+```
+
+### Calculate nearest-neighbor distances
+
+Between GTI high value areas and each of the four LC-derived datasets. 
+```{r, eval = FALSE}
+
+# calculate distance between GTI and each other dataset's classes. 
+# pms2a <- expand.grid(rep(list(0:1), 5))[-1, ] 
+# pms2b <- pms2a[which(rowSums(pms2a) == 2 & pms2a$Var1 == 1), ]
+# pms2b$cl <- c("YC1", "YC2", "YC3", "YC4")
+# rownames(pms2b) <- 1:4
+
+# Define neighborhood window
+sa_owin <- owin(xrange = bbox(sa.shp)[1, ], yrange = bbox(sa.shp)[2, ],
+                unitname = "meter")
+# which1 <- function(x) x == 1  # selector function for r to xy
+
+mudists <- lapply(list(yclass, pclass, cclass, effclass), function(x) {
+  # x <- yclass
+  mudist <- sapply(2:5, function(y) {  # y <- 2
+    print(paste0("...", y))
+    a <- rasterToPoints(x$gti, fun = function(x) x == 1)
+    b <- rasterToPoints(x[[y]], fun = function(x) x == 1)
+    pps <- lapply(list(a, b), function(z) {
+      ppp(x = z[, 1], y = z[, 2], window = sa_owin)
+    })
+    names(pps) <- c("gti", names(x)[y])
+    reord <- sort(sapply(pps, function(i) i$n), decreasing = TRUE)
+    ppnn <- nncross(pps[[names(reord)[1]]], pps[[names(reord)[2]]])
+    mean(ppnn$dist) / 1000
+  })
+  names(mudist) <- names(x)[2:5]
+  mudist
+})  
+names(mudists) <- c("yield", "prod", "carb", "eff")
+
+# plot(stack(yclass))
+# plot(is.na(yclass[[1]]) - is.na(yclass[[2]]))
+# plot(is.na(cyld_agg$f1$gti) - is.na(cyld_agg$f1$geow))
+
+# output plot
+cols <- c("red", "orange3", "green4", "blue")
+pcol <- makeTransparent(cols, alpha = c(60))
+plot(1:4, pch = 20, col = pcol)
+bs <- do.call(rbind, mudists[c(1, 3)])
+lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+
+pdf(full_path(p_fig, "location_offset.pdf"), height = 4, width = 4, 
+    bg = "transparent")
+par(mar = c(4, 4, 1, 0), bg = "transparent")
+bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol), las = 2,
+              border = "transparent", xaxt = "n", ylab = "km", ylim = c(0, 16), 
+              yaxt = "n")
+axis(1, at = colMeans(bp), labels = lcnms, lty = 0)
+axis(2, at = seq(0, 16, 2), labels = seq(0, 16, 2), las = 2)
+legend(x = 9.5, y = 16, legend = rep("", 4), pch = 15, col = cols, adj = 0,
+       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0, horiz = TRUE)
+legend(x = 9.5, y = 15.25, legend = rep("", 4), pch = 15, adj = 0, col = pcol, 
+       pt.cex = 1.5, bty = "n", cex = 0.8, horiz = TRUE, x.intersp = 0)
+text(x = 10, y = 15.1, labels = "Yield", pos = 2, cex= 0.8)
+text(x = 10, y = 14.35, labels = "Carbon", pos = 2, cex = 0.8)
+dev.off()
+
+```
+
+
