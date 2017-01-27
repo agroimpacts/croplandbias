@@ -61,9 +61,11 @@ writeRaster(namask, filename = full_path(p_data, "namask.tif"),
             overwrite = TRUE)
 
 # mask out all joint NAs
-gti <- lapply(gti, function(x) mask(x, namask))
-lclist <- lapply(lclist, function(x) mask(x, namask))
-
+gti <- lapply(gti, function(x) raster::mask(x, namask))
+lclist <- lapply(lclist, function(x) raster::mask(x, namask))
+cropl <- c(gti$g2011, lclist[c("sa30", "globmu", "modmu", "geow")])
+names(cropl)[1] <- "gti"
+save(cropl, file = "external/ext_data/cropland-1km.rda")
 ```
 
 
@@ -89,6 +91,8 @@ dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)),
 dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), 
                             gti_agg, gti_agg, "a - b", silent = FALSE)
 
+
+save(lc_agg, gti_agg, area_wgts, file = full_path(p_data, "agg_cropland.rda"))
 save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 

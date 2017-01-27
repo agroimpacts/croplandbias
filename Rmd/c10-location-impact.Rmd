@@ -38,7 +38,7 @@ load("external/ext_data/MZshapes.Rdata")
 # yield and carbon data
 load("external/ext_data/yieldprod-1km.rda")
 load("external/ext_data/carbon-tier1.rda")
-
+load("external/ext_data/cropland-1km.rda")
 ```
 
 ## Differences in location
@@ -48,6 +48,15 @@ If you are interested in selecting areas of highest yield/production/carbon pote
 ### Identify high value areas
 ```{r, eval = FALSE}
 # top decile of...
+# ...cropland
+crclass <- lapply(cropl, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
 # ...yield
 yclass <- lapply(cyld_agg$f1, function(x) {  # x <- cyld_agg$f1[[1]]
   r <- x * (x > 0)
@@ -112,8 +121,8 @@ sa_owin <- owin(xrange = bbox(sa.shp)[1, ], yrange = bbox(sa.shp)[2, ],
                 unitname = "meter")
 # which1 <- function(x) x == 1  # selector function for r to xy
 
-mudists <- lapply(list(yclass, pclass, cclass, effclass), function(x) {
-  # x <- yclass
+mudists <- lapply(list(crclass, yclass, pclass, cclass, effclass), function(x) {
+  # x <- cclass
   mudist <- sapply(2:5, function(y) {  # y <- 2
     print(paste0("...", y))
     a <- rasterToPoints(x$gti, fun = function(x) x == 1)
@@ -129,7 +138,7 @@ mudists <- lapply(list(yclass, pclass, cclass, effclass), function(x) {
   names(mudist) <- names(x)[2:5]
   mudist
 })  
-names(mudists) <- c("yield", "prod", "carb", "eff")
+names(mudists) <- c("cropland", "yield", "prod", "carb", "eff")
 
 # plot(stack(yclass))
 # plot(is.na(yclass[[1]]) - is.na(yclass[[2]]))
@@ -137,25 +146,32 @@ names(mudists) <- c("yield", "prod", "carb", "eff")
 
 # output plot
 cols <- c("red", "orange3", "green4", "blue")
-pcol <- makeTransparent(cols, alpha = c(60))
+pcol <- makeTransparent(cols, alpha = c(120))
+pcol2 <- makeTransparent(cols, alpha = c(30))
+
 plot(1:4, pch = 20, col = pcol)
-bs <- do.call(rbind, mudists[c(1, 3)])
+bs <- do.call(rbind, mudists[c(1, 2, 4)])
 lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
 
-pdf(full_path(p_fig, "location_offset.pdf"), height = 4, width = 4, 
+pdf(full_path(p_fig, "location_offset.pdf"), height = 3.5, width = 4, 
     bg = "transparent")
-par(mar = c(4, 4, 1, 0), bg = "transparent")
-bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol), las = 2,
-              border = "transparent", xaxt = "n", ylab = "km", ylim = c(0, 16), 
-              yaxt = "n")
-axis(1, at = colMeans(bp), labels = lcnms, lty = 0)
-axis(2, at = seq(0, 16, 2), labels = seq(0, 16, 2), las = 2)
-legend(x = 9.5, y = 16, legend = rep("", 4), pch = 15, col = cols, adj = 0,
+par(mar = c(2, 3.5, 1, 0), bg = "transparent")
+bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol, pcol2), 
+              las = 2, border = "transparent", xaxt = "n", ylab = "", 
+              ylim = c(0, 18), yaxt = "n")
+axis(1, at = colMeans(bp), labels = lcnms, lty = 0, cex.axis = 0.9, 
+     mgp = c(2, 0.25, 0))
+axis(2, at = seq(0, 18, 2), labels = seq(0, 18, 2), las = 2)
+mtext("km", side = 2, line = 2.25)
+legend(x = 12.5, y = 18, legend = rep("", 4), pch = 15, col = cols, adj = 0,
        pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0, horiz = TRUE)
-legend(x = 9.5, y = 15.25, legend = rep("", 4), pch = 15, adj = 0, col = pcol, 
+legend(x = 12.5, y = 17.25, legend = rep("", 4), pch = 15, adj = 0, col = pcol, 
        pt.cex = 1.5, bty = "n", cex = 0.8, horiz = TRUE, x.intersp = 0)
-text(x = 10, y = 15.1, labels = "Yield", pos = 2, cex= 0.8)
-text(x = 10, y = 14.35, labels = "Carbon", pos = 2, cex = 0.8)
+legend(x = 12.5, y = 16.5, legend = rep("", 4), pch = 15, adj = 0, col = pcol2, 
+       pt.cex = 1.5, bty = "n", cex = 0.8, horiz = TRUE, x.intersp = 0)
+text(x = 13, y = 17, labels = "Cropland", pos = 2, cex= 0.8)
+text(x = 13, y = 16.25, labels = "Yield", pos = 2, cex = 0.8)
+text(x = 13, y = 15.5, labels = "Carbon", pos = 2, cex= 0.8)
 dev.off()
 
 ```

@@ -35,6 +35,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 load(full_path(p_data, "d_grid_abs.rda"))  # actual diffence grids
 load(full_path(p_data, "bias_stats.rda"))  # bias statistics
 load(full_path(p_data, "bias_stats_gti.rda"))  # bias statistics
+load(full_path(p_data, "agg_cropland.rda"))  # aggregated cropland
 # cellStats(!is.na(dlist_act$modmu$f1$g2011), sum)
 ```
 
@@ -267,31 +268,45 @@ dev.off()
 ### Total error
 Calculate how much cropland estimates differ between datasets
 ```{r, eval = FALSE}
-paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
-gti <- lapply(paths, raster)
-names(gti) <- c("g2007", "g2011")
-gti <- lapply(gti, function(x) mask(x, namask))  # apply namask
-snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
+# paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
+# gti <- lapply(paths, raster)
+# names(gti) <- c("g2007", "g2011")
+# gti <- lapply(gti, function(x) raster::mask(x, namask))  # apply namask
+# snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
 
 # recreate cropland percentages
-lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
-lc2011 <- lapply(snms, function(x) gti$g2011 - dlist_act[[x]]$f1$g2011)
+# lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
+# lc2011 <- lapply(snms, function(x) gti$g2011 - dlist_act[[x]]$f1$g2011)
 # plot(lc2007[[2]] - lc2011[[2]])  # same thing, as it should be
 
 # calculate km2 cropland in LC datasets
-lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
-refkm2 <- sapply(gti, function(x) cellStats(x / 100, sum))
-refkm2[2] / refkm2[1]  # 3.6 percent more in 2011 than 2007
+awgts <- lapply(area_wgts, function(x) x[[1]])
+lckm2 <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg[[x]]$g2011 / 100 * awgts[[x]], sum)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100 * awgts[[x]], sum)
+  })
+  o <- c(gtia, lca)
+}))
 
-# bias in total cropland relative to GTI
-stats2007 <- round((refkm2[2] - lckm2) / refkm2[2] * 100, 1)
-stats2011 <- round((refkm2[1] - lckm2) / refkm2[1] * 100, 1)
+# lckm2 <- sapply(lc_agg$f1[snms], function(x) cellStats(x / 100, sum))
+# lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
+# refkm2 <- sapply(gti, function(x) cellStats(x / 100, sum))
+
+# area of each GTI dataset
+refkm2 <- sapply(gti_agg$f1, function(x) cellStats(x / 100, sum))
+refkm2[2] / refkm2[1]  # 3.7 percent more in 2011 than 2007
+
+# bias in total cropland relative to GTI, at 1 km scale
+stats2007 <- round((refkm2[2] - lckm2[1, ]) / refkm2[2] * 100, 1)
+stats2011 <- round((refkm2[1] - lckm2[2, ]) / refkm2[1] * 100, 1)
 
 # N km^2 in country
 #sapply(lc2007, function(x) cellStats(!is.na(x), sum))
 # sapply(lc2011, function(x) cellStats(!is.na(x) , sum))
 # sapply(gti, function(x) cellStats(!is.na(x) , sum))
-totkm2 <- cellStats(!is.na(gti$g2011) , sum)
+
+totkm2 <- cellStats(!is.na(gti_agg$f1$g2011) , sum)
 save(stats2007, stats2011, totkm2, refkm2, 
      file = full_path(p_data, "total-cropland.rda"))
 ```
@@ -330,7 +345,7 @@ stats2011
 Weighted by __actual__ cropland percentage, and then, with aggregation, by number of pixels being aggregated. 
 
 ```{r, eval = FALSE}
-# Create weights maks
+# Create weights mask
 fact <- c(5, 10, 25, 50, 100)
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
 # cellStats(!is.na(gti$g2011), sum)
