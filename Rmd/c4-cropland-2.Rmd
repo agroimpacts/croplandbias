@@ -288,6 +288,8 @@ lckm2 <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
   })
   o <- c(gtia, lca)
 }))
+colnames(lckm2)[1] <- "gti"
+rownames(lckm2) <- lev2
 
 # lckm2 <- sapply(lc_agg$f1[snms], function(x) cellStats(x / 100, sum))
 # lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
@@ -334,6 +336,11 @@ stats2007
 And relative to 2011 GTI data
 ```{r, echo = FALSE}
 stats2011
+```
+
+Cropland area by dataset and scale
+```{r, echo = FALSE}
+round(lckm2)
 ```
 
 <a href="#top">Back to top</a>
