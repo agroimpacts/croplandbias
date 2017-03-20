@@ -70,3 +70,11 @@ bias_stats_gti.rda
 d_grid_abs.rda
 d_grid_act.rda
 namask.tif
+agg_cropland.rda
+carbon-tier1.rda
+carbon-werr.rda
+cropland-1km.rda
+cropland-werr-2011.rda
+et-err-bias.rda
+yield-prod-accbias.rda
+yieldprod-1km.rda
