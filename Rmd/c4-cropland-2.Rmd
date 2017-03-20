@@ -268,11 +268,15 @@ dev.off()
 ### Total error
 Calculate how much cropland estimates differ between datasets
 ```{r, eval = FALSE}
-# paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
-# gti <- lapply(paths, raster)
-# names(gti) <- c("g2007", "g2011")
-# gti <- lapply(gti, function(x) raster::mask(x, namask))  # apply namask
-# snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
+fact <- c(5, 10, 25, 50, 100)
+paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
+gti <- lapply(paths, raster)
+names(gti) <- c("g2007", "g2011")
+gti <- lapply(gti, function(x) raster::mask(x, namask))  # apply namask
+snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
+
+gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
+gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
 
 # recreate cropland percentages
 # lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
@@ -282,14 +286,38 @@ Calculate how much cropland estimates differ between datasets
 # calculate km2 cropland in LC datasets
 awgts <- lapply(area_wgts, function(x) x[[1]])
 lckm2 <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
-  gtia <- cellStats(gti_agg[[x]]$g2011 / 100 * awgts[[x]], sum)
+  gtia <- cellStats(gti_agg11[[x]] / 100 * awgts[[x]], sum)
   lca <- sapply(snms, function(y) {
     cellStats(lc_agg[[x]][[y]] / 100 * awgts[[x]], sum)
   })
   o <- c(gtia, lca)
 }))
 colnames(lckm2)[1] <- "gti"
-rownames(lckm2) <- lev2
+rownames(lckm2) <- lev
+
+bias_statsw
+
+# mean (stays about the same)
+lckmmu <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg11[[x]] / 100, mean)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100, mean)
+  })
+  o <- c(gtia, lca)
+}))
+colnames(lckmmu)[1] <- "gti"
+rownames(lckmmu) <- lev
+
+# variance declines with scale, as expected
+lckmvar <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg11[[x]] / 100, var)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100, var)
+  })
+  o <- c(gtia, lca)
+}))
+colnames(lckmvar)[1] <- "gti"
+rownames(lckmvar) <- lev
 
 # lckm2 <- sapply(lc_agg$f1[snms], function(x) cellStats(x / 100, sum))
 # lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
@@ -308,7 +336,7 @@ stats2011 <- round((refkm2[1] - lckm2[2, ]) / refkm2[1] * 100, 1)
 # sapply(lc2011, function(x) cellStats(!is.na(x) , sum))
 # sapply(gti, function(x) cellStats(!is.na(x) , sum))
 
-totkm2 <- cellStats(!is.na(gti_agg$f1$g2011) , sum)
+totkm2 <- cellStats(!is.na(gti_agg$f1$g2011), sum)
 save(stats2007, stats2011, totkm2, refkm2, 
      file = full_path(p_data, "total-cropland.rda"))
 ```
@@ -369,13 +397,14 @@ err2011 <- lapply(lev, function(x) {
 })
 names(err2011) <- lev
 
-gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
-gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
+# gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
+# gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
 
 # calculate bias/MAE for data
 a <- bias_statsw_list(gti_agg11, awgts, err2011, snms, wm, "mu")
 b <- bias_statsw_list(gti_agg11, awgts, err2011, snms, wma, "mua")
 bacc2011 <- rbind(a, b)
+save(bacc2011, file = fp(p_data, "cropland-werr-2011.rda"))
 
 # check error stats - do they match alternate approaches?
 for(i in c("f1", "f25", "f10")) {

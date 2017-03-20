@@ -40,7 +40,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -71,7 +71,7 @@ fact <- c(5, 10, 25, 50, 100)
 # provr <- rasterize(prov, y = gti, field = "id_1", 
 #                    filename = "external/ext_data/provinces.tif")
 provr <- raster("external/ext_data/provinces.tif")
-provr <- mask(provr, namask)
+provr <- raster::mask(provr, namask)
 gtis <- stack(list("prov" = provr, "f" = gti))
 
 # calculate fractions using raster::extract with provinces, to compare speed
@@ -87,9 +87,7 @@ setkey(gti_dt, prov)
 cf <- gti_dt[, list("carea" = sum(f), "parea" = length(f), 
                     "cf" = sum(f) / length(f)), by = prov]
 # cftest - cf[, 2:4, with = FALSE]  # close, but diff caused by few NAs in provr 
-
 # data.table approach is much more efficient
-
 ```
 <a href="#top">Back to top</a>
 
@@ -825,10 +823,10 @@ stats_yd1 <- dstats(y_diff1d)
 ### Plot difference maps
 ```{r, eval=FALSE}
 dnms <- ls()[grep("[y_|p_]diff*.*d", ls())]
-stnms <- ls()[grep("stats_", ls())]
+stnms <- ls()[grep("^stats_", ls())]
 disaggl <- lapply(dnms, function(x) get(x))
 statsl <- lapply(stnms, function(x) get(x))
-rng <- lapply(statsl, function(x) {
+rng <- lapply(statsl, function(x) { # x <- statsl[[1]]
   ilims <- c(ceiling(min(sapply(x, function(y) y[3, ]))), 
              floor(max(sapply(x, function(y) y[21, ]))))
   olims <- range(sapply(x, function(y) range(y)))
@@ -965,7 +963,7 @@ prod_bacc <- rbind(a, b)
 ref <- lapply(gti_agg, function(x) x$gti)
 test_err <- "perr" #"yerr"
 evst <- "wma" # "wm"
-for(i in c("f1", "f25", "f10")) {
+for(i in c("f1", "f25", "f100")) {
   for(j in c("sa30", "modmu", "geow")) { 
     print(paste("cross-checking calculations in", i, j))
     a1 <- bias_statsw(ref[[i]], awgts[[i]], get(test_err)[[i]], snms,  
@@ -1283,7 +1281,6 @@ print(out_xtab, type = "latex", file = "paper/figures/yldprod-bias.tex",
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
 
-
 ```
 <a href="#top">Back to top</a>
 
@@ -1378,6 +1375,7 @@ print(ygap_xtab, type = "latex",
       file = "paper/figures/ygap-spat-bias.tex")
 
 save(list = ls(), file = full_path(p_data, "yield-bias.rda"))
+save(out_tab, file = fp(p_data, "yield-prod-accbias.rda"))
 save(cyld_agg, cpagg1, file = full_path(p_data, "yieldprod-1km.rda"))
 
 ```

@@ -49,7 +49,7 @@ If you are interested in selecting areas of highest yield/production/carbon pote
 ```{r, eval = FALSE}
 # top decile of...
 # ...cropland
-crclass <- lapply(cropl, function(x) {  # x <- cyld_agg$f1[[1]]
+crclass <- lapply(cropl, function(x) {  # x <- cropl$sa30
   r <- x * (x > 0)
   r[r == 0] <- NA
   rq <- quantile(r, c(0, 0.9, 1))
@@ -76,7 +76,7 @@ pclass <- lapply(cpagg1$f1, function(x) {  # x <- cyld_agg$f1[[1]]
 })
 
 # ...carbon
-cdat <- c("gti" = gti_c$f1, lc_c$f1)  # combine C 1 km sets
+cdat <- c(gti_c$f1, lc_c$f1)
 cdatf <- lapply(cdat, function(x) {  # mask out non-cropland areas and take mu C
   msk <- x$forest < 99.6
   cmu <- calc(x, mean)
@@ -89,6 +89,7 @@ cclass <- lapply(cdatf, function(x) {  # x <- cyld_agg$f1[[1]]
   types <- cut(r, breaks = rq)
   types > 1
 })
+names(cclass) <- names(pclass)
 
 # carbon efficiencies (C / yield)
 effclass <- lapply(1:5, function(x) { # x <- 1
@@ -139,6 +140,11 @@ mudists <- lapply(list(crclass, yclass, pclass, cclass, effclass), function(x) {
   mudist
 })  
 names(mudists) <- c("cropland", "yield", "prod", "carb", "eff")
+
+# average km off
+mudvec <- unlist(mudists)
+median(mudvec[!like(names(mudvec), "sa30")])
+# mean(mudvec)
 
 # plot(stack(yclass))
 # plot(is.na(yclass[[1]]) - is.na(yclass[[2]]))

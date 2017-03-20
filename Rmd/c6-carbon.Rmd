@@ -378,7 +378,7 @@ lc_ag2 <- lapply(snms, function(x) {
 gti_ctot2 <- sapply(1:length(gti_c), function(x) {
   msk <- gti_agg[[x]]$gti > 0.005  # farmland > 0.05% mask
   # msk <- gti_agg[[x]]$gti > 0.05  # farmland > 0.05% mask
-  msked <- mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
+  msked <- raster::mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
   cellStats(msked, sum)
 })  # gti 
 lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
@@ -387,7 +387,7 @@ lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
   sapply(1:length(xx), function(y) {
     msk <- jj[[y]] > 0.005  # farmland > 0.05% mask
     # msk <- jj[[y]] > 0  # farmland > 0.05% mask
-    msked <- mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
+    msked <- raster::mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
     cellStats(msked, sum)
   })
 })  # landcover carbon estimates
@@ -412,15 +412,15 @@ totc_out <- cbind.data.frame(knms, round(unname(totc_out), 2))
 colnames(totc_out) <- c("Map", pnms)
 totc_out <- cbind(Region = c(rep("Country", 4), rep("Agricultural", 4)), 
                   totc_out)
-caption <- paste("Percent differences in total carbon stock estimates", 
-                 "calculated from the reference maps and from each of the four",
-                 "cropland maps. Differences are evaluated for total carbon",
-                 "estimates either at the country scale or over just the",
-                 "agricultural regions (cropland $>$0.05\\%), using",
-                 "the carbon densities of 5 different cover types to provide", 
-                 "the values for the non-agricultural portions of each pixel",  
-                 "(cover types indicated by column names).")
-totc_xtab <- xtable(totc_out, caption = caption, digits = 1)
+capt <- paste("Percent differences in total carbon stock estimates", 
+              "calculated from the reference maps and from each of the four",
+              "cropland maps. Differences are evaluated for total carbon",
+              "estimates either at the country scale or over just the",
+              "agricultural regions (cropland $>$0.05\\%), using",
+              "the carbon densities of 5 different cover types to provide", 
+              "the values for the non-agricultural portions of each pixel",  
+              "(cover types indicated by column names).")
+totc_xtab <- xtable(totc_out, caption = capt, digits = 1)
 print(totc_xtab, type = "latex", caption.placement = "top",
       file = "paper/figures/totC-bias.tex", include.rownames = FALSE)
 
@@ -507,7 +507,7 @@ for(i in c("f1", "f25", "f10")) { # i <- "f1"
     }
   }
 }
-
+save(cb_statsw_mua, cb_statsw_mu, file = fp(p_data, "carbon-werr.rda"))
 ````
 
 #### Secondary methods

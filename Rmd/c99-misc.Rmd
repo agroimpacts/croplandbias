@@ -1,5 +1,5 @@
 ---
-title: "Miscallaneous calculations"
+title: "Miscellaneous calculations"
 author: "Lyndon Estes"
 date: "August 24, 2015"
 output: 
@@ -12,24 +12,25 @@ output:
 
 # Miscellaneous additional calculations
 
-```{r, eval=FALSE}
+```{r, message=FALSE}
 library(rgdal)
 library(SAcropland)
 library(rgeos)
+library(lmisc)
 
 p_dat <- full_path(full_path(proj_root("SAcropland"), "SAcropland"), 
                    "external/ext_data")
 
 ```
 
-Area of sub-Saharan Africa and South Africa's share of that area
-```{r, eval=FALSE}
-eco <- readOGR(dsn = full_path(p_dat, "africa_ecofloristic_zones.sqlite"), 
+## Area of sub-Saharan Africa and South Africa's share of that area
+```{r}
+eco <- readOGR(dsn = fp(p_dat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones")
 eco@proj4string <- CRS(projection(raster(nrow = 1, ncol = 1)))
-af <- readOGR(dsn = full_path(p_dat, "africa_countries_alb.sqlite"), 
+af <- readOGR(dsn = fp(p_dat, "africa_countries_alb.sqlite"), 
                layer = "africa_countries_alb")
-af@data <- af@data[, c(1, 3:4)]
+af@data <- af@data[, c(1, 3:4, 6:7)]
 ecoalb <- spTransform(eco, af@proj4string)
 
 # cut down countries
@@ -46,15 +47,15 @@ desert <- ecoalb[grep("desert", ecoalb$gez_term), ]
 sahara <- as.numeric(names(which.max(gArea(desert, byid = TRUE))))
 
 nosahara <- ecoalb[-sahara, ]
-plot(nosahara, col = "red")
+# plot(nosahara, col = "red")
 
 ovs <- which(!is.na(over(nosahara, ssa)))
 ssaeco <- nosahara[ovs, ]
 ssaeco <- ssaeco[-1, ]  # drop a couple Saharan mountains
 ssaeco <- ssaeco[-1, ]
 # plot(ssaeco[ssaeco@data$gez_term == "Tropical mountain system", ][1, ])
-plot(ssa)
-plot(ssaeco, col = "red", add = TRUE)
+# plot(ssa)
+# plot(ssaeco, col = "red", add = TRUE)
 
 # calculate area of remainder
 afarea <- gArea(ssaeco) / 10000
@@ -65,12 +66,66 @@ saarea / afarea
 ```
 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo = FALSE}
 a <- sample(1:100, size = 20)
 b <- sample(1:80, size = 20)
 mean(a - b)
 sum(a) / sum(b)
-
-
 ```
+
+## Calculation of error propagation
+```{r}
+load(fp(p_dat, "cropland-werr-2011.rda"))
+load(fp(p_dat, "yield-prod-accbias.rda"))
+load(fp(p_dat, "et-err-bias.rda"))
+load(fp(p_dat, "carbon-werr.rda"))
+
+cland <- bacc2011
+yprod <- as.data.table(out_tab)[Region == "Density"]
+carb <- rbind(cb_statsw_mu, cb_statsw_mua)
+
+# Reshape error stats
+# yield/production 
+yp1 <- melt(yprod, id.vars = c("Map", "Metric", "Variable"), 
+            measure.vars = names(yprod)[5:10])
+yp2 <- dcast(yp1, formula = Metric + Variable + variable ~ Map)
+setcolorder(yp2, neworder = c(1:3, ncol(yp2), 5:6, 4))
+setnames(yp2, names(yp2), c("stnm", "var", "ol", names(cland)[-c(1:2)]))
+
+snms <- names(cland)[-c(1:2)]
+lev <- cland[stnm == "mu", ol]
+
+# Production and yield propagation
+yp_prop <- rbindlist(lapply(c("Yield", "Production"), function(x) {  
+  o <- data.frame(t(sapply(snms, function(y) {  # y <- "sa30"
+    emag <- yp2[var == x & stnm == "MAE", get(y)] / 
+      cland[stnm == "mua", get(y)] 
+    c(emag, mean(emag))
+  })))
+  o <- cbind(snms, round(o, 2))
+  colnames(o) <- c("map", lev, "mu")
+  data.table(cbind.data.frame("var" = x, o))
+}))
+
+# Carbon differences
+c_prop <- rbindlist(lapply(snms, function(x) {  # x <- "sa30"
+  dat <- carb[stnm == "MAE" & map == x, names(carb)[-c(1:3)], with = FALSE]
+  o <- dat[, lapply(.SD, function(y) y / cland[stnm == "mua", get(x)]), 
+           .SDcols = names(dat)]
+  o <- round(rbind(o, data.table(t(colMeans(o)))), 2)
+  o <- cbind("ol" = c(lev, "mu"), o)
+  cbind("map" = x, o)
+  # dat[, second] / cland[stnm == "mua", get(x)]
+}))
+
+# et propagation
+et_prop <- round(et_err[Variable == "Annual Mean", MAE] / 
+  cland[ol == "f25" & stnm == "mua", snms, with = FALSE], 2)
+
+yp_prop
+c_prop
+et_prop
+```
+
+
 

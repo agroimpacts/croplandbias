@@ -67,7 +67,7 @@
 %\end{tabular}
 %\end{table}  
 \section{\large Overview}
-This document provides supplementary information on methods and results from the different components of the analysis described in the main text.  The code used to conduct the analysis is presented after sections 1-X.  
+This document provides supplementary information on methods and results from the different components of the analysis described in the main text.  The code used to conduct the analysis is presented after section 7.  
 
 \section{\large Reference data accuracy}
 
@@ -144,7 +144,7 @@ As a further exploration of uncertainty, we included the full range of variabili
       \label{fig:default}
 \end{figure}
 
-We also calculated how different methods of calculating the bias and accuracy statistics impacted out findings, using three different methods. First, we simply took the straight averages across the entire country, which substantially understates bias and accuracy because cropland covers only 10\% of the country, and all landcover products successfully discriminate the non-cropped regions.  We also compared the average error metrics extracted from within just the agricultural regions of the maps, defined here as the union of areas having $>$0.5\% cropland in the reference and each test map. This also tends to understate bias, because the area having $<$5\% cropland is much larger than areas having higher densities of cropland (see Fig. 4 frequencies of cells per five percentile bins of cropland density). Finally, we calculated a density-independent metrics, which is similar to the density weighted mean calculated for our main analysis, which was calculated by averaging the mean bias and MAE values within different levels of cropland cover (divided in increments of 5\%). The results of these three alternate metrics are shown in Figure 3. 
+We also calculated how different methods of calculating the bias and accuracy statistics impacted out findings, using three different methods. First, we simply took the straight averages across the entire country, which substantially understates bias and accuracy because cropland covers only 10\% of the country, and all landcover products successfully discriminate the non-cropped regions.  We also compared the average error metrics extracted from within just the agricultural regions of the maps, defined here as the union of areas having $>$0.5\% cropland in the reference and each test map. This also tends to understate bias, because the area having $<$5\% cropland is much larger than areas having higher densities of cropland (see Fig. 4 frequencies of cells per five percentile bins of cropland density). Finally, we calculated a density-independent metric, which is similar to the density weighted mean calculated for our main analysis, which was calculated by averaging the mean bias and MAE values within different levels of cropland cover (divided in increments of 5\%). The results of these three alternate metrics are shown in Figure 3. 
 
 \begin{figure}[!ht]
   \centering

@@ -33,7 +33,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -97,7 +97,7 @@ lnames <- sapply(1981:2008, function(x) paste0(mos, "_", substr(x, 3, 4)))
 lnames <- lnames[1:length(lnames)]
 # length(lnames) == nlayers(etba[[1]])
 etba <- lapply(etba, function(x) {
-  b <- mask(x, mask25k, maskvalue = 0)
+  b <- raster::mask(x, mask25k, maskvalue = 0)
   names(b) <- lnames
   b
 })
@@ -485,6 +485,9 @@ mutab_xtab <- xtable::xtable(mutab, digits = 1, caption = caption)
 print(mutab_xtab, type = "latex", file = "paper/figures/et-bias.tex",
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
+
+et_err <- mutab
+save(et_err, file = fp(p_data, "et-err-bias.rda"))
 ```
 <a href="#top">Back to top</a>
 
