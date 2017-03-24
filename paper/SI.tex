@@ -292,8 +292,14 @@ After making these adjustments, we conducted five different VIC simulations, one
 
 \section{\large Agent-based model assessment}
 
+\subsection{\large Survey statistics}
+The frequency distributions of household cropland holdings were derived from survey data obtained from Zambia (no equivalent data were available for South Africa). We used these statistics to calculate the ``true'' number of households per district, as well as household cropland area distributions. The average field size in these studies was 1 ha, which determined the resolution of the base cropland maps (100 m). 
+
+
 \subsection{\large Maize production}
 The agent-based model simulates household food production using a look-up table that links maize yields to several different variables: planting date; cultivar (open-pollinated or hybrid); soil properties, and weather.  The look-up table itself was based on a series of yield simulations conducted by the DSSAT cropping system model run over 31 years (1979-2010) for a location in the southern Province of Zambia, corresponding to the region where household survey data were collected. The model was run for three dominant soil series\footnote{extracted from a gridded version of the ISRIC-WISE database, available from http://dssat.net/649}, using two open-pollinated and two hybrid cultivars (each pair representing a short- and medium-length growing season variety) whose coefficients were obtained from the inputs files for the PSIMs modeling platform \citep{elliott_parallel_2014}. Each cultivar was simulated under planting dates ranging from October 15th until January 30th, varying by 15 day increments, with row spacing fixed at 90 cm and planting density at 3.7 plants m$^2$, and 5 kg ha$^{-1}$ applied at planting. Models were run using weather data extracted from a bias-corrected version of the Princeton Global Meteorological forcing dataset \citep{sheffield_development_2006,chaney_spatial_2014,estes_changing_2014}.  
+
+
 
 \subsection{\large District selection}
 For our analysis of how landcover map error impacts agent-based model results, we selected four districts in South Africa which had similar climatic characteristics ($\sim$800 mm annual rainfall) to the region in Zambia where the crop model simulations and household survey data were collected.  These were four contiguous districts along the western border of Lesotho, Clocolan, Ficksburg, Fouriesburg, and Marquard (Fig. 12, top left), which had between 29-45\% of their areas covered by cropland, according to the 2011 reference map (Fig. 12, top right).  
