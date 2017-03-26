@@ -24,6 +24,8 @@ if(length(grep("code.Rmd", list.files())) > 0){
 }
 write(book_header, file = "code.Rmd", )
 cfiles <- list.files(pattern = "[0-9].*.Rmd")
+reord <- order(as.numeric(gsub("c|-.*", "", cfiles)))
+cfiles <- cfiles[(1:length(cfiles))[reord]]
 ttext <- NULL
 for(i in 1:length(cfiles)){
   text <- readLines(cfiles[i])

@@ -32,6 +32,9 @@ The next step was running the following script to calculate the area for differe
 source("R_ext/grid-fields-intersect-analyze.R")  # run on mapper.princeton.edu
 ```
 
+
+
+
 # Pre-processing of landcover datasets
 Fetching and pre-processing of global landcover datasets to be analyzed relative to the SA dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, South Africa's 2009 landcover product, and geo-wiki's cropland fusion map. These were converted to 1 km$^2$ percentage cropland estimates after making several versions of MODIS and GlobCover products to account for mixed cropland classes.  A further processing was applied to the two GTI derived cover images.  
 
@@ -409,18 +412,28 @@ cover2011 <- brick(full_path(p_data, "cover2011.tif"))
 
 # sum these also with and without horticulture
 sumfun <- function(x) sum(x, na.rm = TRUE)
+# gti <- lapply(list(cover2007, cover2011), function(y) {
+#   r <- calc(y[[-6]], sumfun)
+#   r[r > 100] <- 100
+#   writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name), overwrite = TRUE)
+# }) 
 gti <- lapply(list(cover2007, cover2011), function(y) {
-  r <- calc(y[[-6]], sumfun)
-  r[r > 100] <- 100
-  writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name), overwrite = TRUE)
-}) 
+  raster(gsub("\\.tif", "sum.tif", y@file@name))
+})
 
 # Leave commented out in case want to bring back horticulture class
-# gti_hort <- lapply(list(cover2007, cover2011), function(y) {
-#   r <- calc(y, sumfun)
-#   r[r > 100] <- 100
-#   writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
-# }) 
+gti_hort <- lapply(list(cover2007, cover2011), function(y) {
+  r <- calc(y, sumfun)
+  r[r > 100] <- 100
+  # writeRaster(r, file = gsub("\\.tif", "sum_h.tif", y@file@name), overwrite = TRUE)
+  r
+})
+
+# calculate areas
+cellStats(cover2011[[2]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # communal areas 18.7\% cropland
+cellStats(cover2011[[6]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # horticulture 3.1\% of cropland
 
 # Remove communal farmlands
 sust_mask <- !is.na(cover2007[[2]]) | !is.na(cover2011[[2]])  # remove communal areas from both dates
@@ -501,9 +514,11 @@ writeRaster(namask, filename = full_path(p_data, "namask.tif"),
             overwrite = TRUE)
 
 # mask out all joint NAs
-gti <- lapply(gti, function(x) mask(x, namask))
-lclist <- lapply(lclist, function(x) mask(x, namask))
-
+gti <- lapply(gti, function(x) raster::mask(x, namask))
+lclist <- lapply(lclist, function(x) raster::mask(x, namask))
+cropl <- c(gti$g2011, lclist[c("sa30", "globmu", "modmu", "geow")])
+names(cropl)[1] <- "gti"
+save(cropl, file = "external/ext_data/cropland-1km.rda")
 ```
 
 
@@ -529,6 +544,8 @@ dlist_abs <- rast_list_math(list(names(lclist), names(lc_agg), names(gti)),
 dlist_gti <- rast_list_math(list("g2007", names(gti_agg), "g2011"), 
                             gti_agg, gti_agg, "a - b", silent = FALSE)
 
+
+save(lc_agg, gti_agg, area_wgts, file = full_path(p_data, "agg_cropland.rda"))
 save(dlist_act, file = full_path(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = full_path(p_data, "d_grid_abs.rda"))
 
@@ -901,6 +918,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 load(full_path(p_data, "d_grid_abs.rda"))  # actual diffence grids
 load(full_path(p_data, "bias_stats.rda"))  # bias statistics
 load(full_path(p_data, "bias_stats_gti.rda"))  # bias statistics
+load(full_path(p_data, "agg_cropland.rda"))  # aggregated cropland
 # cellStats(!is.na(dlist_act$modmu$f1$g2011), sum)
 ```
 
@@ -1133,31 +1151,75 @@ dev.off()
 ### Total error
 Calculate how much cropland estimates differ between datasets
 ```{r, eval = FALSE}
+fact <- c(5, 10, 25, 50, 100)
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*sum_mask.tif$")))
 gti <- lapply(paths, raster)
 names(gti) <- c("g2007", "g2011")
-gti <- lapply(gti, function(x) mask(x, namask))  # apply namask
+gti <- lapply(gti, function(x) raster::mask(x, namask))  # apply namask
 snms <- c("sa30", "globmu", "modmu", "geow")  # all lc data (no MOD/GC extremes)
 
+gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
+gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
+
 # recreate cropland percentages
-lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
-lc2011 <- lapply(snms, function(x) gti$g2011 - dlist_act[[x]]$f1$g2011)
+# lc2007 <- lapply(snms, function(x) gti$g2007 - dlist_act[[x]]$f1$g2007)
+# lc2011 <- lapply(snms, function(x) gti$g2011 - dlist_act[[x]]$f1$g2011)
 # plot(lc2007[[2]] - lc2011[[2]])  # same thing, as it should be
 
 # calculate km2 cropland in LC datasets
-lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
-refkm2 <- sapply(gti, function(x) cellStats(x / 100, sum))
-refkm2[2] / refkm2[1]  # 3.6 percent more in 2011 than 2007
+awgts <- lapply(area_wgts, function(x) x[[1]])
+lckm2 <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg11[[x]] / 100 * awgts[[x]], sum)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100 * awgts[[x]], sum)
+  })
+  o <- c(gtia, lca)
+}))
+colnames(lckm2)[1] <- "gti"
+rownames(lckm2) <- lev
 
-# bias in total cropland relative to GTI
-stats2007 <- round((refkm2[2] - lckm2) / refkm2[2] * 100, 1)
-stats2011 <- round((refkm2[1] - lckm2) / refkm2[1] * 100, 1)
+bias_statsw
+
+# mean (stays about the same)
+lckmmu <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg11[[x]] / 100, mean)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100, mean)
+  })
+  o <- c(gtia, lca)
+}))
+colnames(lckmmu)[1] <- "gti"
+rownames(lckmmu) <- lev
+
+# variance declines with scale, as expected
+lckmvar <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
+  gtia <- cellStats(gti_agg11[[x]] / 100, var)
+  lca <- sapply(snms, function(y) {
+    cellStats(lc_agg[[x]][[y]] / 100, var)
+  })
+  o <- c(gtia, lca)
+}))
+colnames(lckmvar)[1] <- "gti"
+rownames(lckmvar) <- lev
+
+# lckm2 <- sapply(lc_agg$f1[snms], function(x) cellStats(x / 100, sum))
+# lckm2 <- sapply(lc2011, function(x) cellStats(x / 100, sum))
+# refkm2 <- sapply(gti, function(x) cellStats(x / 100, sum))
+
+# area of each GTI dataset
+refkm2 <- sapply(gti_agg$f1, function(x) cellStats(x / 100, sum))
+refkm2[2] / refkm2[1]  # 3.7 percent more in 2011 than 2007
+
+# bias in total cropland relative to GTI, at 1 km scale
+stats2007 <- round((refkm2[2] - lckm2[1, ]) / refkm2[2] * 100, 1)
+stats2011 <- round((refkm2[1] - lckm2[2, ]) / refkm2[1] * 100, 1)
 
 # N km^2 in country
 #sapply(lc2007, function(x) cellStats(!is.na(x), sum))
 # sapply(lc2011, function(x) cellStats(!is.na(x) , sum))
 # sapply(gti, function(x) cellStats(!is.na(x) , sum))
-totkm2 <- cellStats(!is.na(gti$g2011) , sum)
+
+totkm2 <- cellStats(!is.na(gti_agg$f1$g2011), sum)
 save(stats2007, stats2011, totkm2, refkm2, 
      file = full_path(p_data, "total-cropland.rda"))
 ```
@@ -1187,6 +1249,11 @@ And relative to 2011 GTI data
 stats2011
 ```
 
+Cropland area by dataset and scale
+```{r, echo = FALSE}
+round(lckm2)
+```
+
 
 
 ## Cropland bias/MAE plots
@@ -1196,7 +1263,7 @@ stats2011
 Weighted by __actual__ cropland percentage, and then, with aggregation, by number of pixels being aggregated. 
 
 ```{r, eval = FALSE}
-# Create weights maks
+# Create weights mask
 fact <- c(5, 10, 25, 50, 100)
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
 # cellStats(!is.na(gti$g2011), sum)
@@ -1213,13 +1280,14 @@ err2011 <- lapply(lev, function(x) {
 })
 names(err2011) <- lev
 
-gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
-gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
+# gti_agg <- aggregate_rast_list(fact, gti)  # GTI rasters
+# gti_agg11 <- lapply(gti_agg, function(x) x$g2011)
 
 # calculate bias/MAE for data
 a <- bias_statsw_list(gti_agg11, awgts, err2011, snms, wm, "mu")
 b <- bias_statsw_list(gti_agg11, awgts, err2011, snms, wma, "mua")
 bacc2011 <- rbind(a, b)
+save(bacc2011, file = fp(p_data, "cropland-werr-2011.rda"))
 
 # check error stats - do they match alternate approaches?
 for(i in c("f1", "f25", "f10")) {
@@ -1474,7 +1542,7 @@ paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths)  # gti 2011
 gti@crs <- sa.shp@proj4string
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Transform magisterial districts, remove Prince Edward Islands
@@ -2154,7 +2222,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -2231,6 +2299,8 @@ sapply(1:nrow(tst), function(i) {
               sum)
 }) # should be all zeroes
 
+# save for further analysis
+save(gti_c, lc_c, file = full_path(p_data, "carbon-tier1.rda"))
 ```
 
 
@@ -2396,7 +2466,7 @@ lc_ag2 <- lapply(snms, function(x) {
 gti_ctot2 <- sapply(1:length(gti_c), function(x) {
   msk <- gti_agg[[x]]$gti > 0.005  # farmland > 0.05% mask
   # msk <- gti_agg[[x]]$gti > 0.05  # farmland > 0.05% mask
-  msked <- mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
+  msked <- raster::mask(gti_c[[x]] * tareas[[x]], msk, maskvalue = 0)
   cellStats(msked, sum)
 })  # gti 
 lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
@@ -2405,7 +2475,7 @@ lc_ctot2 <- lapply(1:length(lc_c2), function(x) {
   sapply(1:length(xx), function(y) {
     msk <- jj[[y]] > 0.005  # farmland > 0.05% mask
     # msk <- jj[[y]] > 0  # farmland > 0.05% mask
-    msked <- mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
+    msked <- raster::mask(xx[[y]] * tareas[[y]], msk, maskvalue = 0)
     cellStats(msked, sum)
   })
 })  # landcover carbon estimates
@@ -2430,15 +2500,15 @@ totc_out <- cbind.data.frame(knms, round(unname(totc_out), 2))
 colnames(totc_out) <- c("Map", pnms)
 totc_out <- cbind(Region = c(rep("Country", 4), rep("Agricultural", 4)), 
                   totc_out)
-caption <- paste("Percent differences in total carbon stock estimates", 
-                 "calculated from the reference maps and from each of the four",
-                 "cropland maps. Differences are evaluated for total carbon",
-                 "estimates either at the country scale or over just the",
-                 "agricultural regions (cropland $>$0.05\\%), using",
-                 "the carbon densities of 5 different cover types to provide", 
-                 "the values for the non-agricultural portions of each pixel",  
-                 "(cover types indicated by column names).")
-totc_xtab <- xtable(totc_out, caption = caption, digits = 1)
+capt <- paste("Percent differences in total carbon stock estimates", 
+              "calculated from the reference maps and from each of the four",
+              "cropland maps. Differences are evaluated for total carbon",
+              "estimates either at the country scale or over just the",
+              "agricultural regions (cropland $>$0.05\\%), using",
+              "the carbon densities of 5 different cover types to provide", 
+              "the values for the non-agricultural portions of each pixel",  
+              "(cover types indicated by column names).")
+totc_xtab <- xtable(totc_out, caption = capt, digits = 1)
 print(totc_xtab, type = "latex", caption.placement = "top",
       file = "paper/figures/totC-bias.tex", include.rownames = FALSE)
 
@@ -2525,7 +2595,7 @@ for(i in c("f1", "f25", "f10")) { # i <- "f1"
     }
   }
 }
-
+save(cb_statsw_mua, cb_statsw_mu, file = fp(p_data, "carbon-werr.rda"))
 ````
 
 #### Secondary methods
@@ -2852,7 +2922,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -2916,7 +2986,7 @@ lnames <- sapply(1981:2008, function(x) paste0(mos, "_", substr(x, 3, 4)))
 lnames <- lnames[1:length(lnames)]
 # length(lnames) == nlayers(etba[[1]])
 etba <- lapply(etba, function(x) {
-  b <- mask(x, mask25k, maskvalue = 0)
+  b <- raster::mask(x, mask25k, maskvalue = 0)
   names(b) <- lnames
   b
 })
@@ -3304,6 +3374,9 @@ mutab_xtab <- xtable::xtable(mutab, digits = 1, caption = caption)
 print(mutab_xtab, type = "latex", file = "paper/figures/et-bias.tex",
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
+
+et_err <- mutab
+save(et_err, file = fp(p_data, "et-err-bias.rda"))
 ```
 
 
@@ -3342,6 +3415,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 library(SAcropland)
 library(xtable)
 library(RColorBrewer)
+library(spatstat)
 p_root <- full_path(proj_root("SAcropland"), "SAcropland")
 p_fig <- full_path(p_root, "paper/figures/")
 p_data <- full_path(p_root, "external/ext_data/")
@@ -3360,7 +3434,7 @@ load(full_path(p_data, "d_grid_act.rda"))  # actual diffence grids
 paths <- full_path(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
 gti <- raster(paths) / 100  # gti 2011
 namask <- raster(full_path(p_data, "namask.tif"))  # NA mask
-gti <- mask(gti, namask)  # apply mask to GTI
+gti <- raster::mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
 # Reconstruct original landcover estimates
@@ -3391,7 +3465,7 @@ fact <- c(5, 10, 25, 50, 100)
 # provr <- rasterize(prov, y = gti, field = "id_1", 
 #                    filename = "external/ext_data/provinces.tif")
 provr <- raster("external/ext_data/provinces.tif")
-provr <- mask(provr, namask)
+provr <- raster::mask(provr, namask)
 gtis <- stack(list("prov" = provr, "f" = gti))
 
 # calculate fractions using raster::extract with provinces, to compare speed
@@ -3407,9 +3481,7 @@ setkey(gti_dt, prov)
 cf <- gti_dt[, list("carea" = sum(f), "parea" = length(f), 
                     "cf" = sum(f) / length(f)), by = prov]
 # cftest - cf[, 2:4, with = FALSE]  # close, but diff caused by few NAs in provr 
-
 # data.table approach is much more efficient
-
 ```
 
 
@@ -3933,7 +4005,9 @@ cyld_agg <- c(cyldf1, cyldr)
 # check Monfreda's yield data to see how it deals with null areas
 monf <- full_path("external/ext_data/monfreda_data/maize_HarvAreaYield_NetCDF",
                   "maize_AreaYieldProduction.nc")
-monfmz <- brick(monf, level = 2)
+# monfmz <- brick(monf, level = 2, varname = "maizeData")
+monfmz <- raster(monf, level = 2)
+
 plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)), col = bpy.colors(20))
 plot(crop(monfmz, spTransform(sa.shp, monfmz@crs)) > 0)  # almost all SA > 0 
 
@@ -4025,8 +4099,8 @@ for(i in lev[-1]) {
 # sapply(cprod, function(x) cellStats(x, sum))
 # sapply(carea, function(x) cellStats(x, sum))
 
-DT <- na.omit(as.data.table.raster(s, xy = TRUE))
-DT[, wgt := ref * awgts]  # calculate weights from ref and area weights
+# DT <- na.omit(as.data.table.raster(s, xy = TRUE))
+# DT[, wgt := ref * awgts]  # calculate weights from ref and area weights
 
 # Mean production in producing cells at different levels of aggregation. 
 # No need to weight by cropland density, because production value already factors
@@ -4143,10 +4217,10 @@ stats_yd1 <- dstats(y_diff1d)
 ### Plot difference maps
 ```{r, eval=FALSE}
 dnms <- ls()[grep("[y_|p_]diff*.*d", ls())]
-stnms <- ls()[grep("stats_", ls())]
+stnms <- ls()[grep("^stats_", ls())]
 disaggl <- lapply(dnms, function(x) get(x))
 statsl <- lapply(stnms, function(x) get(x))
-rng <- lapply(statsl, function(x) {
+rng <- lapply(statsl, function(x) { # x <- statsl[[1]]
   ilims <- c(ceiling(min(sapply(x, function(y) y[3, ]))), 
              floor(max(sapply(x, function(y) y[21, ]))))
   olims <- range(sapply(x, function(y) range(y)))
@@ -4283,7 +4357,7 @@ prod_bacc <- rbind(a, b)
 ref <- lapply(gti_agg, function(x) x$gti)
 test_err <- "perr" #"yerr"
 evst <- "wma" # "wm"
-for(i in c("f1", "f25", "f10")) {
+for(i in c("f1", "f25", "f100")) {
   for(j in c("sa30", "modmu", "geow")) { 
     print(paste("cross-checking calculations in", i, j))
     a1 <- bias_statsw(ref[[i]], awgts[[i]], get(test_err)[[i]], snms,  
@@ -4601,7 +4675,6 @@ print(out_xtab, type = "latex", file = "paper/figures/yldprod-bias.tex",
       tabular.environment = "longtable", floating = FALSE, 
       caption.placement = "top", include.rownames = FALSE)
 
-
 ```
 
 
@@ -4616,7 +4689,7 @@ p4s <- projection(raster(nrow = 10, ncol = 10)) # GCS
 presa <- crop(pre, spTransform(sa.shp, p4s))  # crop to SA
 projection(presa) <- p4s  
 presa <- projectRaster(presa, lcu$f25$sa30)  # project to Albers
-presa <- mask(presa, awgts$f25, maskvalue = 0)  # mask
+presa <- raster::mask(presa, awgts$f25, maskvalue = 0)  # mask
 presa1k <- disaggregate(presa, fact = 25)
 
 # reclassify rainfalls to nearest 100 mm, tweak to catch lower and upper bound
@@ -4696,6 +4769,9 @@ print(ygap_xtab, type = "latex",
       file = "paper/figures/ygap-spat-bias.tex")
 
 save(list = ls(), file = full_path(p_data, "yield-bias.rda"))
+save(out_tab, file = fp(p_data, "yield-prod-accbias.rda"))
+save(cyld_agg, cpagg1, file = full_path(p_data, "yieldprod-1km.rda"))
+
 ```
 
 
@@ -5069,26 +5145,202 @@ dev.off()
 
 
 
-# Miscellaneous additional calculations
+# Impact of cropland errors on location
+
+Evaluated in terms of how landcover map error impacts the ability to locate areas having a particular quantity of interest. 
+
+## Data
+
+Derived carbon (section 6) and yield estimates (section 8). 
 
 ```{r, eval=FALSE}
+library(SAcropland)
+library(xtable)
+library(RColorBrewer)
+library(spatstat)
+p_root <- full_path(proj_root("SAcropland"), "SAcropland")
+p_fig <- full_path(p_root, "paper/figures/")
+p_data <- full_path(p_root, "external/ext_data/")
+p_data2 <- full_path(p_root, "data/")
+#p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
+# load(full_path(p_data, "yield-bias.rda"))
+
+# SA provinces
+prov <- readOGR("external/ext_data/provinces.sqlite", layer = "provinces")
+prov <- prov[prov$id_1 != 9, ]  # remove Princeton Edward Islands
+prov[prov$id_1 == 10, "id_1"] <- 9 # reset WC to id 10
+load("external/ext_data/MZshapes.Rdata")
+
+# yield and carbon data
+load("external/ext_data/yieldprod-1km.rda")
+load("external/ext_data/carbon-tier1.rda")
+load("external/ext_data/cropland-1km.rda")
+```
+
+## Differences in location
+
+If you are interested in selecting areas of highest yield/production/carbon potential, how far off are you relative to "truth". Use top quintile/decline to assess this, and then calculate mean nearest neighbor distance between two pixels of each map. 
+
+### Identify high value areas
+```{r, eval = FALSE}
+# top decile of...
+# ...cropland
+crclass <- lapply(cropl, function(x) {  # x <- cropl$sa30
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# ...yield
+yclass <- lapply(cyld_agg$f1, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# ...production
+pclass <- lapply(cpagg1$f1, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+
+# ...carbon
+cdat <- c(gti_c$f1, lc_c$f1)
+cdatf <- lapply(cdat, function(x) {  # mask out non-cropland areas and take mu C
+  msk <- x$forest < 99.6
+  cmu <- calc(x, mean)
+  raster::mask(cmu, msk, maskvalue = 0)
+})
+cclass <- lapply(cdatf, function(x) {  # x <- cyld_agg$f1[[1]]
+  r <- x * (x > 0)
+  r[r == 0] <- NA
+  rq <- quantile(r, c(0, 0.9, 1))
+  types <- cut(r, breaks = rq)
+  types > 1
+})
+names(cclass) <- names(pclass)
+
+# carbon efficiencies (C / yield)
+effclass <- lapply(1:5, function(x) { # x <- 1
+  cyld <- cyld_agg$f1[[x]]
+  cyld[cyld == 0] <- NA
+  cdatfc <- crop(cdatf[[x]], cyld)
+  eff <- cdatfc / cyld  # carbon efficiency
+  # eff[is.infinite(eff)] <- NA
+  rq <- quantile(eff, c(0, 0.9, 1))
+  types <- cut(eff, breaks = rq)
+  types > 1
+})
+names(effclass) <- names(cclass)
+
+```
+
+### Calculate nearest-neighbor distances
+
+Between GTI high value areas and each of the four LC-derived datasets. 
+```{r, eval = FALSE}
+
+# calculate distance between GTI and each other dataset's classes. 
+# pms2a <- expand.grid(rep(list(0:1), 5))[-1, ] 
+# pms2b <- pms2a[which(rowSums(pms2a) == 2 & pms2a$Var1 == 1), ]
+# pms2b$cl <- c("YC1", "YC2", "YC3", "YC4")
+# rownames(pms2b) <- 1:4
+
+# Define neighborhood window
+sa_owin <- owin(xrange = bbox(sa.shp)[1, ], yrange = bbox(sa.shp)[2, ],
+                unitname = "meter")
+# which1 <- function(x) x == 1  # selector function for r to xy
+
+mudists <- lapply(list(crclass, yclass, pclass, cclass, effclass), function(x) {
+  # x <- cclass
+  mudist <- sapply(2:5, function(y) {  # y <- 2
+    print(paste0("...", y))
+    a <- rasterToPoints(x$gti, fun = function(x) x == 1)
+    b <- rasterToPoints(x[[y]], fun = function(x) x == 1)
+    pps <- lapply(list(a, b), function(z) {
+      ppp(x = z[, 1], y = z[, 2], window = sa_owin)
+    })
+    names(pps) <- c("gti", names(x)[y])
+    reord <- sort(sapply(pps, function(i) i$n), decreasing = TRUE)
+    ppnn <- nncross(pps[[names(reord)[1]]], pps[[names(reord)[2]]])
+    mean(ppnn$dist) / 1000
+  })
+  names(mudist) <- names(x)[2:5]
+  mudist
+})  
+names(mudists) <- c("cropland", "yield", "prod", "carb", "eff")
+
+# average km off
+mudvec <- unlist(mudists)
+median(mudvec[!like(names(mudvec), "sa30")])
+# mean(mudvec)
+
+# plot(stack(yclass))
+# plot(is.na(yclass[[1]]) - is.na(yclass[[2]]))
+# plot(is.na(cyld_agg$f1$gti) - is.na(cyld_agg$f1$geow))
+
+# output plot
+cols <- c("red", "orange3", "green4", "blue")
+pcol <- makeTransparent(cols, alpha = c(120))
+pcol2 <- makeTransparent(cols, alpha = c(30))
+
+plot(1:4, pch = 20, col = pcol)
+bs <- do.call(rbind, mudists[c(1, 2, 4)])
+lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+
+pdf(full_path(p_fig, "location_offset.pdf"), height = 3.5, width = 4, 
+    bg = "transparent")
+par(mar = c(2, 3.5, 1, 0), bg = "transparent")
+bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol, pcol2), 
+              las = 2, border = "transparent", xaxt = "n", ylab = "", 
+              ylim = c(0, 18), yaxt = "n")
+axis(1, at = colMeans(bp), labels = lcnms, lty = 0, cex.axis = 0.9, 
+     mgp = c(2, 0.25, 0))
+axis(2, at = seq(0, 18, 2), labels = seq(0, 18, 2), las = 2)
+mtext("km", side = 2, line = 2.25)
+legend(x = 12.5, y = 18, legend = rep("", 4), pch = 15, col = cols, adj = 0,
+       pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0, horiz = TRUE)
+legend(x = 12.5, y = 17.25, legend = rep("", 4), pch = 15, adj = 0, col = pcol, 
+       pt.cex = 1.5, bty = "n", cex = 0.8, horiz = TRUE, x.intersp = 0)
+legend(x = 12.5, y = 16.5, legend = rep("", 4), pch = 15, adj = 0, col = pcol2, 
+       pt.cex = 1.5, bty = "n", cex = 0.8, horiz = TRUE, x.intersp = 0)
+text(x = 13, y = 17, labels = "Cropland", pos = 2, cex= 0.8)
+text(x = 13, y = 16.25, labels = "Yield", pos = 2, cex = 0.8)
+text(x = 13, y = 15.5, labels = "Carbon", pos = 2, cex= 0.8)
+dev.off()
+
+```
+
+
+
+# Miscellaneous additional calculations
+
+```{r, message=FALSE}
 library(rgdal)
 library(SAcropland)
 library(rgeos)
+library(lmisc)
 
 p_dat <- full_path(full_path(proj_root("SAcropland"), "SAcropland"), 
                    "external/ext_data")
 
 ```
 
-Area of sub-Saharan Africa and South Africa's share of that area
-```{r, eval=FALSE}
-eco <- readOGR(dsn = full_path(p_dat, "africa_ecofloristic_zones.sqlite"), 
+## Area of sub-Saharan Africa and South Africa's share of that area
+```{r}
+eco <- readOGR(dsn = fp(p_dat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones")
 eco@proj4string <- CRS(projection(raster(nrow = 1, ncol = 1)))
-af <- readOGR(dsn = full_path(p_dat, "africa_countries_alb.sqlite"), 
+af <- readOGR(dsn = fp(p_dat, "africa_countries_alb.sqlite"), 
                layer = "africa_countries_alb")
-af@data <- af@data[, c(1, 3:4)]
+af@data <- af@data[, c(1, 3:4, 6:7)]
 ecoalb <- spTransform(eco, af@proj4string)
 
 # cut down countries
@@ -5105,15 +5357,15 @@ desert <- ecoalb[grep("desert", ecoalb$gez_term), ]
 sahara <- as.numeric(names(which.max(gArea(desert, byid = TRUE))))
 
 nosahara <- ecoalb[-sahara, ]
-plot(nosahara, col = "red")
+# plot(nosahara, col = "red")
 
 ovs <- which(!is.na(over(nosahara, ssa)))
 ssaeco <- nosahara[ovs, ]
 ssaeco <- ssaeco[-1, ]  # drop a couple Saharan mountains
 ssaeco <- ssaeco[-1, ]
 # plot(ssaeco[ssaeco@data$gez_term == "Tropical mountain system", ][1, ])
-plot(ssa)
-plot(ssaeco, col = "red", add = TRUE)
+# plot(ssa)
+# plot(ssaeco, col = "red", add = TRUE)
 
 # calculate area of remainder
 afarea <- gArea(ssaeco) / 10000
@@ -5124,12 +5376,66 @@ saarea / afarea
 ```
 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo = FALSE}
 a <- sample(1:100, size = 20)
 b <- sample(1:80, size = 20)
 mean(a - b)
 sum(a) / sum(b)
-
-
 ```
+
+## Calculation of error propagation
+```{r}
+load(fp(p_dat, "cropland-werr-2011.rda"))
+load(fp(p_dat, "yield-prod-accbias.rda"))
+load(fp(p_dat, "et-err-bias.rda"))
+load(fp(p_dat, "carbon-werr.rda"))
+
+cland <- bacc2011
+yprod <- as.data.table(out_tab)[Region == "Density"]
+carb <- rbind(cb_statsw_mu, cb_statsw_mua)
+
+# Reshape error stats
+# yield/production 
+yp1 <- melt(yprod, id.vars = c("Map", "Metric", "Variable"), 
+            measure.vars = names(yprod)[5:10])
+yp2 <- dcast(yp1, formula = Metric + Variable + variable ~ Map)
+setcolorder(yp2, neworder = c(1:3, ncol(yp2), 5:6, 4))
+setnames(yp2, names(yp2), c("stnm", "var", "ol", names(cland)[-c(1:2)]))
+
+snms <- names(cland)[-c(1:2)]
+lev <- cland[stnm == "mu", ol]
+
+# Production and yield propagation
+yp_prop <- rbindlist(lapply(c("Yield", "Production"), function(x) {  
+  o <- data.frame(t(sapply(snms, function(y) {  # y <- "sa30"
+    emag <- yp2[var == x & stnm == "MAE", get(y)] / 
+      cland[stnm == "mua", get(y)] 
+    c(emag, mean(emag))
+  })))
+  o <- cbind(snms, round(o, 2))
+  colnames(o) <- c("map", lev, "mu")
+  data.table(cbind.data.frame("var" = x, o))
+}))
+
+# Carbon differences
+c_prop <- rbindlist(lapply(snms, function(x) {  # x <- "sa30"
+  dat <- carb[stnm == "MAE" & map == x, names(carb)[-c(1:3)], with = FALSE]
+  o <- dat[, lapply(.SD, function(y) y / cland[stnm == "mua", get(x)]), 
+           .SDcols = names(dat)]
+  o <- round(rbind(o, data.table(t(colMeans(o)))), 2)
+  o <- cbind("ol" = c(lev, "mu"), o)
+  cbind("map" = x, o)
+  # dat[, second] / cland[stnm == "mua", get(x)]
+}))
+
+# et propagation
+et_prop <- round(et_err[Variable == "Annual Mean", MAE] / 
+  cland[ol == "f25" & stnm == "mua", snms, with = FALSE], 2)
+
+yp_prop
+c_prop
+et_prop
+```
+
+
 
