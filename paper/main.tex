@@ -10,6 +10,7 @@
 %\usepackage{endfloat}
 \usepackage{float}
 \usepackage[sort,compress]{natbib}
+%\usepackage[numbers,sort,compress]{natbib}
 %\bibpunct{[}{]}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
 \usepackage{endnotes}
 \usepackage{setspace}
@@ -189,26 +190,26 @@ Our 1 km reference cropland map indicated that crop fields covered 104,304 km$^2
 Subtracting each test map from the reference maps created pixel-wise residuals, where negative and positive values respectively represent overestimates and underestimates by the test map (Fig. 1A). The most pronounced errors were in the MODIS and GlobCover maps, which showed large positive residuals in the center of the country where cropland is most concentrated (blue areas in Fig. 1A), and negative residuals (red areas) along the eastern and northern margins.
 These patterns translated into substantial map bias (Fig. 1B), with GlobCover and MODIS mean error exceeding 45\% and 25\% respectively at 1 km resolution, meaning that each map tends to underestimate cropland by that amount at that resolution. This bias declined with each level of map aggregation, being reduced to nearly 15\% for GlobCover and 5\% for MODIS at 100 km. The magnitude of mean absolute error (MAE) was somewhat higher in all cases. The GeoWiki map, in contrast, was the least biased overall, showing just a $\sim$7\% bias at 1 km and near 0 for all other scales of aggregation, although its accuracy (23\% MAE) was only half as good as SA-LC's at 1 km (11\% MAE), which despite its uniform overestimation bias (Fig. 1A) was the most accurate map at aggregation scales $<10$km. Above this, GeoWiki became slightly more accurate, having $<$5\% MAE at 100 km resolution. The reason GeoWiki had relatively poor accuracy at 1 km resolution was due to the high heterogeneous error pattern, which traded between positive and negative residuals over short distances, thereby inflating MAE at this scale.  
 
-\begin{figure*}[!ht]
-%\begin{wrapfigure}{c}{1\textwidth}
-\centerline{\includegraphics[width=1\textwidth]{figures/figure1.pdf}}
-\vspace{-0.15 cm}
-\caption{(A) Errors in the percent cropland estimates resulting from each of the four test maps relative to the reference map at different scale of pixel aggregation. Rows indicate the test map being assessed (by subtraction from the reference map), while columns refer to resolution of aggregation. White indicates areas where areas under communal farmlands or permanent tree crops were removed from analysis. (B) The bias (mean error) and accuracy (mean absolute error [MAE]) of each test map at each scale of aggregation, weighted by the percentage cropland in each cell of the reference map. Bias estimates are indicated by the semi-transparent bars, accuracy (lower is more accurate) by the solid bars, with bar colors coded to specific cropland maps.}
-\label{afoto1}
-\end{figure*}
+%\begin{figure*}[!ht]
+%%\begin{wrapfigure}{c}{1\textwidth}
+%\centerline{\includegraphics[width=1\textwidth]{figures/figure1.pdf}}
+%\vspace{-0.15 cm}
+%\caption{(A) Errors in the percent cropland estimates resulting from each of the four test maps relative to the reference map at different scale of pixel aggregation. Rows indicate the test map being assessed (by subtraction from the reference map), while columns refer to resolution of aggregation. White indicates areas where areas under communal farmlands or permanent tree crops were removed from analysis. (B) The bias (mean error) and accuracy (mean absolute error [MAE]) of each test map at each scale of aggregation, weighted by the percentage cropland in each cell of the reference map. Bias estimates are indicated by the semi-transparent bars, accuracy (lower is more accurate) by the solid bars, with bar colors coded to specific cropland maps.}
+%\label{afoto1}
+%\end{figure*}
 
 %\subsection*{Relationship between map error and cropland density}
 The generalized additive model revealed primarily non-linear relationships between district MAE and cropland density that were best approximated by a first order polynomial function of cropland density (for all four cropland maps: p$<$0.001 on both terms of quadratic and on smoothing function applied to district centroids; $>$ 85\% deviance explained). Map accuracy was typically lowest at intermediate levels of cropland density (50-60\% cover) for all but the GlobCover map (where accuracy continues to decline with cropland cover), and was highest where the landscape is dominated either by cropland or by another type (Fig. 2). In other words, accuracy was lowest when cropland cover was mixed evenly with other cover types. GlobCover's accuracy continued to decrease with cropland density because the dominant agricultural cover class contributing to the test map was defined as 50-70\% crops mingled with other vegetation, thus the maximum percentage was constrained by this mixture range.  
 
-%\vspace{-0.75 cm}
-%\begin{wrapfigure}{r}{0.5\textwidth}
-\begin{figure}[!h]
-%\centerline{\includegraphics[keepaspectratio,scale = 0.4]{figures/biases_md_lnorm_gam_mu0.pdf}}
-\centerline{\includegraphics[width=.7\textwidth]{figures/biases_md_lnorm_gam_mu0.pdf}}
-\caption{The relationship between map accuracy (the mean absolute error) in test maps and the actual cropland cover within agricultural landscapes (reference map pixels having $>$0.5\% cropland), here defined by the boundaries of magisterial districts (n = 345), as fit with a generalized additive model. Prediction curves are color-coded to the different test maps, with the solid line indicating predicted absolute bias, and the lighter shading the standard error of the coefficients.}\label{afoto2}
-\end{figure}
-%\end{wrapfigure}
-%\vspace{-0.75 cm}
+%%\vspace{-0.75 cm}
+%%\begin{wrapfigure}{r}{0.5\textwidth}
+%\begin{figure}[!h]
+%%\centerline{\includegraphics[keepaspectratio,scale = 0.4]{figures/biases_md_lnorm_gam_mu0.pdf}}
+%\centerline{\includegraphics[width=.7\textwidth]{figures/biases_md_lnorm_gam_mu0.pdf}}
+%\caption{The relationship between map accuracy (the mean absolute error) in test maps and the actual cropland cover within agricultural landscapes (reference map pixels having $>$0.5\% cropland), here defined by the boundaries of magisterial districts (n = 345), as fit with a generalized additive model. Prediction curves are color-coded to the different test maps, with the solid line indicating predicted absolute bias, and the lighter shading the standard error of the coefficients.}\label{afoto2}
+%\end{figure}
+%%\end{wrapfigure}
+%%\vspace{-0.75 cm}
 
 
 \vspace{-0.3 cm}
@@ -220,15 +221,15 @@ The spatial patterns of test map errors transmitted into substantial carbon esti
 
 The magnitude of carbon errors varied as a function of the carbon density of surrounding cover, as demonstrated by the bias statistics (Fig. 3). Bias was near zero when grassland was the adjacent cover type (SI), as its carbon density is nearly the same as cropland. However, when forest was adjacent then bias was a three- to five-fold multiple of cropland map bias (Fig. 1B). At the most extreme, GlobCover's bias was -276\% at 1 km, but even SA-LC and GeoWiki had biases of 22\% and -50\%, respectively. Bias could be substantial even for the least carbon dense vegetation type (sparse), as evidenced by the 15-25\% mean error at 1 km for MODIS and GlobCover under this class.  The mean bias across the different potential adjacent vegetation classes ranged between -20 for GeoWiki and -123\% for GlobCover at 1 km (with MODIS in between these), while SA-LC's average bias was 11\%.  Biases declined fairly rapidly with aggregation, with all datasets having an average (across cover types) bias magnitude of $<$10\% at $\geq$25 km of aggregation, except for GlobCover, which was -12\% at 100 km (SI).  As with cropland percentages, GeoWiki produced the least biased carbon density estimates above 1 km resolution. 
 
-%\vspace{-0.75 cm}
-\begin{figure}[!h]
-%\begin{wrapfigure}{r}{0.5\textwidth}
-%\centerline{\includegraphics[keepaspectratio,scale = 0.4]{figures/figure3.pdf}}
-\centerline{\includegraphics[width=0.55\textwidth]{figures/figure3.pdf}}
-\caption{Biases and accuracies (mean absolute errors) of carbon densities derived from cropland maps, calculated as percents relative to the reference map. Bias estimates (represented by symbols) fall within the semi-transparent floating bars, while accuracies are contained in the solid bars. Bar colors are coded to specific cropland map, symbols indicate which cover type was used to calculate cropland-adjacent carbon density. The bar represents the mean biases calculated across each of the 5 cover types. Shrubland and grassland bias values were near zero, while secondary forest values were close to forest values, and thus these are not shown for display clarity (but see Table S2). MODIS and GlobCover values at 1 km exceeding the plot's Y limits are provided near their truncated tops.}
-\label{afoto}
-\end{figure}
-%\end{wrapfigure}
+%%\vspace{-0.75 cm}
+%\begin{figure}[!h]
+%%\begin{wrapfigure}{r}{0.5\textwidth}
+%%\centerline{\includegraphics[keepaspectratio,scale = 0.4]{figures/figure3.pdf}}
+%\centerline{\includegraphics[width=0.55\textwidth]{figures/figure3.pdf}}
+%\caption{Biases and accuracies (mean absolute errors) of carbon densities derived from cropland maps, calculated as percents relative to the reference map. Bias estimates (represented by symbols) fall within the semi-transparent floating bars, while accuracies are contained in the solid bars. Bar colors are coded to specific cropland map, symbols indicate which cover type was used to calculate cropland-adjacent carbon density. The bar represents the mean biases calculated across each of the 5 cover types. Shrubland and grassland bias values were near zero, while secondary forest values were close to forest values, and thus these are not shown for display clarity (but see Table S2). MODIS and GlobCover values at 1 km exceeding the plot's Y limits are provided near their truncated tops.}
+%\label{afoto}
+%\end{figure}
+%%\end{wrapfigure}
 
 In terms of accuracy, MAE values were essentially the same as bias magnitudes, except for GeoWiki's, which were twice as large. The average MAE across vegetation classes was 47\% at 1 km, dropping to $<$10 only with 25 km of aggregation. In contrast, SA-LC's carbon estimates were twice as accurate at 1 km, and were slightly more accurate up to 25 km of aggregation were GeoWiki achieved parity.  
 
@@ -238,12 +239,12 @@ In terms of accuracy, MAE values were essentially the same as bias magnitudes, e
 Compared to the carbon analysis, the bias and accuracy in evapotranspiration (ET) calculated using the VIC model was negligible, averaging less than than +/-2\%. However, there were several error hotspots in the resulting ET residual maps (Fig. 4). The most pronounced of these were the 5-15\% overestimates in the center of the country caused when VIC was initialized with MODIS and GlobCover, while overestimates along the southern and western coasts reached 25\%. These locations correspond primarily to the margins of major crop production regions--in the center is the westernmost boundary of the summer rainfall growing region, marked approximately by the 400 mm isohyet, where maize is the primary crop. The west coast hotspot falls at the western edge of the wheat-dominated winter rainfall region \citep{hardy_rainfed_2011}, where growing season rainfall is approximately 200 mm. 
 
 SA-LC and GeoWiki also resulted in ET errors estimates along the southern and western coasts, but here the tendency was to underestimate ET, while biases in the center of the country were either negligible to absent.  All but MODIS underestimated ET by 5-15\% in the northern tip of the country.  
-
-%\vspace{-0.75 cm}
-\begin{figure}[h]
-\centerline{\includegraphics[width=.6\textwidth]{figures/et_bias_map.pdf}}
-\caption{Differences in annual mean evapotranspiration estimates from 29-year runs of the VIC land surface hydrology model when initialized with LAI response curves derived from the reference map, versus those from the four test maps.}\label{afoto}
-\end{figure}
+%
+%%\vspace{-0.75 cm}
+%\begin{figure}[h]
+%\centerline{\includegraphics[width=.6\textwidth]{figures/et_bias_map.pdf}}
+%\caption{Differences in annual mean evapotranspiration estimates from 29-year runs of the VIC land surface hydrology model when initialized with LAI response curves derived from the reference map, versus those from the four test maps.}\label{afoto}
+%\end{figure}
 
 \vspace{-0.3 cm}
 \subsubsection*{Downscaling crop yield and production data}
@@ -254,13 +255,13 @@ Production biases were generally higher, but still low, for most datasets, with 
 
 In contrast, the accuracy of production estimates was poor. Here all datasets but SA-LC had MAE values of $\geq$30\% below 25 km of aggregation (Fig. 5), reaching as high as 100\% for GlobCover at 1 km, followed by 65\% for MODIS and 45\% for GeoWiki. SA-LC estimated production was most accurate, having between 10-20\% MAE between 1 and 10 km, and $<$10\% at 25 km and higher.  This low accuracy relative to the gridded yield measures relates to the disaggregation process for harvested area, which allocates a fractional value to each pixel, which is itself a fraction. The process of adjusting the gridded values so that their totals match reported statistics does relatively little to correct the map's underlying commission or omission errors, and this constraint in fact appears to shorten the distance between negative and positive residuals (SI), thereby increasing absolute errors.  
 
-%\vspace{-0.5 cm}
-\begin{figure}[!ht]
-%\vspace{-0.75 cm}
-\centerline{\includegraphics[width=0.55\textwidth]{figures/yield_prod_bias.pdf}}
-\caption{Bias (mean error) and accuracy (mean absolute error [MAE]) in disaggregated maize yield and production estimates. Bias estimates (represented by symbols) fall within the semi-transparent bars, mean absolute errors in the solid bars, with bar colors coded to specific cropland maps.  Symbols code the different variables (production and yield), normalized to their respective means.}
-\label{afoto}
-\end{figure}
+%%\vspace{-0.5 cm}
+%\begin{figure}[!ht]
+%%\vspace{-0.75 cm}
+%\centerline{\includegraphics[width=0.55\textwidth]{figures/yield_prod_bias.pdf}}
+%\caption{Bias (mean error) and accuracy (mean absolute error [MAE]) in disaggregated maize yield and production estimates. Bias estimates (represented by symbols) fall within the semi-transparent bars, mean absolute errors in the solid bars, with bar colors coded to specific cropland maps.  Symbols code the different variables (production and yield), normalized to their respective means.}
+%\label{afoto}
+%\end{figure}
 
 \vspace{-0.3 cm}
 \subsubsection*{Agent-based model of household food security}
@@ -272,11 +273,11 @@ Land deficit (the total area of cropland that should have been allocated to hous
 %randomly siting 100 household agents within each district, and allocating the nearest two cropland pixels to each household. The remaining agents are then iteratively assigned unallocated cropland pixels within a 1.5 km radius of existing agents' fields, and this process continues until all agents are assigned cropland, or all available cropland is allocated. This initialization process 
 %\FloatBarrier
 
-\begin{figure}[ht]
-\centerline{\includegraphics[width=.55\textwidth]{figures/figure6.pdf}}
-\caption{Biases in agent-based model results relative to the district-wise errors (as a percent) in total cropland area, in terms of A) the percent of cropland in each district that was not allocated to any household, B) the land deficit, or the total area of cropland that should have been allocated to households in each district but wasn't (expressed as a percent of total district cropland, as determined by test maps), and C) the food deficit, or the percentage shortfall (relative to the reference simulation) in mean household food production resulting from inadequate cropland allocation. Dot sizes correspond to district numbers, colors represent the land cover map.}
-\label{afoto}
-\end{figure}
+%\begin{figure}[ht]
+%\centerline{\includegraphics[width=.55\textwidth]{figures/figure6.pdf}}
+%\caption{Biases in agent-based model results relative to the district-wise errors (as a percent) in total cropland area, in terms of A) the percent of cropland in each district that was not allocated to any household, B) the land deficit, or the total area of cropland that should have been allocated to households in each district but wasn't (expressed as a percent of total district cropland, as determined by test maps), and C) the food deficit, or the percentage shortfall (relative to the reference simulation) in mean household food production resulting from inadequate cropland allocation. Dot sizes correspond to district numbers, colors represent the land cover map.}
+%\label{afoto}
+%\end{figure}
 
 \vspace{-0.3 cm}
 \subsection*{Location errors}
@@ -285,11 +286,11 @@ The average distance between areas containing the highest cropland densities (up
 
 %The analyses above primarily dealt with impact of landcover map errors on estimating quantitative values from maps. However, there are many applications in which land cover data are needed to identify specific locations, such as areas to be targeted for development, where quantitative information is used to target specific locations \citep{estes_reconciling_2016}. 
 
-\begin{figure}[!ht]
-\centerline{\includegraphics[width=.55\textwidth]{figures/location_offset.pdf}}
-\caption{Average nearest neighbor distances (in km) between pixels representing features identified by the reference map versus those identified from the test maps. Bar colors indicate the different features (and thus contributing maps), which were delineated by selecting pixels with values greater than the 90th percentile: densest cropland (solid bars); highest maize yield (medium transparent bars); highest carbon density (most transparent bars).}   
-\label{afoto}
-\end{figure}
+%\begin{figure}[!ht]
+%\centerline{\includegraphics[width=.55\textwidth]{figures/location_offset.pdf}}
+%\caption{Average nearest neighbor distances (in km) between pixels representing features identified by the reference map versus those identified from the test maps. Bar colors indicate the different features (and thus contributing maps), which were delineated by selecting pixels with values greater than the 90th percentile: densest cropland (solid bars); highest maize yield (medium transparent bars); highest carbon density (most transparent bars).}   
+%\label{afoto}
+%\end{figure}
 
 
 \vspace{-0.5 cm}
@@ -356,6 +357,7 @@ This work was supported by funds from the Princeton Environmental Institute Gran
 %\end{acknowledgments}
 
 \bibliographystyle{gcbnourl} 
+%\bibliographystyle{prsb} 
 {\footnotesize \bibliography{/Users/lestes/Dropbox/publications/fullbib.bib}}
 
 %\end{article}
