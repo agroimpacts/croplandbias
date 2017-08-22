@@ -10,14 +10,14 @@ Maintainer: Lyndon Estes <lestes@princeton.edu>
 Depends:
     TeachingDemos,
     R (>= 3.0.0),
+    lmisc,
     raster,
     rgdal,
-    lmisc,
     dtraster
 Imports:
-    raster,
     rgdal,
     lmisc,
+    raster,
     dtraster
 License: GPL (>= 3)
 RoxygenNote: 5.0.1

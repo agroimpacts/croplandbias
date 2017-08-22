@@ -23,6 +23,7 @@ library(raster)
 library(lmisc)
 library(R.utils)
 library(RColorBrewer)
+library(SAcropland)
 
 # Paths
 p_root <- proj_root("SAcropland")
@@ -294,8 +295,6 @@ lckm2 <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1
 }))
 colnames(lckm2)[1] <- "gti"
 rownames(lckm2) <- lev
-
-bias_statsw
 
 # mean (stays about the same)
 lckmmu <- do.call(rbind, lapply(1:length(lev), function(x) {  # x <- 1

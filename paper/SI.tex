@@ -1,6 +1,6 @@
 \RequirePackage{lineno}  % http://www-d0.fnal.gov/Run2Physics/WWW/templates/lineno.html
 %\documentclass[12pt]{iopart}
-\documentclass[11pt, titlepage]{article}
+\documentclass[12pt, titlepage]{article}
 \usepackage[top=20mm, bottom=20mm, left=23mm, right=23mm]{geometry}
 %\newcommand{\gguide}{{\it Preparing graphics for IOP journals}}
 %Uncomment next line if AMS fonts required
@@ -36,6 +36,11 @@
 \end{minipage}
 \end{myalgo}}
 
+\usepackage{setspace}
+\doublespacing
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
 
 %\bibpunct{(}{)}{,}{n}{,}{,}  % https://xianblog.wordpress.com/tag/natbib/ (allows natbib with PNAS)
 % figures float at top of page
@@ -47,9 +52,8 @@
 \begin{document}
 %\bibliographystyle{unsrt}
 
-\setpagewiselinenumbers
+%\setpagewiselinenumbers
 %\modulolinenumbers[5]
-%\linenumbers
 \begin{center}\section*{\Large Supplementary Methods and Results}\end{center}
 %\begin{table}[ht]
 %\centering
@@ -66,6 +70,7 @@
 %   \hline
 %\end{tabular}
 %\end{table}  
+\linenumbers
 \section{\large Overview}
 This document provides supplementary information on methods and results from the different components of the analysis described in the main text.  The code used to conduct the analysis is presented after section 7.  
 
@@ -96,6 +101,8 @@ We examined the impact of several sources of uncertainty on our results.  The fi
 
 % latex table generated in R 3.2.1 by xtable 1.7-4 package
 % Wed Nov 25 15:57:07 2015
+
+\begin{spacing}{1.0}
 \begin{table}[!ht]
 \caption{Differences in the bias and mean absolute errors values resulting from cropland percentage residuals calculated using 1) the 2011 reference map and 2) the 2007 reference map, with 2007 values subtracted from 2011 values. Differences from each test map and each scale of aggregation are shown. }
 \centering
@@ -118,6 +125,7 @@ We examined the impact of several sources of uncertainty on our results.  The fi
    \hline
 \end{tabular}
 \end{table}
+\end{spacing}
 
 As a further exploration of uncertainty, we included the full range of variability that resulted from a) using either the 2007 or 2011 map to calculate bias and accuracy, and b) from different levels of cropland percentages used when converting MODIS and GlobCover mixed cropland classes into cropland percentage maps, following \citet{fritz_mapping_2015}. We pooled the residuals from across each of these permutations, for each reference-test map combination, and examined how their overall mean values change with aggregation scale (Fig. 1), and also assessed the total distribution of errors within different class of cropland density, determined by dividing the 2011 1 km reference map into 20 different zones, or bins, of cropland density, ranging from 0-5\% cropland cover up to 95-100\% cover. We then calculated summary statistics from the pooled residuals and absolute values of residuals within each of these bins (Fig. 2).   
 
@@ -125,7 +133,7 @@ As a further exploration of uncertainty, we included the full range of variabili
   \centering
      \includegraphics[width = 14cm]{figures/biases_1-100km.pdf} 
 %     \vspace{-3cm}
-      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute error.  The black numbers in each plot area present the overall means of bias/MAE for each sensor-scale combination. The bin-wise and overall mean statistics were calculated from pooled map errors calculated from differences between the 2007 reference map and each cropland map (including all three variants--high, medium, and low--of the MODIS and GlobCover-derived cropland maps), and the 2011 reference map and each cropland map. }
+      \caption{Biases and mean absolute errors (MAE) for each of the cropland maps as a function of cropland density (calculated using the 2011 reference maps) and aggregation scales. Rows present biases by map product, columns by aggregation scale.  Dash lines indicate bias at each level of cropland density, calculated in bins spanning 5\% of density (e.g. 0-5\% cropland cover, 5-10\%, etc.), while solid lines indicate the mean absolute error.  The black numbers in each plot area present the overall means of bias/MAE for each sensor-scale combination; bold numbers provide the mean of bin-wise means of bias/MAE, while non-bold numbers represent the mean of bin-wise means weighted by the number of cells contributing to each bin. The bin-wise and overall mean statistics were calculated from pooled map errors calculated from differences between the 2007 reference map and each cropland map (including all three variants--high, medium, and low--of the MODIS and GlobCover-derived cropland maps), and the 2011 reference map and each cropland map. }
       \label{fig:default}
 \end{figure}
 
@@ -144,7 +152,7 @@ As a further exploration of uncertainty, we included the full range of variabili
       \label{fig:default}
 \end{figure}
 
-We also calculated how different methods of calculating the bias and accuracy statistics impacted out findings, using three different methods. First, we simply took the straight averages across the entire country, which substantially understates bias and accuracy because cropland covers only 10\% of the country, and all landcover products successfully discriminate the non-cropped regions.  We also compared the average error metrics extracted from within just the agricultural regions of the maps, defined here as the union of areas having $>$0.5\% cropland in the reference and each test map. This also tends to understate bias, because the area having $<$5\% cropland is much larger than areas having higher densities of cropland (see Fig. 4 frequencies of cells per five percentile bins of cropland density). Finally, we calculated a density-independent metric, which is similar to the density weighted mean calculated for our main analysis, which was calculated by averaging the mean bias and MAE values within different levels of cropland cover (divided in increments of 5\%). The results of these three alternate metrics are shown in Figure 3. 
+We also calculated how different methods of calculating the bias and accuracy statistics impacted out findings, using three different methods. First, we simply took the straight averages across the entire country, which substantially understates bias and accuracy because cropland covers only 10\% of the country, and all landcover products successfully discriminate the non-cropped regions.  We also compared the average error metrics extracted from within just the agricultural regions of the maps, defined here as the union of areas having $>$0.5\% cropland in the reference and each test map. This also tends to understate bias, because the area having $<$5\% cropland is much larger than areas having higher densities of cropland (see Fig. 4 frequencies of cells per five percentile bins of cropland density). Finally, we calculated a density-independent metric, which produces values similar to the density-weighted means presented in our main analysis, which was calculated by averaging the mean bias and MAE values within different levels of cropland cover (binned into increments of 5\%, excluding areas with $<$0.5\% cropland). The results of these three alternate metrics are shown in Figure 3. 
 
 \begin{figure}[!ht]
   \centering
