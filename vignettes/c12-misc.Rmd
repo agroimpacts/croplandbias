@@ -71,7 +71,6 @@ saarea / afarea
 
 ```
 
-
 ```{r, eval=FALSE, echo = FALSE}
 a <- sample(1:100, size = 20)
 b <- sample(1:80, size = 20)
@@ -84,7 +83,7 @@ sum(a) / sum(b)
 load(spathfunc("cropland-werr-2011.rda"))
 load(spathfunc("yield-prod-accbias.rda", "yl"))
 load(spathfunc("et-err-bias.rda", "et"))
-load(fp(p_dat, "carbon-werr.rda"))
+load(spathfunc("carbon-werr.rda", "cb"))
 
 cland <- bacc2011
 yprod <- as.data.table(out_tab)[Region == "Density"]

@@ -1,12 +1,12 @@
 Package: croplandbias
 Type: Package
-Title: Analysis of error in global landcover using SA cropland layer
+Title: Analysis of error in landcover datasets using SA cropland layer
 Description: As above, but the date the analysis began was earlier than noted
     here.
-Version: 0.4.3
+Version: 0.4.4
 Date: "`r Sys.Date()`"
-Author: Lyndon Estes <lestes@princeton.edu>
-Maintainer: Lyndon Estes <lestes@princeton.edu>
+Author: Lyndon Estes <LEstes@clarku.edu>
+Maintainer: Lyndon Estes <LEstes@clarku.edu>
 Depends:
     TeachingDemos,
     R (>= 3.0.0),
