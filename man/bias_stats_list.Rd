@@ -37,4 +37,3 @@ Calculate weighted bias statistics from list of rasters
 \details{
 This function runs the bias_stats function over a list of rasters
 }
-

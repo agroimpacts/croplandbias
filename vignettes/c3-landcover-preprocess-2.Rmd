@@ -1,0 +1,434 @@
+---
+title: "Fetching and pre-processing landcover data"
+author: "Lyndon Estes"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+vignette: >
+  %\VignetteIndexEntry{c3-landcover-preprocess-2}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Pre-processing of landcover datasets
+Pre-processing global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product. These were converted to 1 km$^2$ percentage cropland estimates after making several versions of MODIS and GlobCover products to account for mixed cropland classes.  A further processing was applied to the two GTI derived cover images.  
+
+Additonal note: This part of the analysis was undertaken on the Linux VM mapper.princeton.edu, using `gdal 1.11`. For full reproducibility of results, this version should be used (`gdalwarp` appears to have different behaviour in older versions when no `-te` (extent) values are passed, which makes the warp slightly different between old and new versions due to different extents after warping).
+
+## Analyses
+### Set-up
+```{r, eval = FALSE}
+library(croplandbias)
+library(gdalUtils)
+library(RCurl)
+# library(RPostgreSQL) # used for initial extraction of sagrid
+library(rgdal)
+library(rgeos)
+library(raster)
+library(httr)
+
+# Paths
+rm(list = ls())
+p_root <- proj_root("croplandbias")
+p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
+p_dl <- fp(p_root, "croplandbias/external/ext_data/landcover/")
+p_orig <- fp(p_root, "croplandbias/external/ext_data/landcover/original")
+
+# Note: installed from homebrew gdal 1.11.5, which is older than version with
+# QGIS on Sierra (2.1)
+gdal_setInstallation(search_path = "/usr/local/bin", rescan = TRUE)
+getOption("gdalUtils_gdalPath")[[1]]$path
+```
+
+### Background data, projections, database connections, and SA grid
+```{r, eval = FALSE}
+# Get SA shape
+data(sashp)
+sa_buf <- gBuffer(sashp, width = 3000)
+
+# projections, etc
+prjstr <- projection(sashp)
+epsg <- data.table(make_EPSG())
+gcsstr <- epsg[like(code, "4326"), prj4]
+
+# Convert SA to GCS for cropping extent
+sa_buf_gcs <- spTransform(sa_buf, CRSobj = CRS(gcsstr))
+
+# Connection (deprecated, from old version of mapper.princeton.edu, since 
+# updated to have whole Africa grid)
+# drv <- dbDriver("PostgreSQL")
+# con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", 
+#                  password = "P0stG1S")
+
+# Create 1 km grid from sa1kilo to rectify grids against that 
+# sql <- paste("SELECT gid, id, ST_AsText(ST_Centroid(geom)) as center", 
+#              "FROM sa1kilo")
+# geom.tab <- dbGetQuery(con, sql)
+# coord.mat <- do.call(rbind, lapply(1:nrow(geom.tab), function(y) {
+#   strip <- gsub("POINT|\\(|\\)", "", geom.tab[y, 3])
+#   coord.mat <- do.call(rbind, strsplit(strsplit(strip, ",")[[1]], " "))
+# }))
+# class(coord.mat) <- "numeric"
+# point.tab <- cbind(geom.tab[, 1:2], coord.mat)
+# colnames(point.tab)[3:4] <- c("x", "y") 
+# pointsXYZ <- point.tab[, c(3:4, 2)]
+# r <- rasterFromXYZ(pointsXYZ)
+# projection(r) <- sa_buf@proj4string
+# sa_r <- writeRaster(r, filename = fp(p_data, "sagrid.tif"), 
+#                     overwrite = TRUE)
+sa_r <- raster(fp(p_data, "sagrid.tif"))
+
+```
+
+### Bring in landcover datasets
+Let's start with the improved/fusion dataset, GLC-Share. Note: the original version of analyses was looking at the geo-wiki dataset, but a coding error referred geowiki to GLC-Share, which was also initially tested, thus error assessments and downstream tests where performed on GLC-Share, not geo-wiki. Both are hybrid-fusion products, therefore serve the same role in analysis. 
+```{r, eval = FALSE}
+setwd(p_dl)
+path <- fp(p_dl, "glc_share")
+r <- raster(fp(path, "glc_shv10_02.Tif"))
+crs(r) <- CRS(gcsstr)
+r <- crop(r, y=sa_buf_gcs, file = fp(path, "glcSA.tif"), 
+          overwrite = TRUE)  # crop to SA
+gdalwarp(srcfile = filename(r), overwrite = TRUE,  
+         dstfile = fp(path, "glcSA_alb.tif"), t_srs = prjstr, 
+         tr = c(1000, 1000), r = "bilinear")
+r <- raster(fp(path, "glcSA_alb.tif"))
+
+# Warp to SA grid
+r <- resample(r, sa_r, method = "bilinear", overwrite = TRUE, 
+              filename = fp(path, "glcSA_alb_rect.tif"))
+r <- mask(r, sa_r, file = fp(p_data, "glcsa_masked.tif"),
+          overwrite = TRUE)
+
+# now compare to originally made glc-share
+# r2 <- raster(fp(p_orig, "upstream/glcsa_masked.tif"))
+# plot(r - r2)
+# cellStats(abs(r - r2), sum)  # identical, hallejulah
+```
+
+#### Globcover 2009
+```{r, eval = FALSE}
+path <- fp(p_dl, "globcover_2009")
+r <- raster(fp(path, "GLOBCOVER_L4_200901_200912_V2.3.tif"))
+r <- crop(r, y = sa_buf_gcs, overwrite = TRUE, 
+          filename = fp(path, "globSA.tif"))  # crop
+gdalwarp(srcfile = filename(r), overwrite = TRUE, 
+         dstfile = fp(path, "globSA_alb.tif"), t_srs = prjstr,
+         tr = c(300, 300))
+r <- raster(fp(path, "globSA_alb.tif"))
+
+# now test against original globSA_alb.tif
+# r2 <- raster(fp(p_orig, "upstream/globSA_alb.tif"))
+# rdif <- r - r2
+# rdif <- Which(rdif != 0)
+# rdifnna <- Which(!is.na(rdif))
+# cellStats(rdif, sum)  # differences at 1117 pixels
+# cellStats(rdifnna, sum)  # out of 27273232 pixels
+```
+
+#### MODIS landcover
+```{r, eval=FALSE}
+path <- fp(p_dl, "MCD12Q1/")
+
+# set up tiles we need and list of corresponding downloads
+tiles <- expand.grid("h" = c(19, 20), "v" = c(11, 12))
+tiles <- apply(tiles, 1, function(x) paste("h", x[1], "v", x[2], sep = ""))
+url <- "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.051/2011.01.01/"
+tile.names <- getURL(url, verbose=TRUE, dirlistonly = TRUE)
+tile.names1 <- strsplit(tile.names, "alt")[[1]]
+tile.names2 <- unique(substr(tile.names1, 20, 64))
+modnames <- tile.names2[sapply(tiles, function(x) grep(x, tile.names2))]
+
+# Quick convert of one MODIS set to get funny resolution
+# have to first change installation of gdal, because homebrew version of gdal 
+# 1.11.5 doesn't have hdf support
+gdpath <- "/Library/Frameworks/GDAL.framework/Versions/2.1/Programs"
+gdal_setInstallation(search_path = gdpath, rescan = TRUE)
+gdal_translate(src_dataset = fp(path, modnames[1]), 
+               dst_dataset = fp(path, "modis1.tif"), sd_index= 1)
+r <- raster(fp(path, "modis1.tif"))  # picks up MODIS resolution
+
+# Translate to geotiff
+batch_gdal_translate(infiles = fp(path, modnames), outdir = path, 
+                     outsuffix = "_LC.tif", sd_index = 1)  
+sdnames <- dir(path, pattern = paste0("LC.tif"), full.names = TRUE)
+
+# set gdal back to 1.11.5, for consistency
+gdpath <- "/usr/local/bin"
+gdal_setInstallation(search_path = gdpath, rescan = TRUE)
+getOption("gdalUtils_gdalPath")[[1]]$path
+
+# warp to albers, mosaic, and clip to SA extent
+gdalwarp(srcfile = sdnames, overwrite = TRUE, 
+         dstfile = fp(path, "modis_type_1_alb.tif"), 
+         t_srs = prjstr, tr = res(r), te = bbox(sa_buf)[1:4])
+r <- raster(fp(path, "modis_type_1_alb.tif"))
+
+# Now check against original MODIS derivative
+# r2 <- raster(fp(p_orig, "upstream/modis_type_1_alb.tif"))
+# rdif <- r - r2
+# rdif <- Which(rdif != 0)
+# rdifnna <- Which(!is.na(rdif))
+# cellStats(rdif, sum)  # 0 differences
+# cellStats(rdifnna, sum)  # out of 10668451 pixels
+# plot(rdif)
+# identical
+
+```
+
+#### South Africa's landcover dataset (30 m)
+```{r, eval = FALSE}
+path <- fp(p_dl, "sa_lc_2009/")
+lcnm <- c("sa_ag.tif", "sa_af.tif")
+gdal_translate(src_dataset = fp(path, "landcover"), 
+               dst_dataset = fp(path, "sa_lc_2009.tif"), 
+               of = "GTiff", ot = "BYTE")
+
+# process masks--extract extract landcover class 2, cultivation, and class 6,
+# plantations, resample, mask with gdal tools
+av <- c(2, 6)
+a <- "sa_lc_2009.tif"
+dang <- Sys.time() 
+r <- lapply(1:2, function(j) {  # j <- 1
+  print(paste("extracting cover for", lcnm[j]))
+  gdal_calc(cstr = paste("A==", av[j], sep = ""), x = list("A" = fp(path, a)), 
+            type = "Byte", filename = fp(path, lcnm[j]))
+  nm <- fp(p_data, paste0(gsub("\\.tif", "", lcnm[j]), "_masked.tif"))
+  ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) {
+    slot(extent(sa_r), x)
+  })
+  print(paste("warping and masking", gsub(path, "", nm)))
+  gdalwarp(srcfile = fp(path, lcnm[j]), t_srs = projection(sa_r), 
+           dstfile = nm, 
+           r = "average", ot = "Float32", te = ext, srcnodata = 255, 
+           dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
+           overwrite = TRUE)
+  file.remove(fp(path, lcnm[j]))
+  r <- raster(nm)
+})
+Sys.time() - dang
+
+# Compare against originals
+# r2 <- lapply(sapply(r, names), function(x) {
+#   raster(fp(p_orig, paste0("upstream", x, ".tif")))
+# })
+# rdif <- lapply(1:2, function(x) r[[x]] - r2[[x]])
+# rdif <- lapply(rdif, function(x) Which(x != 0))
+# rdifnna <- lapply(rdif, function(x) Which(!is.na(x)))
+# lapply(rdif, function(x) cellStats(x, sum))  # 0
+# identical
+```
+
+### Mask out sugarcane
+
+This draws on a proprietary landcover dataset supplied by GeoTerraImage, who should be contacted for access. 
+```{r, eval = FALSE}
+path <- fp(p_dl, "kzn_landcover/")
+unzip("Clp_KZN_2011_V1_grid_w31.zip", exdir = path)
+gdal_translate(src_dataset = fp(path, "Clp_KZN_2011_V1_grid_w31/kznlc11v1w31"),                dst_dataset= fp(path, "kznlandcover.tif"), of = "GTiff")
+system(paste("rm -r", fp(path, "Clp_KZN_2011_V1_grid_w31")))
+r <- raster(fp(path, "kznlandcover.tif"))
+
+# system call to gdal_calc.py to extract landcover class 2, cultivation
+nm <- fp(path, "kzn_cane.tif")  # file.remove(kznlconm)
+ss <- strsplit(filename(r), "/")
+nnm <- ss[[1]][length(ss[[1]])]
+pcalc <- paste0("gdal_calc.py -A ", filename(r), " --outfile=", nm, 
+                " --overwrite --calc='(A==9)|(A==10)'")
+system.time(system(pcalc))  
+r <- raster(nm)
+
+# Warp and resample to SA grid
+gdalwarp(srcfile = filename(r), t_srs = projection(sa_r), 
+         dstfile = fp(path, "kzn_cane_1km.tif"), r = "average", ot = "Float32",          srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
+         verbose = TRUE, overwrite = TRUE)
+r <- raster(fp(path, "kzn_cane_1km.tif"))
+r <- resample(r, sa_r, method = "bilinear")
+r <- mask(r, sa_r, filename = fp(path, "kzn_cane_masked.tif"), 
+          overwrite = TRUE)
+
+# check against original mask
+# r2 <- raster(fp(p_orig, "upstream/kzn_cane_masked.tif"))
+# rdif <- round(r - r2, 7)  # needs rounding otherwise inferno
+# rdif <- Which(rdif != 0)
+# rdifnna <- Which(!is.na(rdif))
+# cellStats(rdif, sum)  # 0 differences
+# cellStats(rdifnna, sum)  # out of 10668451 pixels
+# plot(rdif)
+# identical, with rounding
+
+
+```
+
+### MODIS cropland variants
+Different variants of cropland fractions from MODIS classes 12 and 14 (from the IGBP-DIS scheme). Class 14 is a cropland mosaic class, with minimum of 10% and a max of 60%, so create variants of 10%, 35% (mean) and 60%. 
+```{r, eval = FALSE}
+# MODIS
+path <- fp(p_dl, "MCD12Q1/")
+r <- raster(fp(path, "modis_type_1_alb.tif"))
+r <- stack(r == 12, r == 14)
+r <- brick(r)
+names(r) <- c("cropland", "mosaic")
+  
+# assign percentages
+minset <- c(100, 10)  # assume 10% is min crop cover for MODIS mosaic class
+meanset <- c(100, 35)  # assume 35% is mean crop cover
+maxset <- c(100, 60)  # assume 60% is mean crop cover  
+r_min <- assignLCPct(r, minset, fname = fp(p_data, "mod_1_min.tif"))
+r_mu <- assignLCPct(r, meanset, fname = fp(p_data, "mod_1_mu.tif"))
+r_max <- assignLCPct(r, maxset, fname = fp(p_data, "mod_1_max.tif"))
+
+# aggregate, resample, mask to SA grid
+r <- lapply(list(r_min, r_mu, r_max), function(x) {
+  nm <- gsub("//.tif", "", filename(x))
+  print(paste("Processing", nm))
+  print("...aggregating")
+  agg <- aggregate(x, fact = 2, na.rm = TRUE)  
+  print("...resampling")
+  crop1km <- resample(agg, sa_r, method = "bilinear")
+  print("...masking")
+  crop1km <- mask(crop1km, mask = sa_r, filename = paste0(nm, "_1kmrect.tif"),
+                  overwrite = TRUE)
+  file.remove(filename(x))
+  return(crop1km)
+})
+
+# And them create single raster with summed proportions
+r <- lapply(r, function(x) {
+  nm <- paste0(gsub("\\.tif", "", filename(x)), "_sum.tif")
+  paste(nm)
+  o <- calc(x, sum, filename = nm, overwrite = TRUE)
+  file.remove(filename(x))
+  o
+})
+
+# check against old modmu
+# r2 <- raster(fp(p_orig, "downstream/mod_1_mu_1kmrect_sum.tif"))
+# rdif <- r[[2]] - r2  # needs rounding otherwise inferno
+# rdif <- Which(rdif != 0)
+# rdifnna <- Which(!is.na(rdif))
+# cellStats(rdif, sum)  # 0 differences
+# cellStats(rdifnna, sum)  # out of 10668451 pixels
+# identical
+
+```
+
+### GlobCover cropland variants
+And the same for GlobCover. We want Globcover class 11 (irrigated cropland), class 14 (rainfed), 20 (50-70% cropland), and 30 (20-50% cropland). For the latter two classes we create variants assumung the minimum, mean, and max of each class
+```{r, eval = FALSE}
+path <- fp(p_dl, "globcover_2009")
+r <- raster(fp(path, "globSA_alb.tif"))
+l <- lapply(c(11, 14, 20, 30), function(x) r2 <- r == x)  # pull out classes
+s <- stack(l)
+b <- brick(s, filename = fp(path, "globSA_crop.tif"), overwrite = TRUE)
+rm(s, l)
+  
+# assign percentages
+minset <- c(100, 100, 50, 20)
+maxset <- c(100, 100, 70, 50)
+meanset <- c(100, 100, 60, 35)
+r_min <- assignLCPct(b, minset, fname = fp(p_data, "globSA_300_min.tif"))
+r_mu <- assignLCPct(b, meanset, fname = fp(p_data, "globSA_300_mu.tif"))
+r_max <- assignLCPct(b, maxset, fname = fp(p_data, "globSA_300_max.tif"))
+
+# Aggregate them and resample and mask to SA grid
+r <- lapply(list(r_min, r_mu, r_max), function(x) {
+  nm <- gsub("_300|.tif", "", filename(x))
+  print(paste("Processing", nm))
+  print("...aggregating")
+  agg <- aggregate(x, fact = 3, na.rm = TRUE)  # equiv to summing, div by 900
+  print("...resampling")
+  crop1km <- resample(agg, sa_r, method = "bilinear")
+  print("...masking")
+  crop1km <- mask(crop1km, mask = sa_r, filename = paste0(nm, "_1kmrect.tif"), 
+                  overwrite = TRUE)
+  file.remove(filename(x))
+  return(crop1km)
+})
+
+# And them create single raster with summed proportions
+r <- lapply(r, function(x) {  # x <- r[[1]]
+  nm <- paste0(gsub("\\.tif", "", filename(x)), "_sum.tif")
+  paste(nm)
+  o <- calc(x, sum, filename = nm)
+  file.remove(filename(x))
+  return(o)
+})
+
+# check against old globSA mu
+# r2 <- raster(fp(p_orig, "downstream/globSA_mu_1kmrect_sum.tif"))
+# rdif <- round(r[[2]] - r2, 7)  # needs rounding otherwise inferno
+# hist(rdif, breaks = seq(-7, 7, 0.1))
+# rdif <- Which(rdif != 0)
+# rdifnna <- Which(!is.na(rdif))
+# cellStats(rdif, sum)  # 1518 cells different
+# cellStats(rdifnna, sum)  # out of 2276736 pixels
+```
+
+### Further masking of reference maps
+
+```{r, eval = FALSE}
+# Bring in SA landcover sets and mask
+cover2007 <- brick(fp(p_data, "cover2007.tif"))
+cover2011 <- brick(fp(p_data, "cover2011.tif"))
+
+# sum these also with and without horticulture
+sumfun <- function(x) sum(x, na.rm = TRUE)
+r <- lapply(list(cover2007, cover2011), function(y) {
+  r <- calc(y[[-6]], sumfun)
+  r[r > 100] <- 100
+  writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name),
+              overwrite = TRUE)
+})
+
+# calculate areas
+cellStats(cover2011[[2]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # communal areas 18.7\% cropland
+cellStats(cover2011[[6]] / 100, sum) / 
+  cellStats(calc(cover2011 / 100, sumfun), sum) * 100  # hort 3.1\% 
+# Remove communal farmlands from both dates
+sust_mask <- !is.na(cover2007[[2]]) | !is.na(cover2011[[2]])  
+sust_mask[sust_mask > 0] <- NA
+
+# Set up SA mask including sugarcane and forestry -- add in Mpumalanga sugar
+# cane when it becomes available
+m1 <- raster(fp(p_dl, "kzn_landcover/kzn_cane_masked.tif"))
+m1[is.na(m1)] <- 0
+m1[m1 > 0] <- NA
+m2 <- raster(fp(p_dl, "sa_lc_2009/sa_af_masked.tif"))
+m2[is.na(m2)] <- 0
+m2[m2 > 0] <- NA
+sa_masks <- sa_r > 0
+sa_masks <- m1 + m2 + sa_masks
+rm(m1, m2)
+full_mask <- sa_masks + sust_mask
+
+# Apply masks
+r <- lapply(r, function(x) {  
+  out_name <- paste0(gsub("\\.tif", "", filename(x)), "_mask.tif")
+  o <- mask(x, full_mask, file = out_name, overwrite = TRUE)
+  file.remove(filename(x))
+  return(o)
+})  
+
+
+# test 
+# r2 <- lapply(r, function(x) {
+#   raster(fp(p_orig, paste0("downstream/", basename(filename(x)))))
+# })
+# rdif <- lapply(1:2, function(x) r[[x]] - r2[[x]])
+# rdif <- lapply(rdif, function(x) Which(x != 0))
+# rdifnna <- lapply(rdif, function(x) Which(!is.na(x)))
+# lapply(rdif, function(x) cellStats(x, sum))  # 0
+# lapply(rdifnna, function(x) cellStats(x, sum))  # 2276736
+# identical
+
+```
+
+
+
+
+

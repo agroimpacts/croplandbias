@@ -1,0 +1,57 @@
+code_key
+Key to using remap tables.  
+
+Continental regions (separated into 'frontier' and 'non-frontier')
+100s = North America (non-frontier)
+200s = South America (non-frontier)
+300s = Pacific Ocean (non-frontier)
+400s = Atlantic Ocean (non-frontier)
+500s = Europe (non-frontier)
+600s = Africa (non-frontier)
+700s = Asia (non-frontier)
+800s = Asia (Insular)
+900s = Australia (non-frontier)
+1000s = Indian Ocean (non-frontier)
+1100s = New Zealand (non-frontier)
+1200s = Arctic Ocean (non-frontier)
+1300s = North America (frontier)
+1400s = South America (frontier)
+1700s = Europe (frontier)
+1900s = Asia (frontier)
+2100 = Australia (frontier)
+2300 = New Zealand (frontier)
+
+Ecofloristic zones
+*01 = Boreal coniferous forest
+*02 = Boreal mountain system
+*03 = Boreal tundra woodland
+*04 = Polar
+*05 = Subtropical Desert
+*06 = Subtropical dry forest
+*07 = Subtropical humid forest
+*08 = Subtropical mountain system
+*09 = Subtropical steppe
+*10 = Temperate continental forest
+*11 = Temperate desert
+*12 = Temperate mountain system
+*13 = Temperate oceanic forest
+*14 = Temperate steppe
+*15 = Tropical desert
+*16 = Tropical dry forest
+*17 = Tropical moist deciduous forest
+*18 = Tropical mountain system
+*19 = Tropical rainforest
+*20 = Tropical shrubland
+
+GLC classes:
+1-3 Broadleaf forest
+4-5 Needleleaf forest
+6-8 Mixed forest
+11,12 & 15 Shrub cover classes
+13 Grassland
+14 & 18 Sparse grassland and grassland mosaic classes
+16 Cultivated and managed land
+19 Bare areas
+20-23 Water, snow and ice, and artificial surfaces
+9 & 10 Burnt forest and natural forest mosaic
+17 Forest/Crop mosaic

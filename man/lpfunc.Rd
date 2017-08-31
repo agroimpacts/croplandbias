@@ -28,4 +28,3 @@ point or lines on plot
 For over-plotting custom point or short horizontal lines
 }
 \keyword{internal}
-

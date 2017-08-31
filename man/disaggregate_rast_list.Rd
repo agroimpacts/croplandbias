@@ -28,4 +28,3 @@ be of the form c("f1", "f5", "f10"), etc, where the f stands for factor and
 the number gives the factor by which the raster being disaggregated was 
 aggregated from its original resolution.
 }
-

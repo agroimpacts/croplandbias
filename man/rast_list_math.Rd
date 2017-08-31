@@ -48,4 +48,3 @@ o <- rast_list_math(ilist = list(1:6, 1:5, 1:2), list1 = list1, list2 = list2, e
 plot(o[[1]][[2]][[1]])
 plot(o[[5]][[2]][[1]])
 }
-

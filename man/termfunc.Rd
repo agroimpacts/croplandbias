@@ -19,4 +19,3 @@ plotting
 Predict values from single GAM model term
 }
 \keyword{internal}
-

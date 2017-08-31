@@ -22,4 +22,3 @@ Function found at
 stackoverflow.com/questions/8047668/transparent-equivalent-of-given-color
 }
 \keyword{internal}
-

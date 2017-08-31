@@ -17,4 +17,3 @@ List of rasters aggregated by specified factors, with original raster or list pr
 \description{
 Aggregates a raster or list of rasters using a vector of factors
 }
-

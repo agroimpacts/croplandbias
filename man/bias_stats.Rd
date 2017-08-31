@@ -44,4 +44,3 @@ indicated by the suffix ".nm", meaning it was calculated for all non-NA areas.
 If an unweighted statistic is required, then for a mean value rwgts should be
 a raster of zeros
 }
-

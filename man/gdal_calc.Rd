@@ -26,4 +26,3 @@ The calculated raster
 \description{
 Allows gdal_calc.py to be run, with limited options, for arbitrary calculations
 }
-

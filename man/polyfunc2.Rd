@@ -26,4 +26,3 @@ plotted polygon on previously called plot
 Create arbitrary polygon on plot
 }
 \keyword{internal}
-

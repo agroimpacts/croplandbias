@@ -19,4 +19,3 @@ plotting
 GAM Prediction function
 }
 \keyword{internal}
-

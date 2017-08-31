@@ -85,4 +85,3 @@ bias_statsw(ref, awgts, rerror, fun = sum, evalnm = "rerror", rweight = FALSE,
 bias_statsw(ref, awgts, rerror, fun = sum, evalnm = "rerror", rnd = 4) == 
   round(cellStats(rerror, sum), 4)
 }
-

@@ -19,4 +19,3 @@ Raster with altered values
 \description{
 Block processing function to assign new values to different layers in brick
 }
-

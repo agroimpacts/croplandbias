@@ -1,0 +1,82 @@
+---
+title: "Fetching Landcover Data"
+author: "Lyndon Estes"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+vignette: >
+  %\VignetteIndexEntry{c1-landcover-fetch}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Fetching landcover datasets
+Fetching regional and global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product.
+
+## Downloads
+### Set-up
+```{r, eval = FALSE}
+library(lmisc)  # custom package on GitHub with helper functions
+library(RCurl)
+library(httr)
+
+rm(list = ls())
+p_root <- proj_root("croplandbias")
+p_dl <- fp(p_root, "croplandbias/external/ext_data/landcover/")
+p_orig <- fp(p_root, "croplandbias/external/ext_data/landcover/original")
+```
+
+### Bring in landcover datasets
+#### GLC-Share
+
+Starting with the improved/fusion dataset, GLC-Share. Note: the original version of analyses was looking at the geo-wiki dataset, but a coding error referred geowiki to GLC-Share, which was also initially tested, thus error assessments and downstream tests where performed on GLC-Share, not geo-wiki. Both are hybrid-fusion products, therefore serve the same role in analysis. 
+```{r, eval = FALSE}
+setwd(p_dl)
+path <- fp(p_dl, "glc_share")
+url <- paste0("http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&",
+              "fname=GlcShare_v10_02.zip&access=private")
+download.file(url, method = "auto", destfile = "glc_share.zip")
+unzip("glc_share.zip", exdir = "glc_share")
+```
+
+#### Globcover 2009
+```{r, eval = FALSE}
+path <- fp(p_dl, "globcover_2009")
+url <- "http://due.esrin.esa.int/files/Globcover2009_V2.3_Global_.zip"
+download.file(url, method="auto", destfile = "globcover_2009.zip")
+unzip("globcover_2009.zip", exdir = "globcover_2009")
+```
+
+#### MODIS landcover
+```{r, eval = FALSE}
+path <- fp(p_dl, "MCD12Q1/")
+dir.create(fp(p_dl, "MCD12Q1/"))
+
+# set up tiles we need and list of corresponding downloads
+tiles <- expand.grid("h" = c(19, 20), "v" = c(11, 12))
+tiles <- apply(tiles, 1, function(x) paste("h", x[1], "v", x[2], sep = ""))
+url <- "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.051/2011.01.01/"
+tile.names <- getURL(url, verbose=TRUE, dirlistonly = TRUE)
+tile.names1 <- strsplit(tile.names, "alt")[[1]]
+tile.names2 <- unique(substr(tile.names1, 20, 64))
+modnames <- tile.names2[sapply(tiles, function(x) grep(x, tile.names2))]
+
+# download them
+lapply(modnames, function(x) {  # x <- modnames[1]
+  url2 <- paste0(url, x)
+  GET(url2,
+    authenticate("lestes", "hkPwMHdsKq8DxfrG"),
+    write_disk(fp(path, x)))
+})
+```
+
+#### South Africa's landcover database (30 m)
+```{r, eval = FALSE}
+path <- fp(p_dl, "sa_lc_2009/")
+url <- "http://planet.uwc.ac.za/BGISdownloads/landcover_2009.zip"
+download.file(url, method ="auto", destfile = "landcover_2009.zip")  # painful
+unzip("landcover_2009.zip", exdir = "sa_lc_2009")
+```

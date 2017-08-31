@@ -32,4 +32,3 @@ The type parameter allows for density independent and density
 dependent statistics to be extracted. If density independent, the mean is 
 calculated as the mean of bin-wise means.
 }
-

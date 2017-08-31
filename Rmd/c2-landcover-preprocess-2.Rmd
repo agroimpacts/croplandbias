@@ -8,142 +8,173 @@ output: html_document
 # Pre-processing of landcover datasets
 Fetching and pre-processing of global landcover datasets to be analyzed relative to the SA dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, South Africa's 2009 landcover product, and geo-wiki's cropland fusion map. These were converted to 1 km$^2$ percentage cropland estimates after making several versions of MODIS and GlobCover products to account for mixed cropland classes.  A further processing was applied to the two GTI derived cover images.  
 
+Additonal note: This part of the analysis was undertaken on the Linux VM mapper.princeton.edu, using `gdal 1.11`. For full reproducibility of results, this version should be used (`gdalwarp` appears to have different behaviour in older versions when no `-te` (extent) values are passed, which makes the warp slightly different between old and new versions due to different extents after warping).
+
 ## Analyses
 ### Set-up
 ```{r, eval = FALSE}
 library(SAcropland)
 library(gdalUtils)
 library(RCurl)
-library(RPostgreSQL)
+# library(RPostgreSQL) # used for initial extraction of sagrid
 library(rgdal)
 library(rgeos)
 library(raster)
-library(lmisc)
 ```
 
 Paths
 ```{r, eval = FALSE}
+rm(list = ls())
 #setwd("/u/lestes/analyses/SAcropland/")
-p_root <- proj_root("SAcropland")
-p_fig <- fp(p_root, "SAcropland/external/figures/")
-p_data <- fp(p_root, "SAcropland/external/ext_data/")
+p_root <- proj_root("croplandbias")
+p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
+p_dl <- fp(p_root, "croplandbias/external/ext_data/landcover/")
+
+# Note: installed from homebrew gdal 1.11.5, which is older than version with
+# QGIS on Sierra (2.1)
+getOption("gdalUtils_gdalPath")[[1]]$path
+
 ```
 
 Background data, projections, database connections, and SA grid
 ```{r, eval = FALSE}
 # Get SA shape
-if(!file.exists(fp(p_data, "MZshapes.Rdata"))) {
-  system("wget http://dl.dropboxusercontent.com/u/31890709/MZshapes.Rdata")
-}
-load(fp(p_data, "MZshapes.Rdata"))
-sa_buf <- gBuffer(sa.shp, width = 3000)
-
-# Connection
-drv <- dbDriver("PostgreSQL")
-con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", 
-                 password = "P0stG1S")
+data(sashp)
+sa_buf <- gBuffer(sashp, width = 3000)
 
 # projections, etc
-prjsrid <- 97490  # Albers
-prj_sql <- paste0("select proj4text from spatial_ref_sys where srid=", prjsrid)
-prjstr <- dbGetQuery(con, prj_sql)$proj4text
-gcsid <- 4326  # GCS
-gcs_sql <- paste0("select proj4text from spatial_ref_sys where srid=", gcsid)
-gcsstr <- dbGetQuery(con, gcs_sql)$proj4text
+prjstr <- projection(sashp)
+epsg <- data.table(make_EPSG())
+gcsstr <- epsg[like(code, "4326"), prj4]
 
 # Convert SA to GCS for cropping extent
 sa_buf_gcs <- spTransform(sa_buf, CRSobj = CRS(gcsstr))
 
+# Connection (deprecated, from old version of mapper.princeton.edu, since 
+# updated to have whole Africa grid)
+# drv <- dbDriver("PostgreSQL")
+# con <- dbConnect(drv, dbname = "SouthAfricaSandbox", user = "postgis", 
+#                  password = "P0stG1S")
+
 # Create 1 km grid from sa1kilo to rectify grids against that 
-if(!file.exists(fp(p_data, "sagrid.tif"))) {  # already made? 
-  sql <- paste("SELECT gid, id, ST_AsText(ST_Centroid(geom)) as center", 
-               "FROM sa1kilo")
-  geom.tab <- dbGetQuery(con, sql)
-  coord.mat <- do.call(rbind, lapply(1:nrow(geom.tab), function(y) {
-    strip <- gsub("POINT|\\(|\\)", "", geom.tab[y, 3])
-    coord.mat <- do.call(rbind, strsplit(strsplit(strip, ",")[[1]], " "))
-  }))
-  class(coord.mat) <- "numeric"
-  point.tab <- cbind(geom.tab[, 1:2], coord.mat)
-  colnames(point.tab)[3:4] <- c("x", "y") 
-  pointsXYZ <- point.tab[, c(3:4, 2)]
-  sa_r <- rasterFromXYZ(pointsXYZ)
-  projection(sa_r) <- sa_buf@proj4string
-  sa_r <- writeRaster(sa_r, filename = fp(p_data, "sagrid.tif"), 
-                      overwrite = TRUE)
-} else {
-  sa_r <- raster(fp(p_data, "sagrid.tif"))
-}
+# sql <- paste("SELECT gid, id, ST_AsText(ST_Centroid(geom)) as center", 
+#              "FROM sa1kilo")
+# geom.tab <- dbGetQuery(con, sql)
+# coord.mat <- do.call(rbind, lapply(1:nrow(geom.tab), function(y) {
+#   strip <- gsub("POINT|\\(|\\)", "", geom.tab[y, 3])
+#   coord.mat <- do.call(rbind, strsplit(strsplit(strip, ",")[[1]], " "))
+# }))
+# class(coord.mat) <- "numeric"
+# point.tab <- cbind(geom.tab[, 1:2], coord.mat)
+# colnames(point.tab)[3:4] <- c("x", "y") 
+# pointsXYZ <- point.tab[, c(3:4, 2)]
+# r <- rasterFromXYZ(pointsXYZ)
+# projection(r) <- sa_buf@proj4string
+# sa_r <- writeRaster(r, filename = fp(p_data, "sagrid.tif"), 
+#                     overwrite = TRUE)
+sa_r <- raster(fp(p_data, "sagrid.tif"))
+
 ```
 
 ### Bring in landcover datasets
-Let's start with the improved/fusion datasets, GLC share and geo-wiki's
+Let's start with the improved/fusion dataset, geo-wiki (note: GLC-Share was also initially tested, but it turned out to be identical to geo-wiki)
+
 ```{r, eval = FALSE}
-if(!file.exists(fp(p_data, "glcsa_masked.tif"))) {  # see if file exists,  
-  # to avoid redoing step
-  path <- "/u/lestes/spatial_data/glc_share/"
-  url <- "http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&fname=GlcShare_v10_02.zip&acces=private"
-  download.file(url, method = "auto", destfile = "glc_share.zip")
-  unzip("glc_share.zip", exdir = "glc_share")
-  glc <- raster(fp(path, "glc_shv10_02.Tif"))
-  projection(glc) <- gcsstr
-  glcSA <- crop(glc, y=sa_buf_gcs, file = fp(path, "glcSA.tif"), 
-                overwrite = TRUE)  # crop to SA
-  gdalwarp(srcfile = glcSA@file@name, 
-           dstfile = fp(path, "glcSA_alb.tif"), t_srs = prjstr, 
-           tr = c(1000, 1000), r = "bilinear")
-  glcSA_alb <- raster(fp(path, "glcSA_alb.tif"))
+setwd(p_dl)
+path <- fp(p_dl, "glc_share")
+# url <- "http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&fname=GlcShare_v10_02.zip&acces=private"
+url <- paste0("http://www.fao.org/geonetwork/srv/en/resources.get?id=47948&",
+              "fname=GlcShare_v10_02.zip&access=private")
+download.file(url, method = "auto", destfile = "glc_share.zip")
+unzip("glc_share.zip", exdir = "glc_share")
+glc <- raster(fp(path, "glc_shv10_02.Tif"))
+projection(glc) <- gcsstr
+glcSA <- crop(glc, y=sa_buf_gcs, file = fp(path, "glcSA.tif"), 
+              overwrite = TRUE)  # crop to SA
+gdalwarp(srcfile = glcSA@file@name, 
+         dstfile = fp(path, "glcSA_alb.tif"), t_srs = prjstr, 
+         tr = c(1000, 1000), r = "bilinear")
+glcSA_alb <- raster(fp(path, "glcSA_alb.tif"))
 
-  # Warp to SA grid
-  glcsa <- resample(glcSA_alb, sa_r, method = "bilinear", 
-                    filename = fp(path, "glcSA_alb_rect.tif"))
-  glcsa_m <- mask(glcsa, sa_r, file = fp(p_data, "glcsa_masked.tif"),
-                  overwrite = TRUE)
-} else {
-  glcsa_m <- raster(fp(p_data, "glcsa_masked.tif"))
-}
+# Warp to SA grid
+glcsa <- resample(glcSA_alb, sa_r, method = "bilinear", 
+                  filename = fp(path, "glcSA_alb_rect.tif"))
+glcsa_m <- mask(glcsa, sa_r, file = fp(p_data, "glcsa_masked.tif"),
+                overwrite = TRUE)
 
+```
+
+
+```{r, eval = FALSE}
 if(!file.exists(fp(p_data, "geowikisa_masked.tif"))) {  # see if file exists, to avoid redoing step 
    # first downloaded manually from password protected geo-wiki site
-  path <- "/u/lestes/spatial_data/geowiki/"
+  # path <- "/u/lestes/spatial_data/geowiki/"
+  path <- fp(p_dl, "geowiki/")
   unzip("cropland_hybrid_14052014v8.zip", exdir= "geowiki") 
+  # geowiki <- raster(fp(path, "Hybrid_14052014V8.img"))
   geowiki <- raster(fp(path, "Hybrid_14052014V8.img"))
-  projection(geowiki) <- gcsstr
-  geowikiSA <- crop(geowiki, y=sa_buf_gcs, 
-                    file = fp(path, "geowikiSA.tif"))  # crop to SA
-  gdalwarp(srcfile = geowikiSA@file@name, 
+  # projection(geowiki) <- gcsstr
+  # crs(geowiki) <- CRS(gcsstr)
+  # geowikiSA <- crop(geowiki, y=sa_buf_gcs,
+  #                   file = fp(path, "geowikiSA.tif"))  # crop to SA
+  geowikiSA <- crop(geowiki, y=sa_buf_gcs, overwrite = TRUE, 
+                    file = fp(p_dl, "geowiki/geowikiSA.tif"))  # crop to SA
+  gdalwarp(srcfile = filename(geowikiSA), 
            dstfile = fp(path, "geowikiSA_alb.tif"), t_srs = prjstr, 
            tr = c(1000, 1000), r = "bilinear")
   geowikisa_alb <- raster(fp(path, "geowikiSA_alb.tif"))
   geowikisa <- resample(geowikisa_alb, sa_r, method = "bilinear", # Warp to SA
                         filename = fp(path, "geowikisa_alb_rect.tif"))    
-  geowikisa_m <- mask(glcsa, sa_r, 
+  # geowikisa_m <- mask(glcsa, sa_r, 
+  geowikisa_m <- mask(geowikisa, sa_r, 
                       file = fp(p_data, "geowikisa_masked.tif"), 
                       overwrite = TRUE)
 } else {
   geowikisa_m <- raster(fp(p_data, "geowikisa_masked.tif"))
 }
+
+# test
+tpath <- "croplandbias/external/ext_data/geowikisa_masked.tif"
+geowikisa_mo <- raster(fp(p_root, tpath))
+plot(geowikisa_mo - geowikisa_m)
+
 ```
 
-And the standard products, Globcover 2009 and MODIS
+And the standard products, Globcover 2009 and MODIS. Note the URL used originally has been superseded by the one commented out
 ```{r, eval = FALSE}
 path <- "/u/lestes/spatial_data/globcover_2009/"
 if(!file.exists(fp(path, "globSA_alb.tif"))) {
-  url <- "http://due.esrin.esa.int/globcover/LandCover2009/Globcover2009_V2.3_Global_.zip"
+  url <- paste0("http://due.esrin.esa.int/globcover/LandCover2009/", 
+                "Globcover2009_V2.3_Global_.zip")
+  # url <- "http://due.esrin.esa.int/files/Globcover2009_V2.3_Global_.zip"
   download.file(url, method="auto", destfile = "globcover_2009.zip")
   unzip("globcover_2009.zip", exdir= "globcover_2009")
-  glob <- raster(fp(path, "GLOBCOVER_L4_200901_200912_V2.3.tif"))
-  globSA <- crop(glob, y=sa_buf_gcs)  # crop to extent of SA
-  gdalwarp(srcfile = globSA@file@name, 
-           dstfile = fp(path, "globSA_alb.tif"), t_srs = prjstr, 
-           tr = c(300, 300))
-  globSA_alb <- raster(fp(path, "globSA_alb.tif"))
+  # glob <- raster(fp(path, "GLOBCOVER_L4_200901_200912_V2.3.tif"))
+  glob <- raster(fp(p_dl,
+                    "globcover_2009/GLOBCOVER_L4_200901_200912_V2.3.tif"))
+  # globSA <- crop(glob, y=sa_buf_gcs)  # crop to extent of SA
+  # e <- as(extent(c(-776722.9, 920077.1, -3831848, -2385248)),
+  #                "SpatialPolygons")
+  # crs(e) <- CRS(prjstr)
+  # e <- spTransform(e, CRS(gcsstr))
+  # globSA <- crop(glob, y = e, overwrite = TRUE,
+  globSA <- crop(glob, y = sa_buf_gcs, overwrite = TRUE,
+                 filename = fp(p_dl, "globcover_2009/globSA.tif"))  # crop
+  # gdalwarp(srcfile = filename(globSA), overwrite = TRUE, 
+  gdalwarp(srcfile = filename(globSA), overwrite = TRUE, 
+           dstfile = fp(p_dl, "globSA_alb.tif"), t_srs = prjstr,
+           # tap = TRUE,
+           # dstfile = fp(path, "globSA_alb.tif"), t_srs = prjstr, 
+           tr = c(300, 300))#, te = extent(e)[1:4])
+  # globSA_alb <- raster(fp(path, "globSA_alb.tif"))
+  globSA_alb <- raster(fp(p_dl, "globSA_alb.tif"))
 } else {
   globSA_alb <- raster(fp(path, "globSA_alb.tif"))
 }
 
 # MODIS landcover 
-moddir <- "/u/lestes/spatial_data/MCD12Q1/"
+# moddir <- "/u/lestes/spatial_data/MCD12Q1/"
+moddir <- fp(p_dl, "MCD12Q1")
 if(!file.exists(fp(moddir, "modis_type_1_alb.tif"))) {
   tiles <- expand.grid("h" = c(19, 20), "v" = c(11, 12))
   tiles <- apply(tiles, 1, function(x) paste("h", x[1], "v", x[2], sep = ""))
@@ -165,9 +196,9 @@ if(!file.exists(fp(moddir, "modis_type_1_alb.tif"))) {
   
   # Quick convert of one MODIS set to get funny resolution
   setwd(moddir)
-  gdal_translate(src_dataset = modis[1], dst_dataset= "modis1.tif", sd_index= 1)
+  gdal_translate(src_dataset = modis[1], dst_dataset= "modis1.tif", 
+                 sd_index= 1)
   r <- raster("modis1.tif")
-  r <- res(r)
 
   # Translate to geotiff
   lapply(1:5, function(x) {
@@ -186,6 +217,7 @@ if(!file.exists(fp(moddir, "modis_type_1_alb.tif"))) {
              t_srs = prjstr, tr = res(r), te = bbox(sa_buf)[1:4])
   })  
   mod_1 <- raster("modis_type_1_alb.tif")
+  file.remove(dir(moddir, pattern = "MCD12Q1"))
 } else {
   mod_1 <- raster(fp(moddir, "modis_type_1_alb.tif"))
 }
@@ -194,8 +226,9 @@ if(!file.exists(fp(moddir, "modis_type_1_alb.tif"))) {
 
 And then South Africa's landcover database (30 m)
 ```{r, eval = FALSE}
-path <- "/u/lestes/spatial_data/sa_lc_2009/"
-setwd("/u/lestes/spatial_data/")
+# path <- "/u/lestes/spatial_data/sa_lc_2009/"
+# setwd("/u/lestes/spatial_data/")
+path <- fp(p_dl, "sa_lc_2009/")
 lcnm <- c("sa_ag.tif", "sa_af.tif")
 if(length(dir(p_data, pattern = "sa_.*._masked.tif")) != 2) {
   url <- "http://planet.uwc.ac.za/BGISdownloads/landcover_2009.zip"
@@ -217,12 +250,12 @@ if(length(dir(p_data, pattern = "sa_.*._masked.tif")) != 2) {
     print(paste("extracting cover for", lcnm[j]))
     gdal_calc(cstr = paste("A==", av[j], sep = ""), x = list("A" = a), 
               type = "Byte", filename = lcnm[j])
-    nm <- fp(p_data, 
-                    paste(gsub("\\.tif", "", lcnm[j]), "_masked.tif", sep = ""))
+    # nm <- fp(p_data, paste0(gsub("\\.tif", "", lcnm[j]), "_masked.tif"))
+    nm <- fp(path, paste0(gsub("\\.tif", "", lcnm[j]), "_masked.tif"))
     ext <- sapply(c("xmin", "ymin", "xmax", "ymax"), function(x) {
       slot(extent(sa_r), x)
     })
-    print(paste("warping and masking", gsub(p_data, "", nm)))
+    print(paste("warping and masking", gsub(path, "", nm)))
     gdalwarp(srcfile = lcnm[j], t_srs = projection(sa_r), dstfile = nm, 
              r = "average", ot = "Float32", te = ext, srcnodata = 255, 
              dstnodata = 255, tr = c(1000, 1000), of = "GTiff", verbose = TRUE,
