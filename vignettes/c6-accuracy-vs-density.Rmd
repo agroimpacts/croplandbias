@@ -17,12 +17,11 @@ vignette: >
 
 ## Data
 ```{r, message=FALSE, results='hold', warning=FALSE}
-library(lmisc)
+library(croplandbias)
 library(nlme)
 library(mgcv)
 library(ape)
 library(fitdistrplus)
-library(croplandbias)
 
 # Paths
 rm(list = ls())
@@ -35,10 +34,10 @@ p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
 data(sashp)  # SA shape
 data(gadm)
 # load(fp(p_data2, "ZAF_adm2.rda"))  # magisterial districts
-load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
-load(fp(p_data, "d_grid_abs.rda"))  # actual diffence grids
-paths <- dir(p_data, pattern = "cover*.*11sum_mask.tif$", full.names = TRUE)
-gti <- raster(paths)  # gti 2011
+load(spathfunc("d_grid_act.rda"))  # actual diffence grids
+load(spathfunc("d_grid_abs.rda"))  # actual diffence grids
+paths <- dir(p_data, pattern = , full.names = TRUE)
+gti <- raster(spathfunc("cover2011sum_mask.tif"))  # gti 2011
 crs(gti) <- crs(sashp)
 namask <- raster(fp(p_data, "namask.tif"))  # NA mask
 gti <- mask(gti, namask)  # apply mask to GTI
@@ -230,6 +229,8 @@ lm_med0 <- lapply(nms, function(x) {
 <a href="#top">Back to top</a>
 
 ### Plot the fitted LM models
+
+For evaluation only
 ```{r, eval=FALSE}
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 cols <- c("red", "orange3", "green4", "blue", "black", "grey50")
@@ -238,7 +239,7 @@ lt <- c(rep(2, 4), 1, 1)
 xl <- c(0, 100)
 yl <- c(0, round(max(mu[, snms] / 10 )) * 10)
 
-# mean cropland in districts
+# mean cropland in districts, for evaluation only
 pdf(fp(p_fig, "biases_magdist.pdf"), width = 7, height = 7)
 par(oma = c(5, 0, 0, 0), mar = c(5, 3, 2, 3))
 plot(xl, yl, pch = "", ylab = "% bias", xlab = "% cropland", xaxs = "i", 
@@ -517,12 +518,12 @@ yl1 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat1$fit) * 1.1)),
                   1))
 yl2 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat2$fit) * 1.1)),
                   1))
-pdf(fp(p_fig, "biases_md_lnorm_gam_mu0.pdf"), width = 7, height = 4.5)
+pdf(fp(p_fig, "fig2.pdf"), width = 7, height = 4.5)
 par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2), mgp = c(1.5, 0.5, 0))
 plot(xl, yl1, pch = "", ylab = "Mean Absolute Error (%)", 
      xlab = "% Cropland", xaxs = "i", mgp = c(1.5, 0.5, 0), yaxs = "i", 
-     yaxt = "n")
-axis(2, at = 0:4, round(exp(c(-10, 1:4))))
+     yaxt = "n", tcl = 0.4, mgp = c(2, 0.2, 0))
+axis(2, at = 0:4, round(exp(c(-10, 1:4))), tcl = 0.4, mgp = c(2, 0.2, 0))
 for(i in 1:4) {
   m <- gam_mods[[i]]
   p <- polyfunc(m$pdat1)
@@ -533,6 +534,7 @@ legend("topleft", mcap, lty = 1, lwd = 1.5,
        col = cols, bty = "n", xpd = NA)#, title = "Fit")
 dev.off()
 
+# for evaluation only
 pdf(fp(p_fig, "biases_md_lnorm_gam_mu.pdf"), width = 7, height = 4.5)
 par(oma = c(0, 0, 0, 0), mar = c(3, 3, 2, 2), mgp = c(1.5, 0.5, 0))
 plot(xl, yl2, pch = "", ylab = "Mean Absolute Error (%)", 

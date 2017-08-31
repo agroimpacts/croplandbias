@@ -19,7 +19,6 @@ The following provide further analyses and plots of bias and accuracy metrics ca
 ## Spatial biases
 ### Datasets
 ```{r, message = FALSE}
-# library(R.utils)
 library(croplandbias)
 library(RColorBrewer)
 
