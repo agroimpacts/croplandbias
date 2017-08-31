@@ -12,7 +12,7 @@ output:
     toc_depth: 4
     number_sections: yes
 vignette: >
-  %\VignetteIndexEntry{c8-yield-production}
+  %\VignetteIndexEntry{c11-location-impact}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -44,8 +44,8 @@ prov[prov$id_1 == 10, "id_1"] <- 9 # reset WC to id 10
 
 # yield and carbon data
 load(spathfunc("yieldprod-1km.rda", "yl"))
-load(spathfunc("carbon-tier1.rda")
-load("external/ext_data/cropland-1km.rda")
+load(spathfunc("carbon-tier1.rda", "cb"))
+load(spathfunc("cropland-1km.rda"))
 ```
 
 ## Differences in location
@@ -125,7 +125,7 @@ Between GTI high value areas and each of the four LC-derived datasets.
 # rownames(pms2b) <- 1:4
 
 # Define neighborhood window
-sa_owin <- owin(xrange = bbox(sa.shp)[1, ], yrange = bbox(sa.shp)[2, ],
+sa_owin <- owin(xrange = bbox(sashp)[1, ], yrange = bbox(sashp)[2, ],
                 unitname = "meter")
 # which1 <- function(x) x == 1  # selector function for r to xy
 
@@ -155,16 +155,16 @@ median(mudvec[!like(names(mudvec), "sa30")])
 
 # plot(stack(yclass))
 # plot(is.na(yclass[[1]]) - is.na(yclass[[2]]))
-# plot(is.na(cyld_agg$f1$gti) - is.na(cyld_agg$f1$geow))
+# plot(is.na(cyld_agg$f1$gti) - is.na(cyld_agg$f1$glc))
 
 # output plot
 cols <- c("red", "orange3", "green4", "blue")
 pcol <- makeTransparent(cols, alpha = c(120))
 pcol2 <- makeTransparent(cols, alpha = c(30))
 
-plot(1:4, pch = 20, col = pcol)
+# plot(1:4, pch = 20, col = pcol)
 bs <- do.call(rbind, mudists[c(1, 2, 4)])
-lcnms <- c("SA LC", "GlobCover", "MODIS", "Geowiki")
+lcnms <- c("SA LC", "GlobCover", "MODIS", "GLC-Share")
 
 pdf(full_path(p_fig, "location_offset.pdf"), height = 3.5, width = 4, 
     bg = "transparent")

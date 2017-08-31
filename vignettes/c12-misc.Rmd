@@ -1,37 +1,44 @@
 ---
 title: "Miscellaneous calculations"
 author: "Lyndon Estes"
-date: "August 24, 2015"
+date: "`r Sys.Date()`"
 output: 
-  html_document:
-    highlight: tango
-    theme: spacelab
-    toc: yes 
-    number_sections: true
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+vignette: >
+  %\VignetteIndexEntry{c11-location-impact}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
-# Miscellaneous additional calculations
+# Overview
+
+A few additional calculations undertaken for the paper
 
 ```{r, message=FALSE}
-library(rgdal)
-library(SAcropland)
+library(croplandbias)
 library(rgeos)
-library(lmisc)
 
-p_dat <- full_path(full_path(proj_root("SAcropland"), "SAcropland"), 
-                   "external/ext_data")
+rm(list = ls())
+p_root <- fp(proj_root("croplandbias"), "croplandbias")
+p_edat <- fp(p_root, "external/ext_data")
 
 ```
 
 ## Area of sub-Saharan Africa and South Africa's share of that area
 ```{r}
-eco <- readOGR(dsn = fp(p_dat, "africa_ecofloristic_zones.sqlite"), 
+eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones")
-eco@proj4string <- CRS(projection(raster(nrow = 1, ncol = 1)))
-af <- readOGR(dsn = fp(p_dat, "africa_countries_alb.sqlite"), 
+crs(eco) <- crs(projection(raster(nrow = 1, ncol = 1)))
+af <- readOGR(dsn = fp(p_edat, "africa_countries_alb.sqlite"), 
                layer = "africa_countries_alb")
-af@data <- af@data[, c(1, 3:4, 6:7)]
-ecoalb <- spTransform(eco, af@proj4string)
+ecoalb <- spTransform(eco, crs(africa))
 
 # cut down countries
 nms <- af$cntry_name[af$region == "Northern Africa"]
