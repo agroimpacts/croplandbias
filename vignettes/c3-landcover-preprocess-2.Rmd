@@ -24,11 +24,9 @@ Additonal note: This part of the analysis was undertaken on the Linux VM mapper.
 library(croplandbias)
 library(gdalUtils)
 library(RCurl)
-# library(RPostgreSQL) # used for initial extraction of sagrid
-library(rgdal)
-library(rgeos)
-library(raster)
 library(httr)
+# library(RPostgreSQL) # used for initial extraction of sagrid
+library(rgeos)
 
 # Paths
 rm(list = ls())
@@ -372,8 +370,8 @@ r <- lapply(r, function(x) {  # x <- r[[1]]
 
 ```{r, eval = FALSE}
 # Bring in SA landcover sets and mask
-cover2007 <- brick(fp(p_data, "cover2007.tif"))
-cover2011 <- brick(fp(p_data, "cover2011.tif"))
+cover2007 <- brick(spathfunc("cover2007.tif"))
+cover2011 <- brick(spathfunc("cover2011.tif"))
 
 # sum these also with and without horticulture
 sumfun <- function(x) sum(x, na.rm = TRUE)
@@ -398,7 +396,7 @@ sust_mask[sust_mask > 0] <- NA
 m1 <- raster(fp(p_dl, "kzn_landcover/kzn_cane_masked.tif"))
 m1[is.na(m1)] <- 0
 m1[m1 > 0] <- NA
-m2 <- raster(fp(p_dl, "sa_lc_2009/sa_af_masked.tif"))
+m2 <- raster(spathfunc("sa_af_masked.tif"))
 m2[is.na(m2)] <- 0
 m2[m2 > 0] <- NA
 sa_masks <- sa_r > 0

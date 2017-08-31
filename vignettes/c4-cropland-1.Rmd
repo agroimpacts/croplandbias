@@ -31,12 +31,12 @@ p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
 Derived from global landcover products
 
 ```{r, eval = FALSE}
-salc <- raster(fp(p_data, "sa_ag_masked.tif")) * 100
-ds <- dir(p_data, "globSA*.*1kmrect_sum.tif", full.names = TRUE)[c(2:3, 1)]
-globsa_list_sum <- lapply(ds, raster)
-ds <- dir(p_data, "mod_1*.*1kmrect_sum.tif", full.names = TRUE)[c(2:3, 1)]
-modsa_list_sum <- lapply(ds, raster)
-glc <- raster(fp(p_data, "glcsa_masked.tif"))
+salc <- raster(spathfunc("sa_ag_masked.tif")) * 100
+nms <- paste0("globSA_", c("min", "mu", "max"), "_1kmrect_sum.tif")
+globsa_list_sum <- lapply(nms, function(x) raster(spathfunc(x)))
+nms <- paste0("mod_1_", c("min", "mu", "max"), "_1kmrect_sum.tif")
+modsa_list_sum <- lapply(nms, function(x) raster(spathfunc(x)))
+glc <- raster(spathfunc("glcsa_masked.tif"))
 lclist <- c(salc, globsa_list_sum, modsa_list_sum, glc)  # into list
 names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu",
                    "modmax", "glc")
@@ -44,9 +44,9 @@ names(lclist) <- c("sa30", "globmin", "globmu", "globmax", "modmin", "modmu",
 
 #### Reference data
 ```{r, eval = FALSE}
-load(fp(p_data, "MZshapes.Rdata"))  
-ds <- dir(p_data, "cover*.*sum_mask.tif$", full.names = TRUE)
-gti <- lapply(ds, raster)
+data(sashp)
+nms <- paste0("cover", c("2007", "2011"), "sum_mask.tif")
+gti <- lapply(nms, function(x) raster(spathfunc(x)))
 names(gti) <- c("g2007", "g2011")
 ```
 <a href="#top">Back to top</a>
@@ -99,16 +99,16 @@ save(lc_agg, gti_agg, area_wgts, file = fp(p_data, "agg_cropland.rda"))
 save(dlist_act, file = fp(p_data, "d_grid_act.rda"))
 save(dlist_abs, file = fp(p_data, "d_grid_abs.rda"))
 
-# Write out the gti cover raster and the actual bias rasters for running impact of bias examples in land
-# surface model (25 km resolution)
+# Write out the gti cover raster and the actual bias rasters for running impact
+# of bias examples in land surface model (25 km resolution)
 r <- gti_agg$f25$g2011
 projection(r) <- projection(salc)
-writeRaster(r, filename = fp(p_data, "gti_2011_25km.tif"))
+writeRaster(r, filename = fp(p_data, "gti_2011_25km.tif"), overwrite = TRUE)
 b <- brick(stack(lapply(c("sa30", "globmu", "modmu", "glc"), function(x) {
   dlist_act[[x]]$f25$g2011
 })))
 projection(b) <- projection(salc)
-writeRaster(b, filename = fp(p_data, "lc_bias_25km.tif"))
+writeRaster(b, filename = fp(p_data, "lc_bias_25km.tif"), overwrite = TRUE)
 
 # r <- raster(fp(p_data, "gti_2011_25km.tif"))
 # lcb <- brick(fp(p_data, "lc_bias_25km.tif"))
@@ -240,7 +240,7 @@ Checks: compared number of non-NA cells coming out of each GTI version at each l
 ### 2011 reference-test bias/accuracy
 Whole country and agricultural areas only
 ```{r, eval = FALSE}
-load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
+load(spathfunc("d_grid_act.rda"))  # actual diffence grids
 
 # Subset difference grids, for 2011
 snms <- c("sa30", "globmu", "modmu", "glc")
@@ -353,7 +353,7 @@ lc_pct_diff <- lapply(dlist_act[snms], function(x) {
 })
 
 # construct agricultural area union mask
-lev <- names(lc_list[[1]])
+lev <- names(lc_pct_diff[[1]])
 lcu <- lapply(lev, function(x) {
   print(paste(".", x))
   lcb <- lapply(snms, function(y) {
@@ -407,7 +407,8 @@ for(chk in list(c("modmu", "f25"), c("glc", "f10"), c("sa30", "f50"),
 }  # check
 
 svec <- c("mu_nm", "mua_nm", "mu", "mua", "mu_bin", "mua_bin")
-aa <- c(rep("Country", 2), rep("Agricultural", 2), rep("Density independent", 2))
+aa <- c(rep("Country", 2), rep("Agricultural", 2), 
+        rep("Density independent", 2))
 bb <- c("Bias", "MAE", "Bias", "MAE", "Bias", "MAE")
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 

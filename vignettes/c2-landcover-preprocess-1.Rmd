@@ -25,7 +25,7 @@ Much of the original analysis was undertaken on the Mapping Africa server, using
 This was done for both the 2007 and 2011 datasets, using a script that pulled out the fields, found the bad ones, read them into an R data object, ran pprepair over it, and then stuck the cleaned geometries back into a postgis table holding the full dataset. The intersection was then performed. 
 
 ```{r, eval = FALSE}
-source("R_ext/grid-fields-intersect-postgis.R")  # run on mapper.princeton.edu
+source("grid-fields-intersect-postgis.R")  # run on mapper.princeton.edu
 ```
 
 ### Calculating field areas 
@@ -33,8 +33,18 @@ source("R_ext/grid-fields-intersect-postgis.R")  # run on mapper.princeton.edu
 The next step was running the following script to calculate the area for different cropcover classes in each 1 km^2^ pixel.  This created two core gridded datasets, cover2007.tif and cover2011.tif. 
 
 ```{r, eval = FALSE}
-source("R_ext/grid-fields-intersect-analyze.R")  # run on mapper.princeton.edu
+source("grid-fields-intersect-analyze.R")  # run on mapper.princeton.edu
 ```
+
+Note: both scripts are available as system files under the sub-folder
+```{r, eval = FALSE}
+library(croplandbias)
+system.file("extR", "grid-fields-intersect-postgis.R", 
+            package = "croplandbias")
+system.file("extR", "grid-fields-intersect-analyze.R", 
+            package = "croplandbias")
+```
+
 
 
 
