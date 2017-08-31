@@ -19,6 +19,6 @@ Helps get paths to system files installed with package
 }
 \details{
 For argument y, use "lc" for landcover, "yl" for "yield", "cl" 
-for "climate", "ab" for "abm".
+for "climate", "ab" for "abm", "cb" for "carbon"
 }
 \keyword{internal}

@@ -1,12 +1,20 @@
 ---
-title: "Yield and production bias/accuracy"
+title: "Cropland error impact on locational accuracy"
 author: "Lyndon Estes"
+date: "`r Sys.Date()`"
 output: 
-  html_document:
-    highlight: tango
-    theme: spacelab
-    toc: yes 
-    number_sections: true
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+vignette: >
+  %\VignetteIndexEntry{c8-yield-production}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 # Impact of cropland errors on location
@@ -18,26 +26,25 @@ Evaluated in terms of how landcover map error impacts the ability to locate area
 Derived carbon (section 6) and yield estimates (section 8). 
 
 ```{r, eval=FALSE}
-library(SAcropland)
+library(croplandbias)
 library(xtable)
 library(RColorBrewer)
 library(spatstat)
-p_root <- full_path(proj_root("SAcropland"), "SAcropland")
-p_fig <- full_path(p_root, "paper/figures/")
-p_data <- full_path(p_root, "external/ext_data/")
-p_data2 <- full_path(p_root, "data/")
-#p_carb <- full_path(p_root, "SAcropland/external/ext_data/carbon/")
-# load(full_path(p_data, "yield-bias.rda"))
+
+rm(list = ls())
+p_root <- fp(proj_root("croplandbias"), "croplandbias")
+p_fig <- fp(p_root, "inst/paper/figures/")
+p_data <- fp(p_root, "inst/extdata/")
 
 # SA provinces
-prov <- readOGR("external/ext_data/provinces.sqlite", layer = "provinces")
+data(sashp)
+data(prov)
 prov <- prov[prov$id_1 != 9, ]  # remove Princeton Edward Islands
 prov[prov$id_1 == 10, "id_1"] <- 9 # reset WC to id 10
-load("external/ext_data/MZshapes.Rdata")
 
 # yield and carbon data
-load("external/ext_data/yieldprod-1km.rda")
-load("external/ext_data/carbon-tier1.rda")
+load(spathfunc("yieldprod-1km.rda", "yl"))
+load(spathfunc("carbon-tier1.rda")
 load("external/ext_data/cropland-1km.rda")
 ```
 
