@@ -36,14 +36,13 @@ p_edat <- fp(p_root, "external/ext_data")
 eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones")
 crs(eco) <- crs(projection(raster(nrow = 1, ncol = 1)))
-af <- readOGR(dsn = fp(p_edat, "africa_countries_alb.sqlite"), 
-               layer = "africa_countries_alb")
+data(africa)
 ecoalb <- spTransform(eco, crs(africa))
 
 # cut down countries
-nms <- af$cntry_name[af$region == "Northern Africa"]
+nms <- africa$cntry_name[africa$region == "Northern Africa"]
 nms <- nms[nms != "Sudan"]  # keep Sudan
-ssa <- af[!af$cntry_name %in% nms, ]
+ssa <- africa[!africa$cntry_name %in% nms, ]
 ssa <- ssa[-grep("Island|Sao|Verde|Mauritius|Helena|Comoros|Portugal|Seychell",
                  as.character(ssa@data$cntry_name)), ]
 ssa <- gBuffer(ssa, width = 0)
@@ -67,7 +66,7 @@ ssaeco <- ssaeco[-1, ]
 # calculate area of remainder
 afarea <- gArea(ssaeco) / 10000
 # plot(af[af$cntry_name == "South Africa", ])
-saarea <- gArea(af[af$cntry_name == "South Africa", ]) / 10000
+saarea <- gArea(africa[africa$cntry_name == "South Africa", ]) / 10000
 saarea / afarea
 
 ```
@@ -82,9 +81,9 @@ sum(a) / sum(b)
 
 ## Calculation of error propagation
 ```{r}
-load(fp(p_dat, "cropland-werr-2011.rda"))
-load(fp(p_dat, "yield-prod-accbias.rda"))
-load(fp(p_dat, "et-err-bias.rda"))
+load(spathfunc("cropland-werr-2011.rda"))
+load(spathfunc("yield-prod-accbias.rda", "yl"))
+load(spathfunc("et-err-bias.rda", "et"))
 load(fp(p_dat, "carbon-werr.rda"))
 
 cland <- bacc2011
