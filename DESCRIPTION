@@ -3,7 +3,7 @@ Type: Package
 Title: Analysis of error in global landcover using SA cropland layer
 Description: As above, but the date the analysis began was earlier than noted
     here.
-Version: 0.4
+Version: 0.4.1
 Date: "`r Sys.Date()`"
 Author: Lyndon Estes <lestes@princeton.edu>
 Maintainer: Lyndon Estes <lestes@princeton.edu>
@@ -15,9 +15,9 @@ Depends:
     rgdal,
     dtraster
 Imports:
-    rgdal,
     lmisc,
     raster,
+    rgdal,
     dtraster
 License: GPL (>= 3)
 RoxygenNote: 6.0.1
