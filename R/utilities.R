@@ -84,12 +84,13 @@ lpfunc <- function(x, y, w = NULL, col, size = 1, type, pch = NULL) {
 #' @param x Name of system file to find
 #' @param y Sub-directory under inst/extdata where file is stored (details)
 #' @return Full path to system file
-#' @details For argument y, use "lc" for landcover, "yl" for "yield", and "cl" 
-#' for "climate".
+#' @details For argument y, use "lc" for landcover, "yl" for "yield", "cl" 
+#' for "climate", "ab" for "abm". 
 #' @keywords internal
 #' @export 
 spathfunc <- function(x, y = "lc") {
-  mat <- cbind(c("lc", "yl", "cl"), c("landcover", "yieldprod", "climate"))
+  mat <- cbind(c("lc", "yl", "cl", "ab"), 
+               c("landcover", "yieldprod", "climate", "abm"))
   base <- mat[which(mat[, 1] == y), 2]
   system.file(paste0("extdata/", base), x, package = "croplandbias")
 }

@@ -18,7 +18,7 @@ Full path to system file
 Helps get paths to system files installed with package
 }
 \details{
-For argument y, use "lc" for landcover, "yl" for "yield", and "cl" 
-for "climate".
+For argument y, use "lc" for landcover, "yl" for "yield", "cl" 
+for "climate", "ab" for "abm".
 }
 \keyword{internal}
