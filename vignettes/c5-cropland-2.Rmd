@@ -18,11 +18,10 @@ vignette: >
 The following provide further analyses and plots of bias and accuracy metrics calculated from spatial error maps created in [cropland-1](c4-cropland-1.html). 
 ## Spatial biases
 ### Datasets
-```{r, eval = FALSE}
-library(lmisc)
-library(R.utils)
-library(RColorBrewer)
+```{r, message = FALSE}
+# library(R.utils)
 library(croplandbias)
+library(RColorBrewer)
 
 # Paths
 rm(list =ls())
@@ -32,18 +31,18 @@ p_fig <- fp(p_root, "croplandbias/inst/paper/figures/")
 
 # Load in datasets
 data(sashp)  # SA shape
-load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
-load(fp(p_data, "d_grid_abs.rda"))  # actual diffence grids
-load(fp(p_data, "bias_stats.rda"))  # bias statistics
-load(fp(p_data, "bias_stats_gti.rda"))  # bias statistics
-load(fp(p_data, "agg_cropland.rda"))  # aggregated cropland
+load(spathfunc("d_grid_act.rda"))  # actual diffence grids
+load(spathfunc("d_grid_abs.rda"))  # actual diffence grids
+load(spathfunc("bias_stats.rda"))  # bias statistics
+load(spathfunc("bias_stats_gti.rda"))  # bias statistics
+load(spathfunc("agg_cropland.rda"))  # aggregated cropland
 # cellStats(!is.na(dlist_act$modmu$f1$g2011), sum)
 ```
 
 ## Error maps
 Plot maps of biases at different resolutions. To avoid the visual distortion of NA areas filled in by larger levels of aggregation, each aggregated difference must be disaggregated first and masked before plotting.   
 ```{r, eval = FALSE}
-namask <- raster(fp(p_data, "namask.tif"))
+namask <- raster(spathfunc("namask.tif"))
 # cellStats(namask, sum)
 snms <- c("sa30", "globmu", "modmu", "glc")  # all lc data (no MOD/GC extremes)
 lev <- c("f1", "f25", "f50", "f100")  # just show four levels
@@ -83,7 +82,7 @@ cx <- 1.4
 lcol <- "black"
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 lev2 <- c("1 km", "25 km", "50 km", "100 km")
-pdf(fp(p_fig, "bias_map.pdf"), height = 7, width = 7)
+pdf(fp(p_fig, "fig1a.pdf"), height = 7, width = 7)
 par(mfrow = c(4, 4), mar = c(0, 0, 0, 0), oma = c(3.7, 1.5, 1.5, 0))
 for(i in 1:length(snms)) {
   print(snms[i])
@@ -109,7 +108,7 @@ lev <- names(dlist_abs$sa30)
 The map below was created by the code above, showing biases at 1 km, 25 km, 50 km, and 100 km from South Africa's landcover product, the mean estimates from 
 GlobCover and MODIS, and GLC-SHARE.  
 
-<p align="center"><img src="../inst/paper/figures/bias_map.pdf" width="400px"></p> 
+<p align="center"><img src="../inst/paper/figures/fig1a.pdf" width="400px"></p> 
 
 <a href="#top">Back to top</a>
 
@@ -271,8 +270,8 @@ dev.off()
 Calculate how much cropland estimates differ between datasets
 ```{r, eval = FALSE}
 fact <- c(5, 10, 25, 50, 100)
-paths <- dir(p_data, "cover*.*sum_mask.tif$", full.names = TRUE)
-gti <- lapply(paths, raster)
+nms <- paste0("cover", c("2007", "2011"), "sum_mask.tif")
+gti <- lapply(nms, function(x) raster(spathfunc(x)))
 names(gti) <- c("g2007", "g2011")
 gti <- lapply(gti, function(x) raster::mask(x, namask))  # apply namask
 snms <- c("sa30", "globmu", "modmu", "glc")  # all lc data (no MOD/GC extremes)
@@ -337,17 +336,14 @@ stats2011 <- round((refkm2[1] - lckm2[2, ]) / refkm2[1] * 100, 1)
 # sapply(gti, function(x) cellStats(!is.na(x) , sum))
 
 totkm2 <- cellStats(!is.na(gti_agg$f1$g2011), sum)
-save(stats2007, stats2011, totkm2, refkm2, 
+save(stats2007, stats2011, totkm2, refkm2, lckm2, 
      file = fp(p_data, "total-cropland.rda"))
 ```
 <a href="#top">Back to top</a>
 
 Total square kilometers of South Africa being evaluated
 ```{r, echo = FALSE}
-library(lmisc)
-p_root <- proj_root("croplandbias")
-p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
-load(fp(p_data, "total-cropland.rda"))
+load(spathfunc("total-cropland.rda"))
 totkm2
 ```
 
@@ -382,7 +378,7 @@ Weighted by __actual__ cropland percentage, and then, with aggregation, by numbe
 ```{r, eval = FALSE}
 # Create weights mask
 fact <- c(5, 10, 25, 50, 100)
-namask <- raster(fp(p_data, "namask.tif"))  # NA mask
+namask <- raster(spathfunc("namask.tif"))  # NA mask
 # cellStats(!is.na(gti$g2011), sum)
 # cellStats(namask, sum)
 
@@ -463,7 +459,7 @@ pchs <- c("+", "o", "x")
 yax <- seq(yl[1], yl[2], 5)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-pdf(fp(p_fig, "cropland_bias_main.pdf"), height = 7, width = 7)
+pdf(fp(p_fig, "fig1b.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -484,8 +480,9 @@ for(i in 1:length(svec)) {
     }
   }
 }
-axis(1, at = seq(1.5, 18.5, 3), labels = fact)
-axis(2, at = yax, labels = yax, las = 2)
+mgp <- c(2, 0.2, 0)
+axis(1, at = seq(1.5, 18.5, 3), labels = fact, tcl = 0.4, mgp = mgp)
+axis(2, at = yax, labels = yax, las = 2, tcl = 0.4, mgp = mgp)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
 mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
 legend(x = 12.4, y = -19.9, legend = lcnms, pch = 15, col = cols, adj = 0,
@@ -510,7 +507,7 @@ xtable::xtable(baccdiff)
 
 Across country, agricultural region only, or bin-wise (cropland density classes) mean.
 ```{r, eval = FALSE}
-load(fp(p_data, "lcf_out2011.rda"))
+load(spathfunc("lcf_out2011.rda"))
 lcf <- data.table(lcf_out11)
 
 fact <- c(1, 5, 10, 25, 50, 100)
@@ -616,19 +613,4 @@ gti_bins <- lapply(gti_agg, function(x) {
 bins_25 <- lapply(gti_bins, function(x) freq(x$g2011))
 barplot(bins_25$f1[1:19, 2])
 ```
-
-
-
-```{r, eval=FALSE, echo=FALSE}
-DF <- do.call(rbind.data.frame, lapply(snms[4], function(x) {
-  dstats_all[[2]][[x]]$f1[, c(1, 8)]
-}))
-dlm <- lm(mu ~ poly(V1, degree = 2), data = DF)
-plot(DF[, 1], DF[, 2])
-lines(predict.lm(dlm, newdata = data.frame("V1" = 1:110)))
-```
-
-
-
-
 
