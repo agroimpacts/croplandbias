@@ -30,7 +30,11 @@ Based on Ramankutty et al's (2008) procedure for calculating cropland area, foll
 
 Use SA provinces with GTI to create the amount of agricultural land estimates per province, akin to provincial statistics used by Ramankutty et al (2008). Note: they mentioned SA has 11 administrative units they used, but the publications they cited [here](http://www.statssa.gov.za/publications/DiscussLandAccounts/DiscussLandAccounts.pdf) has just 9 provinces, so maybe they mistakenly counted Lesotho and Swaziland? 
 
-```{r, eval=FALSE}
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
+```{r, eval = e}
 library(croplandbias)
 library(xtable)
 library(RColorBrewer)
@@ -79,7 +83,7 @@ fact <- c(5, 10, 25, 50, 100)
 ## Analyses
 ### Cropland fractions
 #### Get provincial $cf$ factors from 1 km GTI dataset
-```{r, eval=FALSE}
+```{r, eval = e}
 # rasterize provinces and stack with gti raster, convert to data.table
 provr <- rasterize(prov, y = gti, field = "id_1")#,
                    # filename = "external/ext_data/provinces.tif")
@@ -107,7 +111,7 @@ cf <- gti_dt[, list("carea" = sum(f), "parea" = length(f),
 #### Calculate cropland fractions from 1 km landcover sets 
 
 Derived at 1 km resolution rather 10 km (as in Ramankutty et al, 2008), using data.tables to calculate provincial-level correction factors for each
-```{r, eval=FALSE}
+```{r, eval = e}
 lcs <- stack(list("prov" = provr, stack(lc_list)))
 lcs_dt <- na.omit(as.data.table.raster(lcs, xy = TRUE))
 setkey(lcs_dt, prov)
@@ -127,7 +131,7 @@ pcf <- data.table(pcf)
 <a href="#top">Back to top</a>
 
 #### Re-scale landcover cropland fraction using $cf$ factors
-```{r, eval=FALSE}
+```{r, eval = e}
 # multiply each lc fraction value by correction factor for the particular 
 # province
 lcs_dta <- copy(lcs_dt)
@@ -203,7 +207,7 @@ lc_adj <- dropLayer(lc_adj, i = 1)
 ```
 
 #### Aggregate adjusted rasters, compare cropland fractions
-```{r, eval=FALSE}
+```{r, eval = e}
 tl <- lapply(1:4, function(x) lc_adj[[x]])
 names(tl) <- snms
 lc_agg <- aggregate_rast_list(fact, tl) # landcover rasters 
@@ -357,7 +361,7 @@ stats <- lapply(disagg, function(x) {
 <a href="#top">Back to top</a>
 
 #### Plot for supplementary data
-```{r, eval=FALSE}
+```{r, eval = e}
 lims <- c(ceiling(min(sapply(stats, function(x) x[3, ]))), 
           floor(max(sapply(stats, function(x) x[21, ]))))
 rng <- range(sapply(stats, range))
@@ -399,7 +403,7 @@ dev.off()
 Following Monfreda et al's (2008) methods. They appear to have used the 2002 district census, so we will use the more recent 2007 census.  
 
 #### Process magisterial districts and census data
-```{r, eval=FALSE}
+```{r, eval = e}
 # Load in yield dataset and magisterial district polygons
 data(gadm)  # magisterial districts
 yld <- fread(spathfunc("maize_wheat_2007.csv", "yl"))
@@ -487,7 +491,7 @@ md@data <- md@data[, -c(2:4)]
 #### Calculate individual crop fractions
 
 Rasterize MDs and calculate individual crop fractions (for maize), for both GTI and adjusted LC cropland fractions
-```{r, eval = FALSE}
+```{r, eval = e}
 mdr <- rasterize(md, provr, field = "id")  # write to temp space if needed
 mds <- stack(list("md" = crop(mdr, gti_agg$f1$gti), "gti" = gti_agg$f1$gti,
                   lc_adj))  # use gti and lc_adj  
@@ -548,7 +552,7 @@ for(i in 1:5) print(length(which(md_lcl[[i]]$mfrac > 1)))
 Note: when assigning crop fractions, previously we set all fractions > 1 to 1, but now turned this off because Monfreda et al (2010) allow for double-cropping. This is likely not correct, but we are doing it here to be consistent.
 
 #### Assign back crop fraction and yield to grid 
-```{r, eval=FALSE}
+```{r, eval = e}
 # first in data.tables
 asnms <- c("gti", snms)
 crop_ay <- lapply(c("gti", snms), function(j) {
@@ -583,7 +587,7 @@ awgts <- lapply(awgts, function(x) x[[1]])  # unlist on inner loop
 <a href="#top">Back to top</a>
 
 #### Aggregate yields and crop area to coarser resolutions
-```{r, eval=FALSE}
+```{r, eval = e}
 # Yield aggregation - aggregating with weighting by crop fraction
 # using a custom data.table function to allow this 
 # note: 30/8/2017 - had to fix dtraster::dt_aggregate because of change in 
@@ -658,7 +662,7 @@ for(i in lev) {
 #### Crop production estimates at different aggregation scales
 
 Including differences relative to reference versions.
-```{r, eval=FALSE}
+```{r, eval = e}
 # Type A aggregation: multiplying aggregated yields by aggregated fractions
 # with crop-fraction weighted aggregate yields
 cpagg1 <- lapply(1:length(cyld_agg), function(x) {
@@ -818,7 +822,7 @@ stats_yd1 <- dstats(y_diff1d)
 <a href="#top">Back to top</a>
 
 ### Plot difference maps
-```{r, eval=FALSE}
+```{r, eval = e}
 # a raft of variables and plotting functions
 dnms <- ls()[grep("[y_|p_]diff*.*d", ls())]
 stnms <- ls()[grep("^stats_", ls())]
@@ -931,7 +935,7 @@ Type 2 and 3 yield aggregation are incorrect methods, and are not retained here 
 ### Primary method
 
 Density weighted, following methods developed in cropland bias portion of analysis, but here metrics are based on residuals rather than percent errors, because of infinite values (harvested area/yield disaggregation methods mean that there are gridded yields/production estimates in some areas where no reference value exists, leading to infinite values if converting to percent)
-```{r, eval=FALSE}
+```{r, eval = e}
 
 # yield bias/accuracy
 # reshape
@@ -991,7 +995,7 @@ for(i in c("f1", "f25", "f100")) {
 ### Secondary method
 
 Bias and accuracy within agricultural areas
-```{r, eval=FALSE}
+```{r, eval = e}
 # create mask for non-cropland areas, unioning GTI and LC areas with maize
 # estimates -- probably not needed if doing production estimates.  
 lev <- names(y_diff1[[1]])
@@ -1072,7 +1076,7 @@ for(chk in list(c("modmu", "f25"), c("glc", "f10"), c("sa30", "f50"),
 ### Bias/MAE plots
 
 #### Density-weighted
-```{r, eval = FALSE}
+```{r, eval = e}
 alph <- c(225, 60)
 x <- c(0, 3, 6, 9, 12, 15)
 w <- 3 / 8
@@ -1146,7 +1150,7 @@ dev.off()
 #### Agricultural area
 
 Supplemental
-```{r, eval=FALSE}
+```{r, eval = e}
 alph <- c(225, 60)
 
 mula <- c("p1mu", "y1mu")
@@ -1222,7 +1226,7 @@ do.call(cbind, lapply(lev, function(x) {
 ```
 
 ### Supplemental tables
-```{r, eval = FALSE}
+```{r, eval = e}
 vnms <- c(rep("Yield", length(snms)), rep("Production", length(snms)))
 aa <- c("Bias", "MAE")
 
@@ -1286,7 +1290,7 @@ print(out_xtab, type = "latex", file = fp(p_fig, "yldprod-bias.tex"),
 ### The impacts of spatial patterns in bias
 
 (Supplmentary analysis not presented). Using yield gap estimates as an indicator. First we'll bring in mean rainfall as a means of calculating a spatial correlation in yield gap estimates. Using data from the Princeton Global Forcing dataset, downloaded from the Africa Flood and Drought Monitor. Note: currently this is only explored here. 
-```{r, eval=FALSE}
+```{r, eval = e}
 # rainfall layer prepared for SA crop subsidy analysis
 load(spathfunc("mag_dist_clim.rda", "cl"))
 
@@ -1372,7 +1376,7 @@ ygaps <- cbind.data.frame(scen, "sensor" = rep(snms, 3),
                           rbind(ygap_bias, ygap_bias2, ygap_bias3))
 ygap_xtab <- xtable::xtable(ygaps, digits = 1)
 print(ygap_xtab, type = "latex", 
-      file = "paper/figures/ygap-spat-bias.tex")
+      file = fp(p_fig, "ygap-spat-bias.tex"))
 
 # save(list = ls(), file = fp(p_data, "yield-bias.rda"))
 save(out_tab, file = fp(p_data, "yield-prod-accbias.rda"))
@@ -1382,7 +1386,7 @@ save(cyld_agg, cpagg1, file = fp(p_data, "yieldprod-1km.rda"))
 
 The actual impact of the spatial bias is fairly low, being largely cancelled out by biases in other direction in other areas. This illustrates the advantage of a statistically constrained approach to crop area estimates.  
 
-```{r, eval=FALSE, echo=FALSE}
+```{r, eval = FALSE, echo=FALSE}
 # looking into pycnophylactic interpolation of correction factors
 # install.packages("pycno")
 require(pycno)
