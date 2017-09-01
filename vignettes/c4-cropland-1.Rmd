@@ -28,7 +28,7 @@ This section of the analysis calculates the differences between the reference cr
 ## Analyses
 ```{r, echo = FALSE}
 # set this to true when want to run all chunks when not knitting
-e <- FALSE  
+e <- TRUE  
 ```
 
 ```{r, eval = e}
@@ -254,7 +254,7 @@ Checks: compared number of non-NA cells coming out of each GTI version at each l
 ### 2011 reference-test bias/accuracy
 Whole country and agricultural areas only
 ```{r, eval = e}
-load(spathfunc("d_grid_act.rda"))  # actual diffence grids
+load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
 
 # Subset difference grids, for 2011
 snms <- c("sa30", "globmu", "modmu", "glc")
