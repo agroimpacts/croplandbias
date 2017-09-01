@@ -3,7 +3,7 @@ Type: Package
 Title: Analysis of error in landcover datasets using SA cropland layer
 Description: As above, but the date the analysis began was earlier than noted
     here.
-Version: 0.4.18
+Version: 0.4.19
 Date: "`r Sys.Date()`"
 Author: Lyndon Estes <LEstes@clarku.edu>
 Maintainer: Lyndon Estes <LEstes@clarku.edu>

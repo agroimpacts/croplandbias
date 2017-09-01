@@ -27,7 +27,11 @@ vignette: >
 Selection of magisterial districts and associated landcover sets for use in ABM example, and analysis of bias after initial allocation of agents performed based on available farmland estimated from 100 m downscaled versions of the landcover data. 
 
 ## Data
-```{r, eval=FALSE}
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
+```{r, eval = e}
 library(croplandbias)
 library(readxl)
 library(rgeos)
@@ -87,7 +91,7 @@ Looking at the data in QGIS, including some rainfall maps from earlier papers an
    + Fouriesburg (275)
    + Marquard (288)
    
-```{r, eval=FALSE}
+```{r, eval = e}
 # md <- md[mdsel[mdsel < 314], ]
 abm_md <- md[mdsel[mdsel %in% c(269, 274:275, 288)], ]
 # writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4", 
@@ -99,7 +103,7 @@ rgeos::gArea(abm_md, byid = TRUE) / 10000 / 100
 <a href="#top">Back to top</a>
 
 ### Extract cropland percentage from selected districts
-```{r, eval=FALSE}
+```{r, eval = e}
 gti4 <- crop(gti, extent(abm_md))
 lc4 <- crop(lc_list, extent(abm_md))
 cb <- brick(stack(gti4, lc4))
@@ -116,7 +120,7 @@ Cropland percentages:
 <a href="#top">Back to top</a>
 
 ### Map selected districts, cropland percentage, and error
-```{r, eval = FALSE}
+```{r, eval = e}
 brks1 <- seq(0, 100, 10)
 cols1 <- rev(terrain.colors(length(brks1) - 1))
 brks2 <- c(-100, -80, -60, -40, -20, -10, -5, -1)
@@ -175,7 +179,7 @@ dev.off()
 ## Select modeled yields for agent-based model
 
 From earlier simulation of DSSAT yields (see [rcropmod](https://github.com/ldemaz/rcropmod) package), to provide information on yield variability in response to climate, results produced here for input into ABM
-```{r, eval = FALSE}
+```{r, eval = e}
 dssat <- fread(spathfunc("dssat-yields.csv", "ab"))
 dssat_red <- copy(dssat)
 
@@ -221,7 +225,7 @@ Performed separately and described in the methods and supplemental.
 ## Analysis of agent allocation errors
 
 From output of ABM simulations
-```{r, eval = FALSE}
+```{r, eval = e}
 abias <- data.table(read_excel(spathfunc("stats.xlsx", "ab")))
 setkey(abias, MD)
 hhs <- data.table(read_excel(spathfunc("agent-bias2.xlsx", "ab"), sheet = 2))
