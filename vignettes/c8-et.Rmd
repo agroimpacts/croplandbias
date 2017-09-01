@@ -29,7 +29,11 @@ Bias in PET estimates as calculated using different version of the cropland data
 ## Prepare datasets
 
 Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc. 
-```{r, eval = FALSE}
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
+```{r, eval = e}
 library(croplandbias)
 library(RColorBrewer)
 
@@ -44,7 +48,7 @@ p_et <- fp(p_root, "croplandbias/inst/extdata/et")
 data(sashp)  # SA shape
 load(spathfunc("d_grid_act.rda"))  # actual diffence grids
 gti <- raster(spathfunc("cover2011sum_mask.tif"))  / 100  # gti 2011
-namask <- raster(fp(p_data, "namask.tif"))  # NA mask
+namask <- raster(spathfunc("namask.tif"))  # NA mask
 gti <- mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
@@ -72,7 +76,7 @@ names(awgts) <- "f25"
 mask25k <- awgts$f25 > 0  # mask for et datasets
 
 # read in ET estimates, but drop first year because of VIC problem in January
-etf <- dir(p_et, pattern = "nc", full.names = TRUE)
+etf <- Sys.glob(file.path(.libPaths(), "croplandbias", "extdata", "et", "*.nc"))
 etb <- lapply(etf, function(x) brick(x))
 etb <- lapply(etb, function(x) dropLayer(x, i = 1:12))
 
@@ -96,7 +100,7 @@ lnames <- sapply(1981:2008, function(x) paste0(mos, "_", substr(x, 3, 4)))
 lnames <- lnames[1:length(lnames)]
 # length(lnames) == nlayers(etba[[1]])
 etba <- lapply(etba, function(x) {
-  b <- raster::mask(x, mask25k, maskvalue = 0)
+  b <- mask(x, mask25k, maskvalue = 0)
   names(b) <- lnames
   b
 })
@@ -121,7 +125,7 @@ mi <- sapply(unique(mos), function(x) which(mos == x))  # month index
 ## Process ET time series
 
 Figure out which months produce maximum ET values, calculate monthly means, overall country-wide time series, etc. 
-```{r, eval=FALSE}
+```{r, eval = e}
 # Calculate mean, median, mode of dates in time series when PET max occurs
 et_max <- lapply(etba, function(x) {
   bi <- stack(lapply(1:nrow(yi), function(y) {
@@ -204,7 +208,7 @@ et_mm <- lapply(et_mutot, function(x) x[[mm_yr]])
 <a href="#top">Back to top</a>
 
 ## Calculate ET differences
-```{r, eval=FALSE}
+```{r, eval = e}
 # difference rasters and convert to percent
 # between time series annual mean
 ilist <- lapply(et_amu[2:5], function(x) x[[1]])
@@ -245,7 +249,7 @@ gsmx_diff <- lapply(ilist, function(b) {
 
 ## Plot difference maps
 ### Reshape and disaggregate lists
-```{r, eval = FALSE}
+```{r, eval = e}
 # function to reshape lists for use in disaggregate_rast_list
 disaggl <- function(rl, lev = "f25") {
   bo <- lapply(rl, function(x) {
@@ -280,7 +284,7 @@ dstats <- function(dlist) {
 <a href="#top">Back to top</a>
 
 ### Plot maps
-```{r, eval=FALSE}
+```{r, eval = e}
 # calculate single set of breakranges for all sets
 statsl <- lapply(l2dag, dstats)
 rng <- do.call(cbind, lapply(statsl, function(x) {
@@ -365,7 +369,7 @@ dev.off()
 
 ### Primary method (density dependent)
 
-```{r, eval=FALSE}
+```{r, eval = e}
 # weighted mean functions
 wm <- function(x, w) stats::weighted.mean(x, w)
 wma <- function(x, w) stats::weighted.mean(abs(x), w)
@@ -396,7 +400,7 @@ et_gsw <- rbind(a, b)
 ```
 
 ### Agricultural area method
-```{r, eval=FALSE}
+```{r, eval = e}
 lev_vec <- "f25"
 # create mask for non-cropland areas, unioning GTI and each LC, filtering out
 # areas of no-cropland (<1/2% total cover)
