@@ -60,9 +60,9 @@ colnames(mu) <- c("N", "na", "f")
 # district shapes, filtered by N missing data, minimum fraction, and area
 data(gadm)
 md <- spTransform(gadm, CRSobj = crs(sashp))
+md <- crop(md, sashp)
 mdfilt <- mu[mu$na < 20 & mu$f > 5 & mu$N < 1500, ]  
 mdsel <- as.numeric(row.names(mdfilt))
-
 
 # Examine, including in QGIS
 # plot(md)
@@ -83,6 +83,7 @@ Looking at the data in QGIS, including some rainfall maps from earlier papers an
    + Marquard (288)
    
 ```{r, eval=FALSE}
+# md <- md[mdsel[mdsel < 314], ]
 abm_md <- md[mdsel[mdsel %in% c(269, 274:275, 288)], ]
 # writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4", 
 #          driver = "SQLite")
@@ -96,7 +97,7 @@ rgeos::gArea(abm_md, byid = TRUE) / 10000 / 100
 ```{r, eval=FALSE}
 gti4 <- crop(gti, extent(abm_md))
 lc4 <- crop(lc_list, extent(abm_md))
-cb <- brick(stack(gti4, lc4))#, filename = "external/ext_data/cropland-md4.tif",             overwrite = TRUE)
+cb <- brick(stack(gti4, lc4))
 cpct <- extract(gti4, abm_md)
 dcrop_pct <- round(sapply(cpct, sum, na.rm = TRUE) / sapply(cpct, length), 1)
 ```
@@ -262,21 +263,24 @@ hhprodlc <- abias[var == "prod",
 hhprod_def <- (hhprod - hhprodlc) / hhprod * 100  # household deficit
 
 cexs <- seq(1, 2, 1 / 3)
-pdf(fp(p_fig, "agent-bias.pdf"), height = 2.5, width = 5)
+pdf(fp(p_fig, "fig6.pdf"), height = 2.5, width = 5.25)
 cx <- c(0.9, 1, 0.6)
-par(mfrow = c(1, 3), mar = c(4, 2, 0.5, 0), mgp = c(0.9, 0.1, 0), 
-    tcl = -0.2, oma = c(3.5, 0, 0, 0.1))
+par(mfrow = c(1, 3), mar = c(4, 2.5, 0.5, 0), mgp = c(1.1, 0.1, 0), 
+    tcl = 0.2, oma = c(3.5, 0, 0, 0.1))
 scols <- c("red", "orange3", "green4", "blue")
 cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
 plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20, 
      ylab = "% land unallocated", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
+mtext("A", side = 3, adj = -0.2, line = -1)
 plot(unlist(pctbias), unlist(land_def), col = cols, cex = cexs, pch = 20, 
      ylab = "% land deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
+mtext("B", side = 3, adj = -0.2, line = -1)
 plot(unlist(pctbias), unlist(hhprod_def), col = cols, cex = cexs, pch = 20, 
      ylab = "% food deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
+mtext("C", side = 3, adj = -0.2, line = -1)
 par(xpd = NA)
 
 yst <- seq(0.05, 0.23, 0.18 / 4)
