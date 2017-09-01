@@ -34,9 +34,8 @@ p_et <- fp(p_root, "croplandbias/inst/extdata/et")
 
 # cropland data
 data(sashp)  # SA shape
-load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
-paths <- dir(p_data, pattern = "cover*.*11sum_mask.tif$", full.names = TRUE)
-gti <- raster(paths) / 100  # gti 2011
+load(spathfunc("d_grid_act.rda"))  # actual diffence grids
+gti <- raster(spathfunc("cover2011sum_mask.tif"))  / 100  # gti 2011
 namask <- raster(fp(p_data, "namask.tif"))  # NA mask
 gti <- mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
@@ -330,9 +329,7 @@ flex_legend(ncuts = length(brks) - 1, legend.text = legtext[i],
             cex.val = cx - 0.4, textcol = lcol, bordercol = lcol)
 dev.off()
 
-
-fnm <- "et_bias_map.pdf"
-pdf(fp(p_fig, fnm), height = 6, width = 7)
+pdf(fp(p_fig, "fig4.pdf"), height = 6, width = 7)
 par(mfcol = c(2, 2), mar = c(0, 0, 0, 0), oma = c(4, 0, 1, 0))
 for(j in 1) {
   print(names(l2dagd)[j])
