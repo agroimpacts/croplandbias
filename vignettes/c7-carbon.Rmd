@@ -26,7 +26,11 @@ vignette: >
 Based on the Ruesch & Gibbs (2008) approach for estimating carbon density. 
 
 ## Data
-```{r, eval=FALSE}
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE  
+```
+```{r, eval = e}
 library(croplandbias)
 library(RColorBrewer)
 library(xtable)
@@ -43,7 +47,7 @@ p_edat <- fp(p_root, "croplandbias/external/ext_data/")
 ### Carbon values
 
 Starting with the carbon look-up tables used for Africa by Ruesch & Gibbs (2008), inputs downloaded from [here](http://cdiac.ornl.gov/epubs/ndp/global_carbon/carbon_documentation.html#methods).
-```{r, eval=FALSE}
+```{r, eval = e}
 cfiles <- Sys.glob(file.path(.libPaths(), "croplandbias/extdata/carbon", "m*"))
 nms <- gsub("*.*m6|\\.txt", "", cfiles)
 cval_list <- lapply(1:length(cfiles), function(x) {
@@ -87,7 +91,7 @@ colnames(ctab2)[1] <- "class"
   + 20:23 => drop (water, snow, artificial surfaces)
   + 19 => drop (bare areas)
 
-```{r, eval=FALSE}
+```{r, eval = e}
 ctabf <- round(rbind(colMeans(ctab2[c(1, 3), 2:ncol(ctab2)], na.rm = TRUE), 
                      colMeans(ctab2[10:11, 2:ncol(ctab2)], na.rm = TRUE), 
                      ctab2[4:6, 2:ncol(ctab2)]))
@@ -133,7 +137,7 @@ colnames(ctabo) <- LC
 
 ## Analysis
 ### Prepare raster data
-```{r, eval=FALSE}
+```{r, eval = e}
 load(spathfunc("d_grid_act.rda"))  # actual diffence grids
 gti <- raster(spathfunc("cover2011sum_mask.tif"))  / 100  # gti 2011
 namask <- raster(fp(p_data, "namask.tif"))  # NA mask
@@ -167,7 +171,7 @@ gti_bins <- lapply(gti_agg, function(x) {
 <a href="#top">Back to top</a>
 
 ### Create cropland carbon estimates
-```{r, eval=FALSE}
+```{r, eval = e}
 # Apply carbon estimates
 # Function for pixel-wise carbon density from crop & non-crop fractions
 carbon <- function(fcrop, cropC, noncropC) {
@@ -213,7 +217,7 @@ save(gti_c, lc_c, file = fp(p_carb, "carbon-tier1.rda"))
 <a href="#top">Back to top</a>
 
 ### Difference the carbon datasets
-```{r, eval=FALSE}
+```{r, eval = e}
 # percent difference
 pct_diff <- function(x, y) (x - y) / x * 100
 c_pct_diff <- lapply(1:length(gti_c), function(x) {
@@ -272,7 +276,7 @@ stats <- lapply(disagg, function(x) {
 
 ## Outputs
 ### Carbon error maps
-```{r, eval=FALSE}
+```{r, eval = e}
 data(sashp)  # SA shape
 
 # Plotting colors
@@ -315,7 +319,7 @@ dev.off()
 
 ### Carbon bias/accuracy
 #### Calculate how much country-level carbon estimates differ between datasets
-```{r, eval = FALSE}
+```{r, eval = e}
 lev_vec <- names(c_pct_diff)
 # created mask for non-cropland areas, unioning GTI and each LC, filtering out
 # areas of no-cropland (<1/2% total cover)
@@ -422,7 +426,7 @@ print(totc_xtab, type = "latex", caption.placement = "top",
 
 Weighted by __actual__ cropland percentage, and then, with aggregation, by number of pixels being aggregated. 
 
-```{r, eval=FALSE}
+```{r, eval = e}
 # Helper functions to pass into data.table
 # not used - switch on if quantiles needs
 # bfn <- function(x, y) {
@@ -498,11 +502,11 @@ for(i in c("f1", "f25", "f10")) { # i <- "f1"
   }
 }
 save(cb_statsw_mua, cb_statsw_mu, file = fp(p_carb, "carbon-werr.rda"))
-````
+```
 
 #### Secondary methods
 
-```{r, eval=FALSE}
+```{r, eval = e}
 # selection variables
 nms1 <- c(colnames(ctabo), "wgt")
 nms2 <- colnames(ctabo)
@@ -601,7 +605,7 @@ N <- function(namevec, stats, i1, i2) {
 #### Extract statistics for secondary methods
 
 For supplementals
-```{r, eval=FALSE}
+```{r, eval = e}
 # cropland area only
 a <- extract_stat0(LC, cb_stats, "all", "m")  # mean cropland only 
 b <- cbind(V2 = "All", a[, lapply(.SD, mean), by = V1, .SDcols = lev_vec])
@@ -652,7 +656,7 @@ all(round(sapply(lev_vec, function(x) {
 
 #### Density-weighted bias and accuracy 
 
-```{r, eval = FALSE}
+```{r, eval = e}
 cols <- c("red", "orange3", "green4", "blue")
 lcnms <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 pnms <- c("Forest", "Secondary", "Shrubland", "Grassland", "Sparse")
@@ -720,14 +724,14 @@ legend(x = 12.1, y = 120, legend = c("Forest", "Shrubland", "Sparse", "Mean"),
 dev.off()
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval = e}
 # Agricultural area bias and accuracy, deleted here. Values in supplmentary table
 # Check repo before 17/10/15 to retrieve
 ```
 <a href="#top">Back to top</a>
 
 ### Supplementary bias/accuracy tables
-```{r, eval=FALSE}
+```{r, eval = e}
 # Statistics from cropland area-weighted measures, reshaped
 cb_stats_s <- lapply(rev(mutype), function(i) {
   i0 <- do.call(rbind, lapply(snms, function(x) {
@@ -796,7 +800,7 @@ print(fulls_xtab, type = "latex", file = fp(p_fig, "C-bias-accuracy.tex"),
 
 ```
 
-```{r, eval=FALSE, echo=FALSE}
+```{r, eval = e, echo=FALSE}
 # Plot means against cropland density, deleted because not used. Check repo
 # prior to 17/10/15 if needed. 
 ```

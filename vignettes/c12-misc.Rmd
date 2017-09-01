@@ -25,11 +25,13 @@ vignette: >
 \setcounter{section}{12}
 <!-- # Miscellaneous additional analyses -->
 
-A few additional calculations and figures undertaken for the paper
+A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
 
 ```{r, message=FALSE}
 library(croplandbias)
 library(rgeos)
+library(dismo)
+library(sf)
 
 rm(list = ls())
 p_root <- fp(proj_root("croplandbias"), "croplandbias")
@@ -37,10 +39,10 @@ p_edat <- fp(p_root, "external/ext_data")
 
 ```
 
-## Area of sub-Saharan Africa and South Africa's share of that area
-```{r}
+## South Africa's share of sub-Saharan Africa's area
+```{r, message = FALSE, warning = FALSE}
 eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
-               layer = "africa_ecofloristic_zones")
+               layer = "africa_ecofloristic_zones", verbose = FALSE)
 crs(eco) <- crs(projection(raster(nrow = 1, ncol = 1)))
 data(africa)
 ecoalb <- spTransform(eco, crs(africa))
@@ -136,6 +138,45 @@ et_prop <- round(et_err[Variable == "Annual Mean", MAE] /
 yp_prop
 c_prop
 et_prop
+```
+
+## Land cover data illustrated
+### Read in base land cover in Albers format
+
+For this part, steps taken to get to Albers-transformed versions of base land cover data subset to South Africa's extent will have to be repeated. Due to size, these were not saved in the repo. See [chapter 1](c1-landcover-fetch.html) and [chapter 3](c3-landcover-preprocess-2.html) to recreate these initial steps. 
+```{r, eval = FALSE}
+sa_r <- raster(spathfunc("sagrid.tif"))
+glc <- raster(fp(p_edat, "landcover/glc_share/glcSA_alb_rect.tif"))
+glob <- raster(fp(p_edat, "landcover/globcover_2009/globSA.tif"))
+modis <- raster(fp(p_edat, "landcover/MCD12Q1/modis_type_1_alb.tif"))
+salc <- raster(fp(p_edat, "landcover/sa_lc_2009/sa_lc_2009.tif"))  
+
+# Also read in raw shapefile of South Africa field boundaries, for illustration
+gti <- st_read(dsn = fp(p_edat, "landcover/gti/GTI_SA_2011.shp"), 
+               layer = "GTI_SA_2011")
+
+# small image of South Africa, in GCS
+ext <- extent(c(26.95, 27.35, -28.72, -28.43))  # arbitrary small cropland area
+base <- gmap(ext, type = "satellite", lonlat = TRUE)
+baseext <- as(extent(base), "SpatialPolygons")
+gcs <- data.table(make_EPSG())[like(code, "4326"), prj4]
+crs(baseext) <- CRS(gcs)
+baseext_alb1 <- spTransform(baseext, crs(sashp))  # albers used for paper
+baseext_alb2 <- spTransform(baseext, crs(salc))  # albers used for native SA-LC
+
+```
+
+### Crop them down to save
+```{r, eval = FALSE}
+gtic <- st_intersection(gti, st_as_sf(baseext))  # crop GTI layers
+salcc <- crop(salc, baseext_alb2)  # crop with native albers extent
+globc <- crop(glob, baseext_alb1)  # crop with albers used in paper
+modisc <- crop(modis, baseext_alb1)  # ""
+glcc <- crop(glc, baseext_alb1)  # ""
+
+plot(glob)
+plot(st_geometry(gtic), col = "transparent", add = TRUE)
+
 ```
 
 

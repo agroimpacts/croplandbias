@@ -109,11 +109,6 @@ r <- resample(r, sa_r, method = "bilinear", overwrite = TRUE,
               filename = fp(path, "glcSA_alb_rect.tif"))
 r <- mask(r, sa_r, file = fp(p_data, "glcsa_masked.tif"),
           overwrite = TRUE)
-
-# now compare to originally made glc-share
-# r2 <- raster(fp(p_orig, "upstream/glcsa_masked.tif"))
-# plot(r - r2)
-# cellStats(abs(r - r2), sum)  # identical, hallejulah
 ```
 
 #### Globcover 2009
@@ -126,14 +121,6 @@ gdalwarp(srcfile = filename(r), overwrite = TRUE,
          dstfile = fp(path, "globSA_alb.tif"), t_srs = prjstr,
          tr = c(300, 300))
 r <- raster(fp(path, "globSA_alb.tif"))
-
-# now test against original globSA_alb.tif
-# r2 <- raster(fp(p_orig, "upstream/globSA_alb.tif"))
-# rdif <- r - r2
-# rdif <- Which(rdif != 0)
-# rdifnna <- Which(!is.na(rdif))
-# cellStats(rdif, sum)  # differences at 1117 pixels
-# cellStats(rdifnna, sum)  # out of 27273232 pixels
 ```
 
 #### MODIS landcover
@@ -217,16 +204,6 @@ r <- lapply(1:2, function(j) {  # j <- 1
   r <- raster(nm)
 })
 Sys.time() - dang
-
-# Compare against originals
-# r2 <- lapply(sapply(r, names), function(x) {
-#   raster(fp(p_orig, paste0("upstream", x, ".tif")))
-# })
-# rdif <- lapply(1:2, function(x) r[[x]] - r2[[x]])
-# rdif <- lapply(rdif, function(x) Which(x != 0))
-# rdifnna <- lapply(rdif, function(x) Which(!is.na(x)))
-# lapply(rdif, function(x) cellStats(x, sum))  # 0
-# identical
 ```
 
 ### Mask out sugarcane
@@ -250,24 +227,13 @@ r <- raster(nm)
 
 # Warp and resample to SA grid
 gdalwarp(srcfile = filename(r), t_srs = projection(sa_r), 
-         dstfile = fp(path, "kzn_cane_1km.tif"), r = "average", ot = "Float32",          srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
+         dstfile = fp(path, "kzn_cane_1km.tif"), r = "average", ot = "Float32",
+         srcnodata = 255, tr = c(1000, 1000), of = "GTiff", 
          verbose = TRUE, overwrite = TRUE)
 r <- raster(fp(path, "kzn_cane_1km.tif"))
 r <- resample(r, sa_r, method = "bilinear")
 r <- mask(r, sa_r, filename = fp(path, "kzn_cane_masked.tif"), 
           overwrite = TRUE)
-
-# check against original mask
-# r2 <- raster(fp(p_orig, "upstream/kzn_cane_masked.tif"))
-# rdif <- round(r - r2, 7)  # needs rounding otherwise inferno
-# rdif <- Which(rdif != 0)
-# rdifnna <- Which(!is.na(rdif))
-# cellStats(rdif, sum)  # 0 differences
-# cellStats(rdifnna, sum)  # out of 10668451 pixels
-# plot(rdif)
-# identical, with rounding
-
-
 ```
 
 ### MODIS cropland variants
@@ -311,16 +277,6 @@ r <- lapply(r, function(x) {
   file.remove(filename(x))
   o
 })
-
-# check against old modmu
-# r2 <- raster(fp(p_orig, "downstream/mod_1_mu_1kmrect_sum.tif"))
-# rdif <- r[[2]] - r2  # needs rounding otherwise inferno
-# rdif <- Which(rdif != 0)
-# rdifnna <- Which(!is.na(rdif))
-# cellStats(rdif, sum)  # 0 differences
-# cellStats(rdifnna, sum)  # out of 10668451 pixels
-# identical
-
 ```
 
 ### GlobCover cropland variants
@@ -332,7 +288,7 @@ l <- lapply(c(11, 14, 20, 30), function(x) r2 <- r == x)  # pull out classes
 s <- stack(l)
 b <- brick(s, filename = fp(path, "globSA_crop.tif"), overwrite = TRUE)
 rm(s, l)
-  
+
 # assign percentages
 minset <- c(100, 100, 50, 20)
 maxset <- c(100, 100, 70, 50)
@@ -364,15 +320,6 @@ r <- lapply(r, function(x) {  # x <- r[[1]]
   file.remove(filename(x))
   return(o)
 })
-
-# check against old globSA mu
-# r2 <- raster(fp(p_orig, "downstream/globSA_mu_1kmrect_sum.tif"))
-# rdif <- round(r[[2]] - r2, 7)  # needs rounding otherwise inferno
-# hist(rdif, breaks = seq(-7, 7, 0.1))
-# rdif <- Which(rdif != 0)
-# rdifnna <- Which(!is.na(rdif))
-# cellStats(rdif, sum)  # 1518 cells different
-# cellStats(rdifnna, sum)  # out of 2276736 pixels
 ```
 
 ### Further masking of reference maps
@@ -420,19 +367,6 @@ r <- lapply(r, function(x) {
   file.remove(filename(x))
   return(o)
 })  
-
-
-# test 
-# r2 <- lapply(r, function(x) {
-#   raster(fp(p_orig, paste0("downstream/", basename(filename(x)))))
-# })
-# rdif <- lapply(1:2, function(x) r[[x]] - r2[[x]])
-# rdif <- lapply(rdif, function(x) Which(x != 0))
-# rdifnna <- lapply(rdif, function(x) Which(!is.na(x)))
-# lapply(rdif, function(x) cellStats(x, sum))  # 0
-# lapply(rdifnna, function(x) cellStats(x, sum))  # 2276736
-# identical
-
 ```
 
 

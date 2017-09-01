@@ -27,6 +27,10 @@ vignette: >
 The following provide further analyses and plots of bias and accuracy metrics calculated from spatial error maps created in [cropland-1](c4-cropland-1.html). 
 ## Spatial biases
 ### Datasets
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE  
+```
 ```{r, message = FALSE}
 library(croplandbias)
 library(RColorBrewer)
@@ -49,7 +53,7 @@ load(spathfunc("agg_cropland.rda"))  # aggregated cropland
 
 ## Error maps
 Plot maps of biases at different resolutions. To avoid the visual distortion of NA areas filled in by larger levels of aggregation, each aggregated difference must be disaggregated first and masked before plotting.   
-```{r, eval = FALSE}
+```{r, eval = e}
 namask <- raster(spathfunc("namask.tif"))
 # cellStats(namask, sum)
 snms <- c("sa30", "globmu", "modmu", "glc")  # all lc data (no MOD/GC extremes)
@@ -76,7 +80,7 @@ names(disagg) <- snms
 ```
 
 ### Plot of selected rasters and levels 
-```{r, eval = FALSE}
+```{r, eval = e}
 # Plotting colors
 # cols <- colorRampPalette(c("red", "grey80", "blue4"))
 brks <- c(-100.1, -75, -50, -25, -10, -5, -1, 1, 5, 10, 25, 50, 75, 100.1)
@@ -125,7 +129,7 @@ GlobCover and MODIS, and GLC-SHARE.
 ### 1 km Bias/MAE with boxplots
 
 For supplemental.
-```{r, eval = FALSE}
+```{r, eval = e}
 #btype <- c("bias_act.pdf", "bias_abs.pdf")
 # plot matrix
 nc <- 4
@@ -198,7 +202,7 @@ dev.off()
 ### Bias/MAE with scale
 
 Note: the mean values presented in the figure here is a straight mean across 5 percentile bins, which gives bias independent of cropland density. Supplementary tables report the bin-weighted biases. 
-```{r, eval=FALSE}
+```{r, eval = e}
 levnms <- paste(gsub("f", "", lev), "km")
 m2 <- unlist(lapply(seq(1, by = 1, length = length(lev) * 4), function(x) {
   rep(x, nc)
@@ -276,7 +280,7 @@ dev.off()
 
 ### Total error
 Calculate how much cropland estimates differ between datasets
-```{r, eval = FALSE}
+```{r, eval = e}
 fact <- c(5, 10, 25, 50, 100)
 nms <- paste0("cover", c("2007", "2011"), "sum_mask.tif")
 gti <- lapply(nms, function(x) raster(spathfunc(x)))
@@ -383,7 +387,7 @@ round(lckm2)
 
 Weighted by __actual__ cropland percentage, and then, with aggregation, by number of pixels being aggregated. 
 
-```{r, eval = FALSE}
+```{r, eval = e}
 # Create weights mask
 fact <- c(5, 10, 25, 50, 100)
 namask <- raster(spathfunc("namask.tif"))  # NA mask
@@ -514,7 +518,7 @@ xtable::xtable(baccdiff)
 ### Other calculations methods 
 
 Across country, agricultural region only, or bin-wise (cropland density classes) mean.
-```{r, eval = FALSE}
+```{r, eval = e}
 load(spathfunc("lcf_out2011.rda"))
 lcf <- data.table(lcf_out11)
 
@@ -590,7 +594,7 @@ dev.off()
 ### Bin density plots
 
 To see how many values contribute to bin-wise means.
-```{r, eval = FALSE}
+```{r, eval = e}
 # Using the union of agricultural areas, rather than whole country
 bin_size <- do.call(rbind, lapply(lev, function(i) {
   # i <- "f50"

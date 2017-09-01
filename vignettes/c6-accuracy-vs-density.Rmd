@@ -25,6 +25,10 @@ vignette: >
 <!--# District-level cropland density versus map accuracy-->
 
 ## Data
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE  
+```
 ```{r, message=FALSE, results='hold', warning=FALSE}
 library(croplandbias)
 library(nlme)
@@ -67,7 +71,7 @@ round(mean(rgeos::gArea(md, byid = TRUE) / 1000000))
 ### Extract data for magisterial districts
 
 Both cropland percentages and absolute errors. 
-```{r, eval=FALSE}
+```{r, eval = e}
 # GTI data
 # mean cropland cover
 gti_md <- extract(x = gti, y = md, progress = "text")
@@ -192,7 +196,7 @@ med0$w <- nonzero  # weight - N contributing pixels (non-zeros)
 <a href="#top">Back to top</a>
 
 ### Run regressions and check for spatial autocorrelation
-```{r, eval=FALSE}
+```{r, eval = e}
 # check the polygons and rows line up for coordinates
 # i <- 300
 # a <- extract(x = gti, y = md[i, ], progress = "text")
@@ -240,7 +244,7 @@ lm_med0 <- lapply(nms, function(x) {
 ### Plot the fitted LM models
 
 For evaluation only
-```{r, eval=FALSE}
+```{r, eval = e}
 mcap <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 cols <- c("red", "orange3", "green4", "blue", "black", "grey50")
 lw <- c(rep(1, 4), 3, 3)
@@ -334,7 +338,7 @@ dev.off()
 <a href="#top">Back to top</a>
 
 ### Check for spatial autocorrelation in residuals
-```{r, eval=FALSE}
+```{r, eval = e}
 dists <- as.matrix(dist(mu[, c("x", "y")]))
 dists_inv <- 1 / dists
 diag(dists_inv) <- 0
@@ -355,7 +359,7 @@ Present and significant. To deal with it, first try to use:
 
 ### A generalized least squares (GLS) with spatial autocovariance terms. 
 
-```{r, eval=FALSE}
+```{r, eval = e}
 # mean of all data
 i <- "glc"  # glc
 dat <- proc_df(x = mu, nm = i)
@@ -378,7 +382,7 @@ That seemed inadequate for removing autocorrelation in residuals. The GLS did no
 ### Generalized additive model
 
 First check fit of model family, and whether assumptions of normally distributed errors are met. 
-```{r, eval=FALSE}
+```{r, eval = e}
 # stats.stackexchange.com/questions/99425/distribution-for-percentage-data
 # quartz()
 # dat <- mu0[, "sa30"]
@@ -468,7 +472,7 @@ Testing each of the main landcover sets for model shape, the best fit in terms o
 ### Plot final results
 
 Helper functions
-```{r, eval = FALSE}
+```{r, eval = e}
 predfunc <- function(model, newdat) {
   pred <- predict(model, newdata = newdat, type = "response", se.fit = TRUE)
   pdat <- transform(newdat, fit = pred$fit)
@@ -494,7 +498,7 @@ polyfunc <- function(pdat) {
 <a href="#top">Back to top</a>
 
 #### GAM fits
-```{r, eval = FALSE}
+```{r, eval = e}
 gam_mods <- lapply(nms, function(i) {
   dat1 <- proc_df(x = mu0, nm = i)
   dat1 <- dat1[!is.na(dat1$pv), ]
@@ -520,7 +524,7 @@ gam_mods <- lapply(nms, function(i) {
 
 
 #### GAM plots
-```{r, eval = FALSE}
+```{r, eval = e}
 ptcols <- sapply(cols, function(x) makeTransparent(x, 80))  # CI colors
 lw <- c(rep(2, 4), 3, 3)
 yl1 <- c(0, round(max(sapply(gam_mods, function(x) max(x$pdat1$fit) * 1.1)),
@@ -574,7 +578,7 @@ lapply(gam_mods, function(x) {
 #### Final plot of magisterial districts
 
 For supplemental.
-```{r, eval=FALSE}
+```{r, eval = e}
 provs <- unique(md$ID_1)
 greys <- paste0("grey", seq(15, 95, 10))
 pdf(fp(p_fig, "md_map.pdf"), width = 7, height = 7, bg = "transparent")
