@@ -27,7 +27,7 @@ vignette: >
 ## Data
 ```{r, echo = FALSE}
 # set this to true when want to run all chunks when not knitting
-e <- TRUE  
+e <- FALSE
 ```
 ```{r, message=FALSE, results='hold', warning=FALSE}
 library(croplandbias)
