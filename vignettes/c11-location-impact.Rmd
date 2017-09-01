@@ -1,5 +1,5 @@
 ---
-title: "Cropland error impact on locational accuracy"
+title: "11. Cropland error impact on locational accuracy"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
@@ -7,6 +7,10 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=11"
+    ]
   pdf_document:
     toc: yes
     toc_depth: 4
@@ -17,7 +21,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Impact of cropland errors on location
+\setcounter{section}{11}
+<!-- # Cropland error impact on locational accuracy-->
 
 Evaluated in terms of how landcover map error impacts the ability to locate areas having a particular quantity of interest. 
 

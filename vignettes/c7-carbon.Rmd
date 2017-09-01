@@ -1,9 +1,17 @@
 ---
-title: "Vegetative carbon bias and accuracy"
+title: "7. Vegetative carbon bias and accuracy"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=7"
+    ]
+  pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
@@ -13,7 +21,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Error, bias, and accuracy in carbon stock estimates
+\setcounter{section}{7}
+<!-- # Vegetative carbon bias and accuracy-->
 Based on the Ruesch & Gibbs (2008) approach for estimating carbon density. 
 
 ## Data

@@ -1,5 +1,6 @@
 ---
-title: "Miscellaneous calculations"
+title: 12. Miscellaneous additional analyses
+
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
@@ -7,19 +8,24 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=12"
+    ]
   pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
 vignette: >
-  %\VignetteIndexEntry{c11-location-impact}
+  %\VignetteIndexEntry{c12-misc}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-# Overview
+\setcounter{section}{12}
+<!-- # Miscellaneous additional analyses -->
 
-A few additional calculations undertaken for the paper
+A few additional calculations and figures undertaken for the paper
 
 ```{r, message=FALSE}
 library(croplandbias)

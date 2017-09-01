@@ -1,9 +1,17 @@
 ---
-title: "Yield and Production Bias/Accuracy"
+title: "9. Yield and production bias/accuracy"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=9"
+    ]
+  pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
@@ -13,7 +21,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Error, bias, and accuracy of gridded crop yield & production data
+\setcounter{section}{9}
+<!--# Yield and production bias/accuracy-->
 
 Based on Ramankutty et al's (2008) procedure for calculating cropland area, followed by Monfreda et al's (2008) to disaggregate yields and harvested areas.
 

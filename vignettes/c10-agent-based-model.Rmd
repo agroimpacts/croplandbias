@@ -1,5 +1,5 @@
 ---
-title: "Agent-based model sensitivity"
+title: "10. Sensitivity of agent-based model to map error"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
@@ -7,6 +7,10 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=10"
+    ]
   pdf_document:
     toc: yes
     toc_depth: 4
@@ -17,7 +21,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Agent-based model sensitivity to map error
+\setcounter{section}{10}
+<!--# Sensitivity of agent-based model to map error-->
 
 Selection of magisterial districts and associated landcover sets for use in ABM example, and analysis of bias after initial allocation of agents performed based on available farmland estimated from 100 m downscaled versions of the landcover data. 
 

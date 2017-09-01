@@ -1,9 +1,17 @@
 ---
-title: "Cropland Percentage Bias and Accuracy, part II"
+title: "5. Cropland bias/accuracy, part II"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=5"
+    ]
+  pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
@@ -13,7 +21,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Cropland errors, part 2
+\setcounter{section}{5}
+<!--# Cropland bias/accuracy, part 2-->
 
 The following provide further analyses and plots of bias and accuracy metrics calculated from spatial error maps created in [cropland-1](c4-cropland-1.html). 
 ## Spatial biases

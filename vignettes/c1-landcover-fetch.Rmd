@@ -1,9 +1,17 @@
 ---
-title: "Fetching Landcover Data"
+title: "1. Fetching land cover data"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=11"
+    ]
+  pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
@@ -13,11 +21,11 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Fetching landcover datasets
+\setcounter{section}{1}
+<!--# Fetching land cover data-->
 Fetching regional and global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product.
 
-## Downloads
-### Set-up
+## Download landcover datasets
 ```{r, eval = FALSE}
 library(lmisc)  # custom package on GitHub with helper functions
 library(RCurl)
@@ -29,8 +37,7 @@ p_dl <- fp(p_root, "croplandbias/external/ext_data/landcover/")
 p_orig <- fp(p_root, "croplandbias/external/ext_data/landcover/original")
 ```
 
-### Bring in landcover datasets
-#### GLC-Share
+### GLC-Share
 
 Starting with the improved/fusion dataset, GLC-Share. Note: the original version of analyses was looking at the geo-wiki dataset, but a coding error referred geowiki to GLC-Share, which was also initially tested, thus error assessments and downstream tests where performed on GLC-Share, not geo-wiki. Both are hybrid-fusion products, therefore serve the same role in analysis. 
 ```{r, eval = FALSE}
@@ -42,7 +49,7 @@ download.file(url, method = "auto", destfile = "glc_share.zip")
 unzip("glc_share.zip", exdir = "glc_share")
 ```
 
-#### Globcover 2009
+### Globcover 2009
 ```{r, eval = FALSE}
 path <- fp(p_dl, "globcover_2009")
 url <- "http://due.esrin.esa.int/files/Globcover2009_V2.3_Global_.zip"
@@ -50,7 +57,7 @@ download.file(url, method="auto", destfile = "globcover_2009.zip")
 unzip("globcover_2009.zip", exdir = "globcover_2009")
 ```
 
-#### MODIS landcover
+### MODIS landcover
 ```{r, eval = FALSE}
 path <- fp(p_dl, "MCD12Q1/")
 dir.create(fp(p_dl, "MCD12Q1/"))
@@ -73,7 +80,7 @@ lapply(modnames, function(x) {  # x <- modnames[1]
 })
 ```
 
-#### South Africa's landcover database (30 m)
+### South Africa's landcover database (30 m)
 ```{r, eval = FALSE}
 path <- fp(p_dl, "sa_lc_2009/")
 url <- "http://planet.uwc.ac.za/BGISdownloads/landcover_2009.zip"

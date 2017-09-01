@@ -1,9 +1,17 @@
 ---
-title: "ET bias"
+title: "8. Evapotranspiration bias/accuracy"
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=8"
+    ]
+  pdf_document:
     toc: yes
     toc_depth: 4
     number_sections: yes
@@ -13,12 +21,12 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Error, bias, and accuracy in evapotranspiration estimates
+\setcounter{section}{8}
+<!-- # Error, bias, and accuracy in evapotranspiration estimates-->
 
 Bias in PET estimates as calculated using different version of the cropland datasets to determine the vegetation properties in VIC.  
 
-## Analysis
-### Prepare datasets
+## Prepare datasets
 
 Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc. 
 ```{r, eval = FALSE}
@@ -110,7 +118,7 @@ mi <- sapply(unique(mos), function(x) which(mos == x))  # month index
 ```
 <a href="#top">Back to top</a>
 
-### Process ET time series
+## Process ET time series
 
 Figure out which months produce maximum ET values, calculate monthly means, overall country-wide time series, etc. 
 ```{r, eval=FALSE}
@@ -195,7 +203,7 @@ et_mm <- lapply(et_mutot, function(x) x[[mm_yr]])
 ```
 <a href="#top">Back to top</a>
 
-### Calculate ET differences
+## Calculate ET differences
 ```{r, eval=FALSE}
 # difference rasters and convert to percent
 # between time series annual mean
@@ -235,8 +243,8 @@ gsmx_diff <- lapply(ilist, function(b) {
 ```
 <a href="#top">Back to top</a>
 
-### Plot difference maps
-#### Reshape and disaggregate lists
+## Plot difference maps
+### Reshape and disaggregate lists
 ```{r, eval = FALSE}
 # function to reshape lists for use in disaggregate_rast_list
 disaggl <- function(rl, lev = "f25") {
@@ -271,7 +279,7 @@ dstats <- function(dlist) {
 ```
 <a href="#top">Back to top</a>
 
-#### Plot maps
+### Plot maps
 ```{r, eval=FALSE}
 # calculate single set of breakranges for all sets
 statsl <- lapply(l2dag, dstats)
@@ -353,11 +361,9 @@ dev.off()
 ```
 <a href="#top">Back to top</a>
 
-### Calculate bias/accuracy statistics
+## Calculate bias/accuracy statistics
 
-#### Primary method
-
-Density dependent method
+### Primary method (density dependent)
 
 ```{r, eval=FALSE}
 # weighted mean functions
@@ -389,7 +395,7 @@ b <- bias_statsw(gti_agg$f25, awgts, err2011$f25, snms, wma, "mua")
 et_gsw <- rbind(a, b)
 ```
 
-Agricultural area method
+### Agricultural area method
 ```{r, eval=FALSE}
 lev_vec <- "f25"
 # create mask for non-cropland areas, unioning GTI and each LC, filtering out
