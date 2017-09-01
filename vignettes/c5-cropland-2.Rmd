@@ -355,7 +355,7 @@ save(stats2007, stats2011, totkm2, refkm2, lckm2,
 
 Total square kilometers of South Africa being evaluated
 ```{r, echo = FALSE}
-load(spathfunc("total-cropland.rda"))
+load(fp(p_data, "total-cropland.rda"))
 totkm2
 ```
 
