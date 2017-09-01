@@ -29,8 +29,11 @@ Evaluated in terms of how landcover map error impacts the ability to locate area
 ## Data
 
 Derived carbon (section 6) and yield estimates (section 8). 
-
-```{r, eval=FALSE}
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
+```{r, eval = e}
 library(croplandbias)
 library(xtable)
 library(RColorBrewer)
@@ -58,7 +61,7 @@ load(spathfunc("cropland-1km.rda"))
 If you are interested in selecting areas of highest yield/production/carbon potential, how far off are you relative to "truth". Use top quintile/decline to assess this, and then calculate mean nearest neighbor distance between two pixels of each map. 
 
 ### Identify high value areas
-```{r, eval = FALSE}
+```{r, eval = e}
 # top decile of...
 # ...cropland
 crclass <- lapply(cropl, function(x) {  # x <- cropl$sa30
@@ -121,7 +124,7 @@ names(effclass) <- names(cclass)
 ### Calculate nearest-neighbor distances
 
 Between GTI high value areas and each of the four LC-derived datasets. 
-```{r, eval = FALSE}
+```{r, eval = e}
 
 # calculate distance between GTI and each other dataset's classes. 
 # pms2a <- expand.grid(rep(list(0:1), 5))[-1, ] 
