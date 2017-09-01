@@ -18,8 +18,6 @@ Based on the Ruesch & Gibbs (2008) approach for estimating carbon density.
 
 ## Data
 ```{r, eval=FALSE}
-library(lmisc)
-library(data.table)
 library(croplandbias)
 library(RColorBrewer)
 library(xtable)
@@ -37,7 +35,7 @@ p_edat <- fp(p_root, "croplandbias/external/ext_data/")
 
 Starting with the carbon look-up tables used for Africa by Ruesch & Gibbs (2008), inputs downloaded from [here](http://cdiac.ornl.gov/epubs/ndp/global_carbon/carbon_documentation.html#methods).
 ```{r, eval=FALSE}
-cfiles <- dir(p_carb, pattern = "m6", full.names = TRUE)
+cfiles <- Sys.glob(file.path(.libPaths(), "croplandbias/extdata/carbon", "m*"))
 nms <- gsub("*.*m6|\\.txt", "", cfiles)
 cval_list <- lapply(1:length(cfiles), function(x) {
   tab <- read.table(cfiles[x])
@@ -51,8 +49,8 @@ mergefun <- function(x, y) merge(x, y, by = "CL", all.x = TRUE, all.y = TRUE)
 ctab <- Reduce(mergefun, cval_list)
 
 # Read in lookup table key
-key <- readLines(dir(p_carb, pattern = "key", full.names = TRUE))[25:44]
-key2 <- readLines(dir(p_carb, pattern = "key", full.names = TRUE))[47:57]
+key <- readLines(spathfunc("code_key.txt", "cb"))[25:44]
+key2 <- readLines(spathfunc("code_key.txt", "cb"))[47:57]
 mtch <- sapply(gregexpr("[0-9]", key2), max)
 lcs <- sapply(1:length(key2), function(x) substr(key2[x], 1, mtch[x]))
 lcs <- gsub(" & ", ",", gsub("-", ":", lcs))
@@ -127,9 +125,8 @@ colnames(ctabo) <- LC
 ## Analysis
 ### Prepare raster data
 ```{r, eval=FALSE}
-load(fp(p_data, "d_grid_act.rda"))  # actual diffence grids
-paths <- fp(p_data, dir(p_data, paste0("cover*.*11sum_mask.tif$")))
-gti <- raster(paths) / 100  # gti 2011
+load(spathfunc("d_grid_act.rda"))  # actual diffence grids
+gti <- raster(spathfunc("cover2011sum_mask.tif"))  / 100  # gti 2011
 namask <- raster(fp(p_data, "namask.tif"))  # NA mask
 gti <- mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
@@ -138,7 +135,7 @@ gti <- mask(gti, namask)  # apply mask to GTI
 snms <- c("sa30", "globmu", "modmu", "glc")
 dlist_1km <- lapply(dlist_act[snms], function(x) x$f1$g2011)
 lc_list <- lapply(dlist_1km, function(x) gti - x / 100) 
-plot(lc_list[[1]])
+# plot(lc_list[[1]])
 # cellStats(!is.na(lc_list[[1]]), sum)
 # plot(gti)
 
@@ -676,7 +673,7 @@ g1 <- "grey90"
 xl <- c(-0.5, 18)
 shd <- c(4.5, 10.5, 16.5)
 
-pdf(fp(p_fig, "carbon_veg_scalew.pdf"), height = 7, width = 7)
+pdf(fp(p_fig, "fig3.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -697,8 +694,9 @@ for(i in 1:length(lev_vec)) { # i <- 1; j <- 1; k <- 1
     }
   }
 }
-axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
-axis(2, at = yax, labels = yax, las = 2)
+mgp <- c(2, 0.2, 0)
+axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact), tcl = 0.4, mgp = mgp)
+axis(2, at = yax, labels = yax, las = 2, tcl = 0.4, mgp = mgp)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
 mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
 legend(x = 12.4, y = -110, legend = lcnms, pch = 15, col = cols, adj = 0,
