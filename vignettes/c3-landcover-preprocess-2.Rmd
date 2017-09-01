@@ -334,8 +334,8 @@ sumfun <- function(x) sum(x, na.rm = TRUE)
 r <- lapply(list(cover2007, cover2011), function(y) {
   r <- calc(y[[-6]], sumfun)
   r[r > 100] <- 100
-  writeRaster(r, file = gsub("\\.tif", "sum.tif", y@file@name),
-              overwrite = TRUE)
+  fnm <- fp(p_data, gsub("\\.tif", "sum.tif", basename(filename(y))))
+  writeRaster(r, fnm, overwrite = TRUE)
 })
 
 # calculate areas
