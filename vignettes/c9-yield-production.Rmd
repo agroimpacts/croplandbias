@@ -485,7 +485,7 @@ mds <- stack(list("md" = crop(mdr, gti_agg$f1$gti), "gti" = gti_agg$f1$gti,
 # v <- values((lc_agg$f1$modmu > 1) * 1); sum(v[!is.na(v)]); rm(v)
 
 # data.table calculations
-md_dt <- as.data.table.raster(mds, xy = TRUE)
+md_dt <- as.data.table(mds, xy = TRUE)
 setkey(md_dt, md)
 mdarea <- md_dt[, .N, by = md]  # how many km2 in each MD
 setnames(mdarea, "N", "mdkm2") 
@@ -1089,7 +1089,7 @@ pchs <- c("+", "o")
 yax <- seq(yl[1], yl[2], 10)
 xax <- seq(1, 6, 5 / (length(yax) - 1))
 
-pdf(fp(p_fig, "yield_prod_bias.pdf"), height = 7, width = 7)
+pdf(fp(p_fig, "fig5.pdf"), height = 7, width = 7)
 par(mar = rep(1, 4), oma = c(2, 2, 0, 0), mgp = c(1, 0.5, 0), tcl = -0.3)
 plot(xl, yl, pch = "", yaxt = "n", xaxt = "n", xaxs = "i", yaxs = "i", 
      ylab = "", xlab = "")#,
@@ -1116,8 +1116,9 @@ for(ii in 1:length(lev)) { # ii <- 1; i <- 1; k <- 1
     }
   }
 }
-axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact))
-axis(2, at = yax, labels = yax, las = 2)
+mgp <- c(2, 0.2, 0)
+axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact), mgp = mgp, tcl = 0.4)
+axis(2, at = yax, labels = yax, las = 2, mgp = mgp, tcl = 0.4)
 mtext(side = 1, text = "Resolution (km)", outer = TRUE, line = 0.5)
 mtext(side = 2, text = "Bias/MAE (%)", outer = TRUE, line = 1)
 legend(x = 12.4, y = -10, legend = lcnms, pch = 15, col = cols, adj = 0,
