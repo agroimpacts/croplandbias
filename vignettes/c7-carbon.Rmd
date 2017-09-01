@@ -28,7 +28,7 @@ Based on the Ruesch & Gibbs (2008) approach for estimating carbon density.
 ## Data
 ```{r, echo = FALSE}
 # set this to true when want to run all chunks when not knitting
-e <- FALSE  
+e <- FALSE
 ```
 ```{r, eval = e}
 library(croplandbias)
@@ -140,7 +140,7 @@ colnames(ctabo) <- LC
 ```{r, eval = e}
 load(spathfunc("d_grid_act.rda"))  # actual diffence grids
 gti <- raster(spathfunc("cover2011sum_mask.tif"))  / 100  # gti 2011
-namask <- raster(fp(p_data, "namask.tif"))  # NA mask
+namask <- raster(spathfunc("namask.tif"))  # NA mask
 gti <- mask(gti, namask)  # apply mask to GTI
 # cellStats(!is.na(gti), sum)
 
