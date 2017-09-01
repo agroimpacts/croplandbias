@@ -164,9 +164,9 @@ pcol2 <- makeTransparent(cols, alpha = c(30))
 
 # plot(1:4, pch = 20, col = pcol)
 bs <- do.call(rbind, mudists[c(1, 2, 4)])
-lcnms <- c("SA LC", "GlobCover", "MODIS", "GLC-Share")
+lcnms <- c("SA-LC", "GlobCover", "MODIS", "GLC-Share")
 
-pdf(full_path(p_fig, "location_offset.pdf"), height = 3.5, width = 4, 
+pdf(full_path(p_fig, "fig7.pdf"), height = 3.5, width = 4, 
     bg = "transparent")
 par(mar = c(2, 3.5, 1, 0), bg = "transparent")
 bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol, pcol2), 
@@ -174,8 +174,9 @@ bp <- barplot(bs, beside = TRUE, col = ggplot2:::interleave(cols, pcol, pcol2),
               ylim = c(0, 18), yaxt = "n")
 axis(1, at = colMeans(bp), labels = lcnms, lty = 0, cex.axis = 0.9, 
      mgp = c(2, 0.25, 0))
-axis(2, at = seq(0, 18, 2), labels = seq(0, 18, 2), las = 2)
-mtext("km", side = 2, line = 2.25)
+axis(2, at = seq(0, 18, 2), labels = seq(0, 18, 2), las = 2, mgp = c(2, 0.2, 0), 
+     tcl = 0.4)
+mtext("km", side = 2, line = 2)
 legend(x = 12.5, y = 18, legend = rep("", 4), pch = 15, col = cols, adj = 0,
        pt.cex = 1.5, bty = "n", cex = 0.8, x.intersp = 0, horiz = TRUE)
 legend(x = 12.5, y = 17.25, legend = rep("", 4), pch = 15, adj = 0, col = pcol, 
