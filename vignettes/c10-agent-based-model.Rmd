@@ -29,7 +29,7 @@ Selection of magisterial districts and associated landcover sets for use in ABM 
 ## Data
 ```{r, echo = FALSE}
 # set this to true when want to run all chunks when not knitting
-e <- FALSE
+e <- TRUE
 ```
 ```{r, eval = e}
 library(croplandbias)
@@ -141,7 +141,7 @@ plot(abm_md)
 plot(cb[[1]], axes = FALSE, box = FALSE, breaks = brks1, col = cols1, 
      add = TRUE, legend = FALSE)
 plot(abm_md, add = TRUE)
-polygonsLabel(abm_md, labels = paste0(abm_md$name_2, " (", 1:4, ")"), 
+polygonsLabel(abm_md, labels = paste0(abm_md$NAME_2, " (", 1:4, ")"), 
               method = "buffer", cex = 0.9)
 for(i in 2:5) {
   plot(abm_md)
@@ -202,7 +202,7 @@ for(i in unique(dssat$FNAM)) {
 }
 
 # provincial ag census statistics from 2007
-prodyld <- cbind.data.frame("md" = as.character(abm_md$name_2), 
+prodyld <- cbind.data.frame("md" = as.character(abm_md$NAME_2), 
                             "pha" = c(6219, 6203, 6391, 9404), 
                             "prod" = c(14781, 17434, 24366, 25578))
 prodyld$yld <- prodyld$prod / prodyld$pha
@@ -281,15 +281,15 @@ cols <- c(rep("red", 4), rep("orange3", 4), rep("green4", 4), rep("blue", 4))
 plot(unlist(pctbias), unlist(unalloc), col = cols, cex = cexs, pch = 20, 
      ylab = "% land unallocated", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
-mtext("A", side = 3, adj = -0.2, line = -1)
+mtext("(a)", side = 3, adj = -0.27, line = -1)
 plot(unlist(pctbias), unlist(land_def), col = cols, cex = cexs, pch = 20, 
      ylab = "% land deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
-mtext("B", side = 3, adj = -0.2, line = -1)
+mtext("(b)", side = 3, adj = -0.23, line = -1)
 plot(unlist(pctbias), unlist(hhprod_def), col = cols, cex = cexs, pch = 20, 
      ylab = "% food deficit", xlab = "% error in cropland area", 
      cex.lab = cx[2], cex.axis = cx[1])
-mtext("C", side = 3, adj = -0.2, line = -1)
+mtext("(c)", side = 3, adj = -0.23, line = -1)
 par(xpd = NA)
 
 yst <- seq(0.05, 0.23, 0.18 / 4)
