@@ -26,17 +26,27 @@ vignette: >
 <!-- # Miscellaneous additional analyses -->
 
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
-
+```{r, echo = FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
 ```{r, message=FALSE}
 library(croplandbias)
 library(rgeos)
 library(dismo)
 library(sf)
+# library(rasterVis)
+# library(gridExtra)
+# library(ggplot2)  # used version github here (2.2.1.9000) b/c wanted geom_sf
+# library(RStoolbox)
+# library(grid)
+# library(cowplot)
+library(viridis)
 
 rm(list = ls())
 p_root <- fp(proj_root("croplandbias"), "croplandbias")
 p_edat <- fp(p_root, "external/ext_data")
-
+p_fig <- fp(p_root, "inst/paper/figures/")
 ```
 
 ## South Africa's share of sub-Saharan Africa's area
@@ -77,13 +87,6 @@ afarea <- gArea(ssaeco) / 10000
 saarea <- gArea(africa[africa$cntry_name == "South Africa", ]) / 10000
 saarea / afarea
 
-```
-
-```{r, eval=FALSE, echo = FALSE}
-a <- sample(1:100, size = 20)
-b <- sample(1:80, size = 20)
-mean(a - b)
-sum(a) / sum(b)
 ```
 
 ## Calculation of error propagation
@@ -144,10 +147,10 @@ et_prop
 ### Read in base land cover in Albers format
 
 For this part, steps taken to get to Albers-transformed versions of base land cover data subset to South Africa's extent will have to be repeated. Due to size, these were not saved in the repo. See [chapter 1](c1-landcover-fetch.html) and [chapter 3](c3-landcover-preprocess-2.html) to recreate these initial steps. 
-```{r, eval = FALSE}
+```{r, eval = e}
 sa_r <- raster(spathfunc("sagrid.tif"))
 glc <- raster(fp(p_edat, "landcover/glc_share/glcSA_alb_rect.tif"))
-glob <- raster(fp(p_edat, "landcover/globcover_2009/globSA.tif"))
+glob <- raster(fp(p_edat, "landcover/globcover_2009/globSA_alb.tif"))
 modis <- raster(fp(p_edat, "landcover/MCD12Q1/modis_type_1_alb.tif"))
 salc <- raster(fp(p_edat, "landcover/sa_lc_2009/sa_lc_2009.tif"))  
 
@@ -157,7 +160,8 @@ gti <- st_read(dsn = fp(p_edat, "landcover/gti/GTI_SA_2011.shp"),
 
 # small image of South Africa, in GCS
 ext <- extent(c(26.95, 27.35, -28.72, -28.43))  # arbitrary small cropland area
-base <- gmap(ext, type = "satellite", lonlat = TRUE)
+base <- gmap(ext, type = "satellite", lonlat = TRUE, rgb = TRUE)
+base <- trim(base)
 baseext <- as(extent(base), "SpatialPolygons")
 gcs <- data.table(make_EPSG())[like(code, "4326"), prj4]
 crs(baseext) <- CRS(gcs)
@@ -167,15 +171,158 @@ baseext_alb2 <- spTransform(baseext, crs(salc))  # albers used for native SA-LC
 ```
 
 ### Crop them down to save
-```{r, eval = FALSE}
+```{r, eval = e}
 gtic <- st_intersection(gti, st_as_sf(baseext))  # crop GTI layers
 salcc <- crop(salc, baseext_alb2)  # crop with native albers extent
 globc <- crop(glob, baseext_alb1)  # crop with albers used in paper
 modisc <- crop(modis, baseext_alb1)  # ""
 glcc <- crop(glc, baseext_alb1)  # ""
 
-plot(glob)
-plot(st_geometry(gtic), col = "transparent", add = TRUE)
+# Set minor (<10 pixels) cover types to NA
+# hist(salcc, maxpixels = ncell(salcc), plot = FALSE, breaks = seq(0.5, 5.5, 1))
+# only 6 pixels in degraded in degraded class, so plays havoc with levelplot and 
+# ggplot--set to NA
+salcc[salcc == 3] <- NA
+
+# table(values(modisc))  # class 9 and 13 only have 2 and 6 each. Set both to NA
+modisc[modisc %in% c(9, 13)] <- NA
+
+# table(values(globc))  # class 14 (rainfed cropland), 60, and 130 have 1, 8, 2
+globc[globc %in% c(14, 60, 130)] <- NA
+
+# add categories to categorical data
+# cols <- rev(terrain.colors(8))
+# cols <- c("khaki")
+
+# display.brewer.all()
+crcols <- brewer.pal(11, "PuOr")[3:5]
+blth20 <- brewer.pal(11, "Paired")[6]
+natveg <- brewer.pal(9, "YlGn")[c(2, 3, 4)]
+# plot(1:5, pch = 20, col = natveg, cex = 3)
+
+# SA-LC
+salcc <- ratify(salcc)
+rat <- levels(salcc)[[1]]
+rat[["lc"]] <- c("Natural", "Cultivation", "Built", "Water")
+rat[["cols"]] <- c(natveg[3], crcols[1], blth20, "blue")
+levels(salcc) <- rat
+
+# GlobCover
+globc <- ratify(globc)
+rat <- levels(globc)[[1]]
+rat[["lc"]] <- c("Mosaic veg/crop", "Mosaic for-shrub/grass", 
+                 "Closed/open herb", "Sparse veg", "Water")
+rat[["cols"]] <- c(crcols[2], rev(natveg), "blue")
+levels(globc) <- rat
+
+# MODIS
+modisc <- ratify(modisc)
+rat <- levels(modisc)[[1]]
+rat[["lc"]] <- c("Open shrub", "Grasslands", 
+                 "Croplands", "Cropland/nat. veg")
+rat[["cols"]] <- c(natveg[2:1], crcols[1], crcols[2])
+levels(modisc) <- rat
+
+
+```
+
+### And plot
+```{r, eval = e}
+# old_theme <- theme_get()
+# theme_set(old_theme)
+# 
+sasf <- st_as_sf(spTransform(sashp, CRS(gcs)))  # sasp to sf (gcs)
+# p0 <- ggplot() + geom_sf(data = sasf, fill = "grey") + theme_void() + 
+#   geom_sf(data = st_as_sf(baseext), fill = "red") 
+# p1a <- ggRGB(base, r = 1, g = 2 , b = 3) + theme_void()
+# p1b <- p1a + geom_sf(data = gtic, fill = crcols[1], col = "transparent")
+# p2 <- gplot(salcc) + theme_void() + geom_raster(aes(fill = factor(value))) +
+#   scale_fill_manual(values = levels(salcc)[[1]]$cols, 'Type',
+#                     labels = levels(salcc)[[1]]$lc)
+# p3 <- gplot(globc) + theme_void() + geom_raster(aes(fill = factor(value))) +
+#   scale_fill_manual(values = levels(globc)[[1]]$col, 'Type',
+#                     labels = levels(globc)[[1]]$lc)
+# p4 <- gplot(modisc) + theme_void() + geom_raster(aes(fill = factor(value))) + 
+#   scale_fill_manual(values = levels(modisc)[[1]]$col, guide = FALSE)#'Type', 
+#                     # labels = levels(modisc)[[1]]$lc)
+# p5 <- gplot(glcc) + theme_void() + geom_raster(aes(fill = value)) + 
+#   scale_fill_gradient("% cropland", low = "grey", high = crcols[1], 
+#                       breaks = seq(0, 100, 10))
+# 
+# oplot <- plot_grid(p0, p1a, p2, p3, p1b, p4, p5, align = "v", ncol = 4, 
+#                    labels = LETTERS[1:6], axis = "l")
+# save_plot(fp(p_fig, "lc-demo-fig.pdf"), plot = oplot, 
+#           base_height = 4, base_aspect_ratio = 2)
+# plot(modisc, col = levels(modisc)[[1]]$col)
+# 
+
+l <- -1
+cx <- 0.8
+png(fp(p_fig, "lc-demo-fig.png"), width = 6, height = 2.5, units = "in", 
+    res = 300)
+par(mfrow = c(2, 4), mar = c(0, 0, 0, 1.5), oma = c(0, 0, 0, 0))
+
+# sa shp
+plot(st_geometry(sasf), col = "grey")
+plot(st_as_sf(baseext), col = "red", add = TRUE)
+
+# Base image
+plot(baseext, lty = 0)
+plotRGB(base, add = TRUE)
+
+# Base image with GTI polys
+plot(baseext, lty = 0)
+plotRGB(base, add = TRUE)
+mtext("Reference", side = 3, line = l, cex = cx)
+plot(st_geometry(gtic), border = "transparent", col = crcols[1], add = TRUE)
+
+# GLC-Share
+aargs <- list(mgp = c(1, 0.25, 0), at = seq(0, 100, 10), 
+              tcl = -0.2, cex.axis = 0.6)
+plot(baseext_alb1, lty = 0)
+plot(glcc, add = TRUE, axes = FALSE, legend = FALSE, box = FALSE, 
+     interpolate = FALSE, col = inferno(10), breaks = seq(0, 100, 10))
+mtext("GLC-Share", side = 3, line = l, cex = cx)
+plot(glcc, legend.only = TRUE, title = "%", legend.width = 1, col = inferno(10),
+     legend.shrink = 0.5, axis.args = aargs, 
+     legend.args = list("%", cex = 0.6))
+
+# SA-LC, GlobCover, MODIS
+plot(baseext_alb2, lty = 0)
+plot(salcc, add = TRUE, axes = FALSE, legend = FALSE, box = FALSE,
+     col = levels(salcc)[[1]]$col)  # SA-LC
+mtext("SA-LC", side = 3, line = l, cex = cx)
+plot(baseext_alb1, lty = 0)
+plot(globc, add = TRUE, axes = FALSE, legend = FALSE, box = FALSE, 
+     col = levels(globc)[[1]]$col)  # Glob-Cover
+mtext("GlobCover", side = 3, line = l, cex = cx)
+plot(baseext_alb1, lty = 0)
+plot(modisc, add = TRUE, axes = FALSE, legend = FALSE, box = FALSE, 
+     col = levels(modisc)[[1]]$col)  # MODIS
+mtext("MODIS", side = 3, line = l, cex = cx)
+
+# Legend
+legtxt <- c(" NAT / FSG /  -  ", 
+            "  -  / COH / OSH ", 
+            "  -  / SVG / GRL ",
+            " CUL / CLD / CLD", 
+            "  -  / MVC / CNV ", 
+            " BLT /  -  / BLT ",
+            " H20 / H20 /  -  ")
+plot(baseext, lty = 0)
+par(family = "mono")
+legend("left", bty = "n", legend = legtxt, title = "SA-LC/GlobCover/MODIS",
+       fill = c(rev(natveg), crcols[1:2], blth20, "blue"), 
+       inset = -0.005, y.intersp = 0.7, x.intersp = 0.5, cex = 0.8, 
+       title.adj = 3.5)
+
+dev.off()
+
+
+
+
+
+
 
 ```
 
