@@ -35,12 +35,6 @@ library(croplandbias)
 library(rgeos)
 library(dismo)
 library(sf)
-# library(rasterVis)
-# library(gridExtra)
-# library(ggplot2)  # used version github here (2.2.1.9000) b/c wanted geom_sf
-# library(RStoolbox)
-# library(grid)
-# library(cowplot)
 library(viridis)
 
 rm(list = ls())
@@ -228,33 +222,7 @@ levels(modisc) <- rat
 
 ### And plot
 ```{r, eval = e}
-# old_theme <- theme_get()
-# theme_set(old_theme)
-# 
 sasf <- st_as_sf(spTransform(sashp, CRS(gcs)))  # sasp to sf (gcs)
-# p0 <- ggplot() + geom_sf(data = sasf, fill = "grey") + theme_void() + 
-#   geom_sf(data = st_as_sf(baseext), fill = "red") 
-# p1a <- ggRGB(base, r = 1, g = 2 , b = 3) + theme_void()
-# p1b <- p1a + geom_sf(data = gtic, fill = crcols[1], col = "transparent")
-# p2 <- gplot(salcc) + theme_void() + geom_raster(aes(fill = factor(value))) +
-#   scale_fill_manual(values = levels(salcc)[[1]]$cols, 'Type',
-#                     labels = levels(salcc)[[1]]$lc)
-# p3 <- gplot(globc) + theme_void() + geom_raster(aes(fill = factor(value))) +
-#   scale_fill_manual(values = levels(globc)[[1]]$col, 'Type',
-#                     labels = levels(globc)[[1]]$lc)
-# p4 <- gplot(modisc) + theme_void() + geom_raster(aes(fill = factor(value))) + 
-#   scale_fill_manual(values = levels(modisc)[[1]]$col, guide = FALSE)#'Type', 
-#                     # labels = levels(modisc)[[1]]$lc)
-# p5 <- gplot(glcc) + theme_void() + geom_raster(aes(fill = value)) + 
-#   scale_fill_gradient("% cropland", low = "grey", high = crcols[1], 
-#                       breaks = seq(0, 100, 10))
-# 
-# oplot <- plot_grid(p0, p1a, p2, p3, p1b, p4, p5, align = "v", ncol = 4, 
-#                    labels = LETTERS[1:6], axis = "l")
-# save_plot(fp(p_fig, "lc-demo-fig.pdf"), plot = oplot, 
-#           base_height = 4, base_aspect_ratio = 2)
-# plot(modisc, col = levels(modisc)[[1]]$col)
-# 
 
 l <- -1
 cx <- 0.8
