@@ -31,6 +31,7 @@ Based on Ramankutty et al's (2008) procedure for calculating cropland area, foll
 Use SA provinces with GTI to create the amount of agricultural land estimates per province, akin to provincial statistics used by Ramankutty et al (2008). Note: they mentioned SA has 11 administrative units they used, but the publications they cited [here](http://www.statssa.gov.za/publications/DiscussLandAccounts/DiscussLandAccounts.pdf) has just 9 provinces, so maybe they mistakenly counted Lesotho and Swaziland? 
 
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
@@ -40,7 +41,6 @@ library(xtable)
 library(RColorBrewer)
 # library(spatstat)
 
-rm(list = ls())
 p_root <- fp(proj_root("croplandbias"), "croplandbias")
 p_fig <- fp(p_root, "inst/paper/figures/")
 p_edat <- fp(p_root, "external/ext_data/")

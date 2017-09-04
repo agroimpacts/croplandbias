@@ -27,12 +27,12 @@ This section of the analysis calculates the differences between the reference cr
 
 ## Analyses
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
-e <- TRUE  
+e <- FALSE  
 ```
 
 ```{r, eval = e}
-rm(list = ls())
 library(lmisc)
 library(raster)
 library(croplandbias)

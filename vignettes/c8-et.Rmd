@@ -30,6 +30,7 @@ Bias in PET estimates as calculated using different version of the cropland data
 
 Bring in cropland datasets, ET grids, reproject the latter to SA Albers, mask, convert to monthly total ET, etc. 
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
@@ -38,7 +39,6 @@ library(croplandbias)
 library(RColorBrewer)
 
 # Paths
-rm(list = ls())
 p_root <- proj_root("croplandbias")
 p_fig <- fp(p_root, "croplandbias/inst/paper/figures/")
 p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")

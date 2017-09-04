@@ -26,11 +26,6 @@ vignette: >
 <!-- # Miscellaneous additional analyses -->
 
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
-```{r, echo = FALSE}
-# set this to true when want to run all chunks when not knitting
-e <- TRUE
-```
-
 ```{r, message=FALSE}
 library(croplandbias)
 library(rgeos)
@@ -45,6 +40,10 @@ p_fig <- fp(p_root, "inst/paper/figures/")
 ```
 
 ## South Africa's share of sub-Saharan Africa's area
+```{r, echo=FALSE}
+# set this to true when want to run all chunks when not knitting
+e <- FALSE
+```
 ```{r, message = FALSE, warning = FALSE}
 eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones", verbose = FALSE)

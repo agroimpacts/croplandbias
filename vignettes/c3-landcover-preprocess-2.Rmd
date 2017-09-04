@@ -29,7 +29,12 @@ Additonal note: This part of the analysis was undertaken on the Linux VM mapper.
 
 ## Analyses
 ### Set-up
-```{r, eval = FALSE}
+```{r, echo = FALSE}
+rm(list = ls())
+# set this to true when want to run all chunks when not knitting
+e <- FALSE  
+```
+```{r, eval = e}
 library(croplandbias)
 library(gdalUtils)
 library(RCurl)
@@ -38,7 +43,6 @@ library(httr)
 library(rgeos)
 
 # Paths
-rm(list = ls())
 p_root <- proj_root("croplandbias")
 p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
 p_dl <- fp(p_root, "croplandbias/external/ext_data/landcover/")
@@ -51,7 +55,7 @@ getOption("gdalUtils_gdalPath")[[1]]$path
 ```
 
 ### Background data, projections, database connections, and SA grid
-```{r, eval = FALSE}
+```{r, eval = e}
 # Get SA shape
 data(sashp)
 sa_buf <- gBuffer(sashp, width = 3000)
@@ -92,7 +96,7 @@ sa_r <- raster(fp(p_data, "sagrid.tif"))
 
 ### Bring in landcover datasets
 Let's start with the improved/fusion dataset, GLC-Share. Note: the original version of analyses was looking at the geo-wiki dataset, but a coding error referred geowiki to GLC-Share, which was also initially tested, thus error assessments and downstream tests where performed on GLC-Share, not geo-wiki. Both are hybrid-fusion products, therefore serve the same role in analysis. 
-```{r, eval = FALSE}
+```{r, eval = e}
 setwd(p_dl)
 path <- fp(p_dl, "glc_share")
 r <- raster(fp(path, "glc_shv10_02.Tif"))
@@ -112,7 +116,7 @@ r <- mask(r, sa_r, file = fp(p_data, "glcsa_masked.tif"),
 ```
 
 #### Globcover 2009
-```{r, eval = FALSE}
+```{r, eval = e}
 path <- fp(p_dl, "globcover_2009")
 r <- raster(fp(path, "GLOBCOVER_L4_200901_200912_V2.3.tif"))
 r <- crop(r, y = sa_buf_gcs, overwrite = TRUE, 
@@ -124,7 +128,7 @@ r <- raster(fp(path, "globSA_alb.tif"))
 ```
 
 #### MODIS landcover
-```{r, eval=FALSE}
+```{r, eval = e}
 path <- fp(p_dl, "MCD12Q1/")
 
 # set up tiles we need and list of corresponding downloads
@@ -174,7 +178,7 @@ r <- raster(fp(path, "modis_type_1_alb.tif"))
 ```
 
 #### South Africa's landcover dataset (30 m)
-```{r, eval = FALSE}
+```{r, eval = e}
 path <- fp(p_dl, "sa_lc_2009/")
 lcnm <- c("sa_ag.tif", "sa_af.tif")
 gdal_translate(src_dataset = fp(path, "landcover"), 
@@ -209,7 +213,7 @@ Sys.time() - dang
 ### Mask out sugarcane
 
 This draws on a proprietary landcover dataset supplied by GeoTerraImage, who should be contacted for access. 
-```{r, eval = FALSE}
+```{r, eval = e}
 path <- fp(p_dl, "kzn_landcover/")
 unzip("Clp_KZN_2011_V1_grid_w31.zip", exdir = path)
 gdal_translate(src_dataset = fp(path, "Clp_KZN_2011_V1_grid_w31/kznlc11v1w31"),                dst_dataset= fp(path, "kznlandcover.tif"), of = "GTiff")
@@ -238,7 +242,7 @@ r <- mask(r, sa_r, filename = fp(path, "kzn_cane_masked.tif"),
 
 ### MODIS cropland variants
 Different variants of cropland fractions from MODIS classes 12 and 14 (from the IGBP-DIS scheme). Class 14 is a cropland mosaic class, with minimum of 10% and a max of 60%, so create variants of 10%, 35% (mean) and 60%. 
-```{r, eval = FALSE}
+```{r, eval = e}
 # MODIS
 path <- fp(p_dl, "MCD12Q1/")
 r <- raster(fp(path, "modis_type_1_alb.tif"))
@@ -281,7 +285,7 @@ r <- lapply(r, function(x) {
 
 ### GlobCover cropland variants
 And the same for GlobCover. We want Globcover class 11 (irrigated cropland), class 14 (rainfed), 20 (50-70% cropland), and 30 (20-50% cropland). For the latter two classes we create variants assumung the minimum, mean, and max of each class
-```{r, eval = FALSE}
+```{r, eval = e}
 path <- fp(p_dl, "globcover_2009")
 r <- raster(fp(path, "globSA_alb.tif"))
 l <- lapply(c(11, 14, 20, 30), function(x) r2 <- r == x)  # pull out classes
@@ -324,7 +328,7 @@ r <- lapply(r, function(x) {  # x <- r[[1]]
 
 ### Further masking of reference maps
 
-```{r, eval = FALSE}
+```{r, eval = e}
 # Bring in SA landcover sets and mask
 cover2007 <- brick(spathfunc("cover2007.tif"))
 cover2011 <- brick(spathfunc("cover2011.tif"))

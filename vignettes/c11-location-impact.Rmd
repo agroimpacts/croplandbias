@@ -30,6 +30,7 @@ Evaluated in terms of how landcover map error impacts the ability to locate area
 
 Derived carbon (section 6) and yield estimates (section 8). 
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
@@ -39,7 +40,6 @@ library(xtable)
 library(RColorBrewer)
 library(spatstat)
 
-rm(list = ls())
 p_root <- fp(proj_root("croplandbias"), "croplandbias")
 p_fig <- fp(p_root, "inst/paper/figures/")
 p_data <- fp(p_root, "inst/extdata/")

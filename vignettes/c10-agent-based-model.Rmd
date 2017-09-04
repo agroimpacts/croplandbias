@@ -28,6 +28,7 @@ Selection of magisterial districts and associated landcover sets for use in ABM 
 
 ## Data
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
@@ -37,7 +38,6 @@ library(readxl)
 library(rgeos)
 
 # Paths
-rm(list = ls())
 p_root <- fp(proj_root("croplandbias"), "croplandbias")
 p_fig <- fp(p_root, "inst/paper/figures/")
 p_edat <- fp(p_root, "external/ext_data/")

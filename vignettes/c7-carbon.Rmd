@@ -27,6 +27,7 @@ Based on the Ruesch & Gibbs (2008) approach for estimating carbon density.
 
 ## Data
 ```{r, echo = FALSE}
+rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
@@ -36,7 +37,6 @@ library(RColorBrewer)
 library(xtable)
 
 # Paths
-rm(list = ls())
 p_root <- proj_root("croplandbias")
 p_fig <- fp(p_root, "croplandbias/inst/paper/figures/")
 p_data <- fp(p_root, "croplandbias/inst/extdata/landcover")
