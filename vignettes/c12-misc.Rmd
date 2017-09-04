@@ -28,8 +28,9 @@ vignette: >
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
 ```{r, echo = FALSE}
 # set this to true when want to run all chunks when not knitting
-e <- FALSE
+e <- TRUE
 ```
+
 ```{r, message=FALSE}
 library(croplandbias)
 library(rgeos)
@@ -273,9 +274,9 @@ mtext("MODIS", side = 3, line = l, cex = cx)
 legtxt <- c(" NAT / FSG /  -  ", 
             "  -  / COH / OSH ", 
             "  -  / SVG / GRL ",
-            " CUL / CLD / CLD", 
+            " CUL /  -  / CLD", 
             "  -  / MVC / CNV ", 
-            " BLT /  -  / BLT ",
+            " BLT /  -  /  - ",
             " H20 / H20 /  -  ")
 plot(baseext, lty = 0)
 par(family = "mono")
