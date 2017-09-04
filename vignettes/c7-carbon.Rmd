@@ -560,7 +560,7 @@ dut <- Sys.time() - dang  # 3.65 minutes (vs 33 in earlier incarnation),
 # 24 sec for means only
 names(cb_stats) <- lev_vec
 #save(cb_stats, file = "external/ext_data/carbon_bias_tables.rda")
-save(cb_stats, file = fp(p_carb, "carbon_bias_tables_mus.rda")
+save(cb_stats, file = fp(p_carb, "carbon_bias_tables_mus.rda"))
 
 namevec <- LC
 stats <- cb_stats
@@ -707,6 +707,24 @@ for(i in 1:length(lev_vec)) { # i <- 1; j <- 1; k <- 1
     }
   }
 }
+
+# annotate values that go beyond the range of plot (GlobCover, MODIS, 1km for.)
+adj <- c(1, 0.3)
+y <- 150
+cx2 <- 0.8
+v <- get(mutype[1])[map == "globmu" & ol == "f1", round(forest)]  # glob MAE
+text(x = 1, y = y, labels = v, srt = 90, col = "grey40", adj = adj, 
+     cex = cx2) 
+adj <- c(1, 0.3)
+v <- get(mutype[1])[map == "modmu" & ol == "f1", round(forest)]  # mod MAE
+text(x = 1.75, y = y, labels = v, srt = 90, col = "grey40", adj = adj, 
+     cex = cx2) 
+adj <- c(0, -0.2)
+v <- get(mutype[2])[map == "globmu" & ol == "f1", round(forest)]  # glob bias
+text(x = 1.5, y = -y, labels = v, srt = 90, col = "grey40", adj = adj, 
+     cex = cx2) 
+
+# axes etc
 mgp <- c(2, 0.2, 0)
 axis(1, at = seq(1.5, 18.5, 3), labels = c(1, fact), tcl = 0.4, mgp = mgp)
 axis(2, at = yax, labels = yax, las = 2, tcl = 0.4, mgp = mgp)

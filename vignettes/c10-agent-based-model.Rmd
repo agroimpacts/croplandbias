@@ -32,7 +32,7 @@ rm(list = ls())
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
-```{r, eval = e}
+```{r, message = FALSE, warning = FALSE}
 library(croplandbias)
 library(readxl)
 library(rgeos)
@@ -91,14 +91,14 @@ Looking at the data in QGIS, including some rainfall maps from earlier papers an
    + Fouriesburg (275)
    + Marquard (288)
    
-```{r, eval = e}
+```{r}
 # md <- md[mdsel[mdsel < 314], ]
 abm_md <- md[mdsel[mdsel %in% c(269, 274:275, 288)], ]
 # writeOGR(abm_md, dsn = "external/ext_data/md4.sqlite", layer = "md4", 
 #          driver = "SQLite")
 
 # Deprecated: earlier used when running 2007 rather than 2011
-rgeos::gArea(abm_md, byid = TRUE) / 10000 / 100
+round(rgeos::gArea(abm_md, byid = TRUE) / 10000 / 100)
 ```
 <a href="#top">Back to top</a>
 
