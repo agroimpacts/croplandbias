@@ -12,10 +12,6 @@ output:
       "--number-sections",
       "--number-offset=12"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c12-misc}
   %\VignetteEngine{knitr::rmarkdown}
