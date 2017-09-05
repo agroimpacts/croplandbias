@@ -22,7 +22,7 @@ vignette: >
 ---
 
 \setcounter{section}{7}
-<!-- # Vegetative carbon bias and accuracy-->
+<!--# Vegetative carbon bias and accuracy-->
 Based on the Ruesch & Gibbs (2008) approach for estimating carbon density. 
 
 ## Data

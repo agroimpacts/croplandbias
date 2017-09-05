@@ -23,7 +23,7 @@ vignette: >
 ---
 
 \setcounter{section}{12}
-<!-- # Miscellaneous additional analyses -->
+<!--# Miscellaneous additional analyses -->
 
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
 ```{r, message=FALSE}
