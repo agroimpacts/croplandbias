@@ -8,6 +8,10 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
+    pandoc_args: [
+      "--number-sections",
+      "--number-offset=12"
+    ]
 vignette: >
   %\VignetteIndexEntry{c12-misc}
   %\VignetteEngine{knitr::rmarkdown}
@@ -277,12 +281,6 @@ legend("left", bty = "n", legend = legtxt, title = "SA-LC/GlobCover/MODIS",
        title.adj = 3.5)
 
 dev.off()
-
-
-
-
-
-
 
 ```
 
