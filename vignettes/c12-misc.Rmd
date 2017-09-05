@@ -8,10 +8,6 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
-    pandoc_args: [
-      "--number-sections",
-      "--number-offset=12"
-    ]
 vignette: >
   %\VignetteIndexEntry{c12-misc}
   %\VignetteEngine{knitr::rmarkdown}
