@@ -916,7 +916,7 @@ There are also two ways of aggregating production estimates:
 
   1.  __Type A__: Aggregating yield and crop area separately, then multiplying. This is correct with __Type 1__ yield aggregation, and producing identical production estimates to __Type II__, but not with the other two types of yield aggregation.    
   
-  2.  __Type B__: Calculating production at the base resolution, then aggregating by sum. This should be the correct way of doing it. 
+  2.  __Type B__: Calculating production at the base resolution, then aggregating by sum. 
   
 Why would someone do a yield aggregation, when you have the gridded estimates?  To calculate values and compare them to a coarser resolution product, for instance, or to get a country-level average. 
 
@@ -936,7 +936,6 @@ Type 2 and 3 yield aggregation are incorrect methods, and are not retained here 
 
 Density weighted, following methods developed in cropland bias portion of analysis, but here metrics are based on residuals rather than percent errors, because of infinite values (harvested area/yield disaggregation methods mean that there are gridded yields/production estimates in some areas where no reference value exists, leading to infinite values if converting to percent)
 ```{r, eval = e}
-
 # yield bias/accuracy
 # reshape
 yerr <- lapply(lev, function(x) {
@@ -1051,25 +1050,25 @@ y1ma <- extract_stat(lev, snms, "all", "mua", "bias", yd1_st)
 
 # Older variant of code from compare-landcover.Rmd to evaluate whether newer DT
 # version is finding correct results
-i <- y_diff1 #pdiff_3 # p_diff1
-jdt <- yd1_st # pd3_st # pd1_st
-bv <- "mua" # bv <- "mu"
+i <- p_diff1#y_diff1 #pdiff_3 # p_diff1
+jdt <- pd1_st#yd1_st # pd3_st # pd1_st
+bv <- "mu" #"mua" # bv <- "mu"
 for(chk in list(c("modmu", "f25"), c("glc", "f10"), c("sa30", "f50"), 
-                c("globmu", "f1"))) {
+                c("globmu", "f1"), c("sa30", "f1"))) {
   x <- chk[1] 
   y <- chk[2] 
   print(paste(".", x, "..", y))
   rs <- lcu[[y]][[x]] 
   rs[rs == 0] <- NA
-  l3 <- abs(i[[x]][[y]][[1]])
-  # l3 <- i[[x]][[y]][[1]]
+  # l3 <- abs(i[[x]][[y]][[1]])
+  l3 <- i[[x]][[y]][[1]]
   o <- rs * l3
   w <- awgts[[y]][[1]] * rs
   wmu <- weighted.mean(getValues(o), getValues(w), na.rm = TRUE)
   print(jdt[ol == y & il == x & bvals == bv & bin == "all", bias] ==
           round(wmu, 2))
+  # print(round(wmu / mup[y]), 3)
 }  # check
-
 ```
 <a href="#top">Back to top</a>
 
@@ -1157,6 +1156,9 @@ mula <- c("p1mu", "y1mu")
 mala <- c("p1ma", "y1ma")
 malmula <- list(mala, mula)
 pyl <- c("mup", "muy")
+
+
+p1mu
 
 yl <- c(-70, 80)
 yax <- seq(yl[1], yl[2], 10)
