@@ -11,10 +11,6 @@ output:
       "--number-sections",
       "--number-offset=3"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c3-landcover-preprocess-2}
   %\VignetteEngine{knitr::rmarkdown}

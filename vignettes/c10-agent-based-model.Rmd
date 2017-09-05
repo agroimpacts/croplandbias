@@ -11,10 +11,6 @@ output:
       "--number-sections",
       "--number-offset=10"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c10-agent-based-model}
   %\VignetteEngine{knitr::rmarkdown}

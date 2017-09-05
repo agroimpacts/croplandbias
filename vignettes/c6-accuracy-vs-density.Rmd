@@ -11,10 +11,6 @@ output:
       "--number-sections",
       "--number-offset=6"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c6-accuracy-vs-density}
   %\VignetteEngine{knitr::rmarkdown}

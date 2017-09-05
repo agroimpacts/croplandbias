@@ -11,10 +11,6 @@ output:
       "--number-sections",
       "--number-offset=11"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c11-location-impact}
   %\VignetteEngine{knitr::rmarkdown}

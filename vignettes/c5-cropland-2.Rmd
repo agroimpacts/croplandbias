@@ -11,10 +11,6 @@ output:
       "--number-sections",
       "--number-offset=5"
     ]
-  pdf_document:
-    toc: yes
-    toc_depth: 4
-    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{c5-cropland-2}
   %\VignetteEngine{knitr::rmarkdown}
