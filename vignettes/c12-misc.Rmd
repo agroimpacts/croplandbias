@@ -38,7 +38,7 @@ p_fig <- fp(p_root, "inst/paper/figures/")
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, eval = e}
 eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones", verbose = FALSE)
 crs(eco) <- crs(projection(raster(nrow = 1, ncol = 1)))
