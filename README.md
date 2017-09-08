@@ -10,5 +10,3 @@ library(devtools)
 install_github("agroimpacts/croplandbias", build_vignettes = TRUE)
 ```
 
-As of now, the vignettes are not building correctly on install, therefore may have to be knit separately. 
-
