@@ -5,12 +5,15 @@ output:
     toc: yes
     toc_depth: 4
     number_sections: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
 vignette: >
   %\VignetteIndexEntry{full-codebook}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
 
 # Fetching land cover data
 Fetching regional and global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product.
@@ -78,7 +81,6 @@ download.file(url, method ="auto", destfile = "landcover_2009.zip")  # painful
 unzip("landcover_2009.zip", exdir = "sa_lc_2009")
 ```
 
-
 # Pre-processing reference cropland data layer
 The following describes the initial pre-processing of landcover datasets that was undertaken for an analysis of error in landcover data. 
 
@@ -107,7 +109,6 @@ system.file("extR", "grid-fields-intersect-postgis.R",
 system.file("extR", "grid-fields-intersect-analyze.R", 
             package = "croplandbias")
 ```
-
 
 
 
@@ -463,7 +464,6 @@ r <- lapply(r, function(x) {
   return(o)
 })  
 ```
-
 
 
 
@@ -913,9 +913,7 @@ print(lcfout_xtab, type = "latex",
 
 
 
-
 # Cropland bias/accuracy, part 2
-
 The following provide further analyses and plots of bias and accuracy metrics calculated from spatial error maps created in [cropland-1](c4-cropland-1.html). 
 ## Spatial biases
 ### Datasets
@@ -1519,7 +1517,6 @@ barplot(bins_25$f1[1:19, 2])
 ```
 
 
-
 # District-level cropland density versus map accuracy
 
 ## Data
@@ -2089,7 +2086,6 @@ for(i in 1:length(provs)) {
 dev.off()
 
 ```
-
 
 
 
@@ -2895,7 +2891,6 @@ print(fulls_xtab, type = "latex", file = fp(p_fig, "C-bias-accuracy.tex"),
 ```
 
 
-
 # Error, bias, and accuracy in evapotranspiration estimates
 
 Bias in PET estimates as calculated using different version of the cropland datasets to determine the vegetation properties in VIC.  
@@ -3367,7 +3362,6 @@ save(et_err, file = fp(p_et, "et-err-bias.rda"))
 
 
 The largest (in an absolute sense) mean actual bias is -0.6%, while the largest mean absolute bias is 1.25%, so not much here.
-
 
 
 # Yield and production bias/accuracy
@@ -4505,9 +4499,6 @@ mala <- c("p1ma", "y1ma")
 malmula <- list(mala, mula)
 pyl <- c("mup", "muy")
 
-
-p1mu
-
 yl <- c(-70, 80)
 yax <- seq(yl[1], yl[2], 10)
 
@@ -4782,7 +4773,6 @@ sum(rep(2, 10) * cft)
 
 
 ```
-
 
 
 
@@ -5089,7 +5079,6 @@ dev.off()
 
 
 
-
 # Cropland error impact on locational accuracy
 
 Evaluated in terms of how landcover map error impacts the ability to locate areas having a particular quantity of interest. 
@@ -5268,7 +5257,6 @@ dev.off()
 
 
 
-
 # Miscellaneous additional analyses 
 
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed
@@ -5290,7 +5278,7 @@ p_fig <- fp(p_root, "inst/paper/figures/")
 # set this to true when want to run all chunks when not knitting
 e <- FALSE
 ```
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, eval = e}
 eco <- readOGR(dsn = fp(p_edat, "africa_ecofloristic_zones.sqlite"), 
                layer = "africa_ecofloristic_zones", verbose = FALSE)
 crs(eco) <- crs(projection(raster(nrow = 1, ncol = 1)))
@@ -5531,12 +5519,6 @@ legend("left", bty = "n", legend = legtxt, title = "SA-LC/GlobCover/MODIS",
        title.adj = 3.5)
 
 dev.off()
-
-
-
-
-
-
 
 ```
 

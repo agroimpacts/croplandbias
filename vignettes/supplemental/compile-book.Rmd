@@ -13,7 +13,7 @@ output:
 
 Solution from [here](http://stackoverflow.com/questions/25824795/how-to-combine-two-rmarkdown-rmd-files-into-a-single-output).
 ```{r}
-d <- "vignettes"
+d <- "vignettes/supplemental"
 a <- "---\ntitle: 'Complete Code Book: c1-12'\noutput:\n"  
 aa <- "  rmarkdown::html_vignette:\n"
 b <- "    toc: yes\n    toc_depth: 4\n    number_sections: yes\n"
@@ -24,11 +24,11 @@ f <- "  %\\VignetteEngine{knitr::rmarkdown}\n"
 g <- "  %\\VignetteEncoding{UTF-8}\n---"
 book_header <- readLines(textConnection(paste0(a, aa, b, cc, dd, e, f, g)))
 # book_header <- readLines(textConnection("---\ntitle: 'Title'\n---"))
-old <- setwd(d)
+setwd(d)
 if(length(grep("../full-codebook.Rmd", list.files())) > 0){
   warning("full-codebook.Rmd already exists")
 }
-write(book_header, file = "../full-codebook.Rmd")
+write(book_header, file = "full-codebook.Rmd")
 cfiles <- list.files(pattern = "[0-9].*.Rmd")
 reord <- order(as.numeric(gsub("c|-.*", "", cfiles)))
 cfiles <- cfiles[(1:length(cfiles))[reord]]
@@ -47,7 +47,7 @@ for(i in 1:length(cfiles)){
 
 # Render
 ```{r}
-rmarkdown::render("../full-codebook.Rmd", 
+rmarkdown::render("full-codebook.Rmd", output_file = "full-codebook.pdf", 
                   output_format = c("pdf_document"))
 ```
 
