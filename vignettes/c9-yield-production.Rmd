@@ -28,7 +28,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 ```{r, echo = FALSE}
 rm(list = ls())
 # set this to true when want to run all chunks when not knitting
-e <- TRUE
+e <- FALSE
 ```
 ```{r, eval = e}
 library(croplandbias)
