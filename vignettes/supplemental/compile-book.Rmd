@@ -25,10 +25,10 @@ g <- "  %\\VignetteEncoding{UTF-8}\n---"
 book_header <- readLines(textConnection(paste0(a, aa, b, cc, dd, e, f, g)))
 # book_header <- readLines(textConnection("---\ntitle: 'Title'\n---"))
 old <- setwd(d)
-if(length(grep("full-codebook.Rmd", list.files())) > 0){
+if(length(grep("../full-codebook.Rmd", list.files())) > 0){
   warning("full-codebook.Rmd already exists")
 }
-write(book_header, file = "full-codebook.Rmd")
+write(book_header, file = "../full-codebook.Rmd")
 cfiles <- list.files(pattern = "[0-9].*.Rmd")
 reord <- order(as.numeric(gsub("c|-.*", "", cfiles)))
 cfiles <- cfiles[(1:length(cfiles))[reord]]
@@ -47,6 +47,7 @@ for(i in 1:length(cfiles)){
 
 # Render
 ```{r}
-rmarkdown::render("full-codebook.Rmd", output_format = c("pdf_document"))
+rmarkdown::render("../full-codebook.Rmd", 
+                  output_format = c("pdf_document"))
 ```
 

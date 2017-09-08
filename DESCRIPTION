@@ -1,9 +1,11 @@
 Package: croplandbias
 Type: Package
-Title: Analysis of error in landcover datasets using SA cropland layer
-Description: As above, but the date the analysis began was earlier than noted
-    here.
-Version: 0.5.7
+Title: Analysis of error in landcover datasets using SA reference data
+Description: This package contains the the data, analyses, and manuscript source
+  for the Estes et al (2017), "A Large-Area, Spatially Continuous Assessment of 
+  Land Cover Map Error and Its Impact on Downstream Analyses", in Global Change
+  Biology
+Version: 0.5.8
 Date: "`r Sys.Date()`"
 Author: Lyndon Estes <LEstes@clarku.edu>
 Maintainer: Lyndon Estes <LEstes@clarku.edu>
