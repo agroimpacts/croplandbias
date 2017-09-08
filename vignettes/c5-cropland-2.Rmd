@@ -17,9 +17,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{5}
 <!--# Cropland bias/accuracy, part 2-->
-
 The following provide further analyses and plots of bias and accuracy metrics calculated from spatial error maps created in [cropland-1](c4-cropland-1.html). 
 ## Spatial biases
 ### Datasets

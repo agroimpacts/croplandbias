@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{8}
 <!--# Error, bias, and accuracy in evapotranspiration estimates-->
 
 Bias in PET estimates as calculated using different version of the cropland datasets to determine the vegetation properties in VIC.  

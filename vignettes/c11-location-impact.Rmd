@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{11}
 <!--# Cropland error impact on locational accuracy-->
 
 Evaluated in terms of how landcover map error impacts the ability to locate areas having a particular quantity of interest. 

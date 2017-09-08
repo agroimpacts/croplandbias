@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{6}
 <!--# District-level cropland density versus map accuracy-->
 
 ## Data

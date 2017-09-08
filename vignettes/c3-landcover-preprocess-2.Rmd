@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{3}
 <!--# Pre-processing landcover-->
 Pre-processing global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product. These were converted to 1 km$^2$ percentage cropland estimates after making several versions of MODIS and GlobCover products to account for mixed cropland classes.  A further processing was applied to the two GTI derived cover images.  
 

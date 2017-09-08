@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{9}
 <!--# Yield and production bias/accuracy-->
 
 Based on Ramankutty et al's (2008) procedure for calculating cropland area, followed by Monfreda et al's (2008) to disaggregate yields and harvested areas.
@@ -29,7 +28,7 @@ Use SA provinces with GTI to create the amount of agricultural land estimates pe
 ```{r, echo = FALSE}
 rm(list = ls())
 # set this to true when want to run all chunks when not knitting
-e <- FALSE
+e <- TRUE
 ```
 ```{r, eval = e}
 library(croplandbias)
@@ -1152,9 +1151,6 @@ mula <- c("p1mu", "y1mu")
 mala <- c("p1ma", "y1ma")
 malmula <- list(mala, mula)
 pyl <- c("mup", "muy")
-
-
-p1mu
 
 yl <- c(-70, 80)
 yax <- seq(yl[1], yl[2], 10)

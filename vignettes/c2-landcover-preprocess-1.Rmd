@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{2}
 <!--# Pre-processing reference cropland data layer-->
 The following describes the initial pre-processing of landcover datasets that was undertaken for an analysis of error in landcover data. 
 

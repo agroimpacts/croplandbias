@@ -1,6 +1,5 @@
 ---
 title: 12. Miscellaneous additional analyses
-
 author: "Lyndon Estes"
 date: "`r Sys.Date()`"
 output: 
@@ -18,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-<!-- \setcounter{section}{12} -->
 <!--# Miscellaneous additional analyses -->
 
 A few additional calculations and figures undertaken for the paper, including supplemental figure (requested by final review) of example illustration of different land-cover datasets analyzed

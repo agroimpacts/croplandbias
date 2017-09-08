@@ -17,7 +17,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\setcounter{section}{1}
 <!--# Fetching land cover data-->
 Fetching regional and global landcover datasets to be analyzed relative to the SA reference dataset: the MODIS 2011 landcover product for South Africa was downloaded, the GLC-SHARE dataset, the 2009 GlobCover product, and South Africa's 2009 landcover product.
 
