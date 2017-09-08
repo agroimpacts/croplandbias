@@ -22,5 +22,6 @@ Imports:
     rgdal,
     dtraster
 License: GPL (>= 3)
+VignetteBuilder: knitr
 RoxygenNote: 6.0.1
 LazyData: TRUE
